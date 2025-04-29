@@ -21,11 +21,10 @@ params.trunc_len_f = 240 // DADA2: Forward read truncation length
 params.trunc_len_r = 200 // DADA2: Reverse read truncation length
 params.trim_length = 250 // Deblur: Read trim length
 
+
+
 // == Input Channel ==
-Channel
-    .fromFilePairs( params.reads )
-    .ifEmpty { error "Cannot find any reads matching: ${params.reads}" }
-    .set( ch_reads )
+ch_reads = Channel.fromFilePairs(params.reads, flat: false)
 
 // == Workflow ==
 workflow {
