@@ -21,10 +21,9 @@ params.trunc_len_f = 240 // DADA2: Forward read truncation length
 params.trunc_len_r = 200 // DADA2: Reverse read truncation length
 params.trim_length = 250 // Deblur: Read trim length
 
-
-
 // == Input Channel ==
-ch_reads = Channel.fromFilePairs(params.reads, flat: false)
+ch_reads = Channel.fromFilePairs(params.reads, flat: true)
+
 
 // == Workflow ==
 workflow {
@@ -65,25 +64,32 @@ process IMPORT_READS {
     publishDir "${params.outdir}/qiime2_artifacts/01_imported_reads", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(reads)
-
+    tuple val(sample_id), path(reads_R1), path(reads_R2)
+    
     output:
     path("${sample_id}_demux.qza", emit: demux_qza)
-
+    
     script:
     """
-    qiime tools import \
-        --type 'SampleData[PairedEndSequencesWithQuality]' \
-        --input-path . \
-        --input-format CasavaOneEightSingleLanePerSampleDirFmt \
-        --output-path ${sample_id}_demux.qza
+    # Create a manifest file for QIIME2 import
+    echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
+    echo -e "${sample_id}\t\$PWD/${reads_R1}\t\$PWD/${reads_R2}" >> manifest.tsv
+    
+    qiime tools import \\
+        --type 'SampleData[PairedEndSequencesWithQuality]' \\
+        --input-path manifest.tsv \\
+        --output-path ${sample_id}_demux.qza \\
+        --input-format PairedEndFastqManifestPhred33V2
+    
     """
-
+    
     stub: // Minimal command for testing without actual execution
     """
     touch ${sample_id}_demux.qza
     """
 }
+
+
 
 // 2a. Denoise with DADA2
 process DENOISE_DADA2 {
