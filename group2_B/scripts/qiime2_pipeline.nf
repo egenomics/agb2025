@@ -17,8 +17,8 @@ params.outdir = "group2_B/results" // Default, override with --outdir
 params.denoiser = "dada2" // Options: 'dada2', 'deblur'
 params.classifier_db = "path/to/your/qiime2_classifier.qza" // <<< IMPORTANT: Specify path to your classifier (e.g., Silva/Greengenes)
 params.sampling_depth = 1000 // <<< IMPORTANT: Adjust based on your data (check feature table summary)
-params.trunc_len_f = 240 // DADA2: Forward read truncation length
-params.trunc_len_r = 200 // DADA2: Reverse read truncation length
+params.trunc_len_f = 100 // DADA2: Forward read truncation length ### dpends on the demux report!!!!!!
+params.trunc_len_r = 100 // DADA2: Reverse read truncation length
 params.trim_length = 250 // Deblur: Read trim length
 
 // == Input Channel ==
@@ -171,7 +171,7 @@ process SUMMARIZE_TABLE {
     qiime feature-table summarize \
       --i-table ${table_qza} \
       --o-visualization table.qzv
-    # Add metadata here if available: --m-sample-metadata-file path/to/metadata.tsv
+      --m-sample-metadata-file path/to/metadata.tsv #define this!!!!
     """
     stub:
     """
