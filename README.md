@@ -4,3 +4,46 @@ Repository for the AGB 2025 common class project
 # Here is the link to the wiki
 
 [Wiki you can modify and use to document the process!](https://github.com/egenomics/agb2025/wiki)
+
+## Project Directory Structure
+
+```text
+├── 📁 raw_data/            # Original FASTQ files (paired-end reads)
+│   ├── sample1_R1.fastq.gz
+│   ├── sample1_R2.fastq.gz
+│   └── ...
+├── 📁 metadata/            # Sample metadata (CSV or TSV)
+│   └── run_metadata.csv
+├── 📁 scripts/             # Custom or pipeline scripts
+│   └── …
+├── 📁 outputs/              # Outputs per run
+│   └── 📁 run_YYYYmmdd_hhmmss
+│       ├── 📁 qc_reports/          # FastQC or MultiQC reports
+│       │   ├── fastqc/
+│       │   └── multiqc_report.html
+│       ├── 📁 processed_data/      # Trimmed, filtered reads
+│       │   ├── data_filtered/
+│       │   └── qiime2_demux/
+│       ├── 📁 feature_tables/      # OTU or ASV tables
+│       │   ├── table.qza
+│       │   └── table.tsv
+│       ├── 📁 taxonomy/            # Taxonomy assignment results
+│       │   ├── classifier.qza
+│       │   ├── taxonomy.qza
+│       │   └── taxonomy.tsv
+│       ├── 📁 phylogeny/           # Phylogenetic tree files
+│       │   ├── rooted-tree.qza
+│       │   └── unrooted-tree.qza
+│       ├── 📁 diversity_analysis/  # Alpha & beta diversity
+│       │   ├── core-metrics-results/
+│       │   └── emperor_plots/
+│       └── 📁 visualizations/      # QIIME 2 visualizations
+│           ├── taxonomy_barplots.qzv
+│           ├── rarefaction_curves.png
+│           └── …
+├── 📁 results/             # Final summary tables and plots per run (or sample?)
+│   └── summary_report.html
+│ 
+└── 📁 logs/                # Pipeline logs
+    └── run_YYYYmmdd_hhmmss_pipeline.log
+
