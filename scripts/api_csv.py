@@ -30,7 +30,7 @@ timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
 
 # Create unique folder for this run
 base_folder = "../metadata/original_data"
-output_folder = os.path.join(base_folder, f"run_{timestamp}")
+output_folder = os.path.join(base_folder, f"fetch_{timestamp}")
 os.makedirs(output_folder, exist_ok=True)
 
 # === FUNCTION TO PROCESS EACH WORKSHEET ===
