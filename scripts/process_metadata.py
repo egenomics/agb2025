@@ -95,11 +95,11 @@ def split_by_run_id(merged_df, output_directory):
 
 def main():
     # Find all fetch_{timestamp} folders in the metadata/original_data directory
-    base_directory = "agb2025/metadata/original_data"
+    base_directory = "../metadata/original_data"
     fetch_folders = glob.glob(os.path.join(base_directory, "fetched_*"))
     
     # Create output directory for split files
-    split_directory = "agb2025/metadata/merged_data"
+    split_directory = "../metadata/merged_data"
     os.makedirs(split_directory, exist_ok=True)
     
     # Process each fetch folder
