@@ -8,8 +8,10 @@ def clean_header(df):
     return df
 
 def format_df(df):
-    df = df.applymap(lambda x: str(x).replace(' ', '_').replace('-', '_').replace('/', '_'))
+    df = df.map(lambda x: str(x).replace(' ', '_').replace('-', '_').replace('/', '_'))
+    df.columns = (df.columns.str.strip().str.lower().str.replace(r'[^\w]+', '_', regex=True))  # Replace non-word chars with underscore
     return df
+
 def rename_sample_columns(df):
     column_mapping = {
         'if_you_are_smoker,_specify_the_number_of_cigarettes_per_day': 'daily_cigarettes',
@@ -26,49 +28,49 @@ def rename_sample_columns(df):
 
 def merge_run_and_sample_metadata(folder_path):
     # Find the run and sample metadata files from the fetch folder
-    run_file = glob.glob(os.path.join(folder_path, "run_metadata.csv"))
-    sample_file = glob.glob(os.path.join(folder_path, "sample_metadata.csv"))
-    
-    if not run_file: 
-        print(f"❌ Missing required {run_file} in folder {folder_path}")
+    run_files = glob.glob(os.path.join(folder_path, "run_metadata*.csv"))
+    sample_files = glob.glob(os.path.join(folder_path, "sample_metadata*.csv"))
+
+    if not run_files: 
+        print(f"❌ Missing required {run_files} in folder {folder_path}")
         return None
     
-    elif not sample_file:
-        print(f"❌ Missing required {sample_file} in folder {folder_path}")
+    elif not sample_files:
+        print(f"❌ Missing required {sample_files} in folder {folder_path}")
         return None
     
-    # Load run metadata file as a dataframe
     try:
-        run_df = pd.read_csv(run_file)
+        run_df_list = [pd.read_csv(f) for f in run_files]
+        run_df = pd.concat(run_df_list, ignore_index=True).drop_duplicates()
     except Exception as e:
-            print(f"❌ Error reading {run_file}: {e}")
-    
-    # Load all sample metadata files
-    try:
-        sample_df = pd.read_csv(sample_file)
-    except Exception as e:
-            print(f"❌ Error reading {sample_file}: {e}")
-    
-    if not run_df or not sample_df:
-        print(f"❌ Error importing files in folder {folder_path}")
+        print(f"❌ Error reading run metadata files: {e}")
         return None
-    
+
+    try:
+        sample_df_list = [pd.read_csv(f) for f in sample_files]
+        sample_df = pd.concat(sample_df_list, ignore_index=True).drop_duplicates()
+    except Exception as e:
+        print(f"❌ Error reading sample metadata files: {e}")
+        return None
+
     # Clean headers and remove 'Marca de temps' column
     cleaned_run_df = clean_header(run_df)
     cleaned_sample_df = clean_header(sample_df)
-    
-    cleaned_run_df = lower(cleaned_run_df)
-    cleaned_sample_df = lower(cleaned_sample_df)
+
+    # Normalize column names
+    cleaned_run_df.columns = cleaned_run_df.columns.str.lower()
+    cleaned_sample_df.columns = cleaned_sample_df.columns.str.lower()
 
     # Format dataframes to replace spaces and special characters
     formatted_run_df = format_df(cleaned_run_df)
     formatted_sample_df = format_df(cleaned_sample_df)
 
+
     # Rename specific columns in sample_metadata
-    formatted_sample_df = rename_sample_columns(sample_df)
-    
+    formatted_sample_df = rename_sample_columns(formatted_sample_df)
+
     # Merge dataframes based on Run_ID
-    merged_df = pd.merge(formatted_run_df, formatted_sample_df, on='run_ID', how='inner')
+    merged_df = pd.merge(formatted_run_df, formatted_sample_df, on='run_id', how='inner')
     
     return merged_df
 
@@ -93,17 +95,17 @@ def split_by_run_id(merged_df, output_directory):
 
 def main():
     # Find all fetch_{timestamp} folders in the metadata/original_data directory
-    base_directory = "../metadata/original_data"
+    base_directory = "agb2025/metadata/original_data"
     fetch_folders = glob.glob(os.path.join(base_directory, "fetched_*"))
     
     # Create output directory for split files
-    split_directory = "../metadata/merged_data"
+    split_directory = "agb2025/metadata/merged_data"
     os.makedirs(split_directory, exist_ok=True)
     
     # Process each fetch folder
     for folder in fetch_folders:
         merged_file = merge_run_and_sample_metadata(folder)
-        if merged_file:
+        if merged_file is not None:
             split_by_run_id(merged_file, split_directory)
 
 if __name__ == "__main__":
