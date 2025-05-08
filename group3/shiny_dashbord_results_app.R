@@ -18,7 +18,9 @@ library(reshape2)
 library(Rtsne)
 library(umap)
 library(RColorBrewer)
-# library(leaflet)
+library(ComplexHeatmap)
+library(circlize)
+# librar# librar# library(leaflet)
 
 # Define UI
 ui <- dashboardPage(
@@ -179,8 +181,8 @@ ui <- dashboardPage(
               )
             )
     ),
-    #-------------------------------------------------------------
-    # Taxonomy Tab 
+   
+    # TAB 2: Taxonomy Tab 
     tabItem(tabName = "taxonomy",
             fluidRow(
               box(
@@ -188,39 +190,172 @@ ui <- dashboardPage(
                 status = "primary", 
                 solidHeader = TRUE,
                 width = 3,
+                collapsible = TRUE, 
+                
+                # Core taxonomy settings 
                 selectInput("tax_level", "Taxonomic Level:",
                             choices = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
                             selected = "Phylum"),
-                selectInput("group_var", "Group By:",
-                            choices = c("None"), selected = "None"),
-                sliderInput("min_abundance", "Minimum Abundance (%):", 
-                            min = 0, max = 5, value = 1, step = 0.1),
+                
+                # Metadata filtering options 
+                selectInput("group_var", "Primary Group By:",
+                            choices = c("None", "Gender", "Geographical_origin", "Age_group", "Institution", 
+                                        "Ongoing_conditions", "Antibiotic_intake", "Smoking_status", 
+                                        "Alcohol_consumption", "Exercise_frequency"),
+                            selected = "None"),
+                
+                # Demographic comparison view 
+                checkboxInput("enable_comparison", "Enable Group Comparison", value = FALSE), 
+                conditionalPanel(
+                  condition = "input.enable_comparison == true", 
+                  selectInput("compare_var", "Compare By:", 
+                              choices = c("Gender", "Geographical_origin", "Age_group", "Institution", 
+                                      "Ongoing_conditions", "Antibiotic_intake", "Smoking_status", 
+                                      "Alcohol_consumption", "Exercise_frequency"),
+                              selected = "Gender"), 
+                  selectInput("compare_value1", "Group 1:", choices = NULL), 
+                  selectInput("compare_value2", "Group 2:", choices = NULL)
+                ),
+                
+                # Data transformation options
+                selectInput("normalization", "Data Normalization:",
+                            choices = c("Relative Abundance (%)" = "percentage", 
+                                        "Log10 Transformation" = "log10", 
+                                        "Z-Score" = "zscore", 
+                                        "Presence/Absence" = "binary"), 
+                            selected = "percentage"), 
+                
+                # Common settings 
+                sliderInput("min_abundance", "Minimum Abundance (%):",
+                            min = 0, max = 5, value = 1, step = 0.1), 
                 checkboxInput("sort_by_abundance", "Sort by Abundance", value = TRUE),
-                checkboxInput("show_legend", "Show Legend", value = TRUE),
-                radioButtons("plot_type", "Plot Type:",
-                             choices = c("Stacked Bar" = "bar", "Heatmap" = "heatmap"),
-                             selected = "bar"),
-                hr(),
-                downloadButton("download_tax_plot", "Download Plot", class = "btn-primary")
-              ),
+                checkboxInput("show_legend", "Show Legend", value = TRUE), 
+                checkboxInput("use_plotly", "Use interactive plot", value = FALSE)
+              ), 
+              
+              # Visualization settings 
+              box(
+                title = "Visualization Options", 
+                status = "primary", 
+                solidHeader = TRUE, 
+                width = 3, 
+                collapsible = TRUE, 
+                
+                # Plot types 
+                radioButtons("plot_type", "Plot Type:", 
+                             choices = c("Stacked Bar" = "bar", 
+                                         "Heatmap" = "heatmap", 
+                                         "Bubble Plot" = "bubble", 
+                                         "Geographic Map" = "geo_map", 
+                                         "Demographic Pattern" = "demo_pattern"), 
+                             selected = "bar"), 
+                
+                # Conditional options based on plot type 
+                conditionalPanel(
+                  condition = "input.plot_type == 'bar'", 
+                  checkboxInput("show_error_bars", "Show Error Bars", value = FALSE), 
+                  selectInput("bar_color_scheme", "Color Scheme:",
+                              choices = c("Viridis" = "viridis", 
+                                          "Set1" = "Set1", 
+                                          "Set2" = "Set2",
+                                          "Dark2" = "Dark2",
+                                          "Paired" = "Paired"),
+                              selected = "viridis")
+                ),
+                conditionalPanel(
+                  condition = "input.plot_type == 'heatmap'",
+                  selectInput("heatmap_palette", "Color Palette:",
+                              choices = c("Viridis" = "viridis", 
+                                          "Plasma" = "plasma", 
+                                          "Magma" = "magma",
+                                          "Inferno" = "inferno",
+                                          "RdBu" = "RdBu",
+                                          "RdYlBu" = "RdYlBu"),
+                              selected = "viridis"),
+                  selectInput("cluster_method", "Clustering Method:",
+                              choices = c("None" = "none",
+                                          "Euclidean" = "euclidean",
+                                          "Bray-Curtis" = "bray"),
+                              selected = "none")
+                ), 
+                conditionalPanel(
+                  condition = "input.plot_type == 'geo_map'",
+                  selectInput("geo_aggregation", "Geographic Aggregation:",
+                              choices = c("Region" = "region", 
+                                          "Country" = "country"),
+                              selected = "region"),
+                  selectInput("map_color_var", "Color By Taxa:",
+                              choices = NULL)
+                ),
+                conditionalPanel(
+                  condition = "input.plot_type == 'demo_pattern'",
+                  selectInput("demo_variable", "Demographic Variable:",
+                              choices = c("Age" = "Age", 
+                                          "Gender" = "Gender",
+                                          "BMI" = "BMI"),
+                              selected = "Age"),
+                  selectInput("pattern_type", "Pattern View:",
+                              choices = c("Trend Analysis" = "trend", 
+                                          "Distribution" = "distribution"),
+                              selected = "trend"),
+                  selectInput("selected_taxa", "Highlight Taxa:", choices = NULL)
+                ),
+                
+                hr(), 
+                downloadButton("download_tax_plot", "Download Plot:", class = "btn-primary")
+              ), 
+              
+              # Main plot area with tabs for multiple views 
               box(
                 title = "Taxonomic Composition", 
                 status = "info", 
                 solidHeader = TRUE,
-                width = 9,
-                plotOutput("taxonomy_plot", height = 600)
+                width = 6,
+                tabsetPanel(
+                  id = "tax_plot_tabs",
+                  tabPanel("Main View", 
+                           plotOutput("taxonomy_plot", height = 600)),
+                  tabPanel("Comparison View", 
+                           conditionalPanel(
+                             condition = "input.enable_comparison == true",
+                             plotOutput("comparison_plot", height = 600)
+                           ),
+                           conditionalPanel(
+                             condition = "input.enable_comparison == false",
+                             div(style = "text-align: center; margin-top: 250px;",
+                                 "Enable comparison in settings to view side-by-side comparisons")
+                           ))
+                )
               )
-            ),
+            ), 
             fluidRow(
+              # Enhanced taxa table with more metrics
               box(
-                title = "Top Taxa Table", 
+                title = "Top Taxa Analysis", 
                 status = "info", 
                 solidHeader = TRUE,
                 width = 12,
-                dataTableOutput("taxa_table")
+                tabsetPanel(
+                  id = "taxa_table_tabs",
+                  tabPanel("Overall", dataTableOutput("taxa_table")),
+                  tabPanel("By Demographics", 
+                           fluidRow(
+                             column(3,
+                                    selectInput("demo_table_var", "Group By:",
+                                                choices = c("Gender", "Geographical_origin", "Age_group", 
+                                                            "Ongoing_conditions", "Antibiotic_intake"),
+                                                selected = "Gender")
+                             ),
+                             column(9, dataTableOutput("taxa_demo_table"))
+                           ))
+                )
               )
             )
     ),
+                
+                
+    
+    ###################################################3
     
     # Alpha Diversity Tab
     tabItem(tabName = "alpha",
@@ -325,46 +460,11 @@ ui <- dashboardPage(
             )
     ),
     
-    # Metadata Explorer Tab
-    tabItem(tabName = "metadata",
-            fluidRow(
-              box(
-                title = "Metadata Exploration", 
-                status = "primary", 
-                solidHeader = TRUE,
-                width = 3,
-                selectInput("meta_x", "X-axis Variable:",
-                            choices = c("None"), selected = "None"),
-                selectInput("meta_y", "Y-axis Variable:",
-                            choices = c("None"), selected = "None"),
-                selectInput("meta_color", "Color By:",
-                            choices = c("None"), selected = "None"),
-                radioButtons("meta_plot_type", "Plot Type:",
-                             choices = c("Scatter" = "scatter", 
-                                         "Box Plot" = "box", 
-                                         "Bar Plot" = "bar"),
-                             selected = "scatter"),
-                hr(),
-                downloadButton("download_meta_plot", "Download Plot", class = "btn-primary")
-              ),
-              box(
-                title = "Metadata Visualization", 
-                status = "info", 
-                solidHeader = TRUE,
-                width = 9,
-                plotOutput("metadata_plot", height = 500)
-              )
-            ),
-            fluidRow(
-              box(
-                title = "Correlation Analysis", 
-                status = "info", 
-                solidHeader = TRUE,
-                width = 12,
-                plotOutput("correlation_plot", height = 400)
-              )
-            )
-    ),
+    # Other possible tabs 
+    tabItem(tabName = "clinical", h3("Clinical Factors - Under Development")),
+    tabItem(tabName = "lifestyle", h3("Lifestyle Impact - Under Development")),
+    tabItem(tabName = "interventions", h3("Medical Interventions - Under Development")),
+    tabItem(tabName = "multifactor", h3("Multi-factor Analysis - Under Development")),
     
     # Reports Tab
     tabItem(tabName = "reports",
@@ -684,189 +784,1026 @@ server <- function(input, output, session) {
               options = list(pageLength = 10, scrollX = TRUE))
   })
   
+  #### TAXONOMY TAB ######
   
-  # -----------------------------------------------
+  # Create reactive objects to store processed taxonomy data
+  taxonomy_data <- reactive({
+    req(data_store$taxonomy_data, data_store$sample_metadata)
+    
+    # Join taxonomy data with sample metadata
+    taxonomy_joined <- merge(data_store$taxonomy_data, 
+                             data_store$sample_metadata, 
+                             by = "Sample_ID")
+    
+    # Return the processed data
+    return(taxonomy_joined)
+  })
   
+  # Handle the dynamic UI updates for comparison values based on selected variable
+  observe({
+    req(input$enable_comparison, input$compare_var, data_store$sample_metadata)
+    if(input$enable_comparison) {
+      # Get unique values for the selected comparison variable
+      compare_values <- unique(data_store$sample_metadata[[input$compare_var]])
+      
+      # Update the select inputs
+      updateSelectInput(session, "compare_value1", 
+                        choices = compare_values,
+                        selected = compare_values[1])
+      
+      updateSelectInput(session, "compare_value2", 
+                        choices = compare_values,
+                        selected = if(length(compare_values) > 1) compare_values[2] else compare_values[1])
+    }
+  })
   
-  # Taxonomy plot 
-  output$taxonomy_plot <- renderPlot({
-    ps <- phyloseq_obj()
-    if (is.null(ps)) {
-      return(NULL)
+  # Update the selected taxa choices for demographic pattern plots
+  observe({
+    req(data_store$taxonomy_data)
+    
+    # Get taxonomic data at the selected level
+    taxa_names <- unique(data_store$taxonomy_data$Species)
+    
+    # Update the select inputs
+    updateSelectInput(session, "selected_taxa",
+                      choices = taxa_names,
+                      selected = taxa_names[1])
+    
+    # Also update map_color_var for geo_map
+    updateSelectInput(session, "map_color_var",
+                      choices = taxa_names,
+                      selected = taxa_names[1])
+  })
+  
+  # Function to process taxonomy data based on selected level and filters
+  process_taxonomy_data <- reactive({
+    req(taxonomy_data(), input$tax_level, input$normalization)
+    
+    tax_data <- taxonomy_data()
+    
+    # Default to Species level
+    tax_level_col <- "Species"
+    
+    # Extract the selected taxonomic level (simulated)
+    if(input$tax_level == "Phylum") {
+      # For demonstration, extract first word as "phylum"
+      tax_data$Phylum <- sapply(strsplit(as.character(tax_data$Species), " "), `[`, 1)
+      tax_level_col <- "Phylum"
+    } else if(input$tax_level == "Genus") {
+      # For demonstration, extract first word as "genus"
+      tax_data$Genus <- sapply(strsplit(as.character(tax_data$Species), " "), `[`, 1)
+      tax_level_col <- "Genus"
     }
     
-    # Get selected taxonomic level 
-    tax_level <- input$tax_level
-    
-    # Agglomerate at the selected taxonomic level 
-    ps_glom <- tax_glom(ps, taxrank = tax_level)
-    
-    # Transform to relavtive abundance
-    ps_rel <- transform_sample_counts(ps_glom, function(x) x / sum(x) * 100)
-    
-    # Melt to long format for ggplot 
-    ps_melt <- psmelt(ps_rel)
-    
-    # Filter low abundance taxa 
-    ps_melt <- ps_melt %>%
-      group_by(get(tax_level)) %>%
-      mutate(MeanAbundance = mean(Abundance)) %>%
-      ungroup()
-    
-    low_abundance_taxa <- ps_melt %>%
-      filter(MeanAbundance < input$min_abundance) %>%
-      pull(!!sym(tax_level)) %>%
-      unique()
-    
-    if (length(low_abundance_taxa) > 0) {
-      ps_melt <- ps_melt %>%
-        mutate(!!tax_level := ifelse(get(tax_level) %in% low_abundance_taxa, "Other", get(tax_level)))
+    # Apply normalization
+    if(input$normalization == "percentage") {
+      # Calculate relative abundance per sample
+      tax_data <- tax_data %>%
+        group_by(Sample_ID) %>%
+        mutate(Abundance = (Abundance / sum(Abundance)) * 100) %>%
+        ungroup()
+    } else if(input$normalization == "log10") {
+      # Log10 transformation (add small value to avoid log(0))
+      tax_data$Abundance <- log10(tax_data$Abundance + 1)
+    } else if(input$normalization == "zscore") {
+      # Z-score normalization per sample
+      tax_data <- tax_data %>%
+        group_by(Sample_ID) %>%
+        mutate(Abundance = (Abundance - mean(Abundance)) / max(.Machine$double.eps, sd(Abundance))) %>%
+        ungroup()
+    } else if(input$normalization == "binary") {
+      # Presence/absence
+      tax_data$Abundance <- ifelse(tax_data$Abundance > 0, 1, 0)
     }
     
-    # Create plot based on plot type
-    if (input$plot_type == "bar") {
-      # Group by the selected variable if not "None"
-      if (input$group_var != "None") {
-        group_var <- input$group_var
+    # Aggregate data by taxonomic level
+    tax_data_agg <- tax_data %>%
+      group_by(Sample_ID, !!sym(tax_level_col)) %>%
+      summarize(Abundance = sum(Abundance),
+                .groups = "drop")
+    
+    # Check if min_abundance is defined before applying filter
+    if(!is.null(input$min_abundance) && input$min_abundance > 0 && input$normalization == "percentage") {
+      # Calculate mean abundance per taxon
+      taxon_means <- tax_data_agg %>%
+        group_by(!!sym(tax_level_col)) %>%
+        summarize(MeanAbundance = mean(Abundance), .groups = "drop")
+      
+      # Identify low abundance taxa
+      low_abundance_taxa <- taxon_means %>%
+        filter(MeanAbundance < input$min_abundance) %>%
+        pull(!!sym(tax_level_col))
+      
+      # Replace low abundance taxa with "Other"
+      if(length(low_abundance_taxa) > 0) {
+        tax_data_agg[[tax_level_col]] <- ifelse(
+          tax_data_agg[[tax_level_col]] %in% low_abundance_taxa,
+          "Other",
+          tax_data_agg[[tax_level_col]]
+        )
         
-        # Reorder samples by group and abundance if requested 
-        if (input$sort_by_abundance) {
-          sample_order <- ps_melt %>%
-            group_by(Sample, !!sym(group_var)) %>%
+        # Re-aggregate after replacing with "Other"
+        tax_data_agg <- tax_data_agg %>%
+          group_by(Sample_ID, !!sym(tax_level_col)) %>%
+          summarize(Abundance = sum(Abundance), .groups = "drop")
+      }
+    }
+    
+    # Join with metadata for grouping
+    tax_data_with_meta <- merge(tax_data_agg, 
+                                data_store$sample_metadata, 
+                                by = "Sample_ID")
+    
+    return(list(
+      data = tax_data_with_meta,
+      tax_level = tax_level_col
+    ))
+  })
+  
+  # Generate the main taxonomy plot UI
+  output$taxonomy_plot <- renderUI({
+    req(data_store$taxonomy_data)
+    
+    # Check if we should use plotly or ggplot
+    if(input$plot_type == "bar" && input$use_plotly) {
+      # Use plotly output
+      plotlyOutput("plotly_bar", height = 600)
+    } else {
+      # Use regular plot output
+      plotOutput("taxonomy_plot_static", height = 600)
+    }
+  })
+  
+  # Add static plot output
+  output$taxonomy_plot_static <- renderPlot({
+    req(process_taxonomy_data())
+    
+    # Get processed data
+    processed <- process_taxonomy_data()
+    tax_data <- processed$data
+    tax_level_col <- processed$tax_level
+    
+    # Check if we have data to plot
+    if(nrow(tax_data) == 0) {
+      return(ggplot() + 
+               geom_text(aes(x = 0.5, y = 0.5, label = "No data available.")) +
+               theme_void())
+    }
+    
+    # Initialize plot
+    p <- NULL
+    
+    # Handle different plot types
+    if(input$plot_type == "bar") {
+      # Stacked bar plot
+      if(!is.null(input$group_var) && input$group_var != "None") {
+        # Group by selected variable
+        if(input$sort_by_abundance) {
+          # Sort samples by group and abundance
+          sample_order <- tax_data %>%
+            group_by(Sample_ID, !!sym(input$group_var)) %>%
             summarize(TotalAbundance = sum(Abundance), .groups = "drop") %>%
-            arrange(!!sym(group_var), desc(TotalAbundance)) %>%
-            pull(Sample)
-          ps_melt$Sample <- factor(ps_melt$Sample, levels = sample_order)
+            arrange(!!sym(input$group_var), desc(TotalAbundance)) %>%
+            pull(Sample_ID)
+          
+          tax_data$Sample_ID <- factor(tax_data$Sample_ID, levels = sample_order)
         }
         
-        # Create the grouped stacked bar plot 
-        p <- ggplot(ps_melt, aes(x = Sample, y = Abundance, fill = get(tax_level))) +
+        # Create grouped stacked bar plot
+        p <- ggplot(tax_data, aes(x = Sample_ID, y = Abundance, fill = !!sym(tax_level_col))) +
           geom_bar(stat = "identity") +
-          labs(x = "Sample", y = "Relative Abundance (%)", fill = "tax_level") +
-          theme_minimal() +
-          theme(
-            axis.text.x = element_text(angle = 45, hjust = 1, size = 8), 
-            legend.position = if (input$show_legend) "right" else "none"
+          labs(
+            title = paste("Taxonomic Composition at", input$tax_level, "Level"),
+            x = "Sample",
+            y = ifelse(input$normalization == "percentage", "Relative Abundance (%)", "Abundance"),
+            fill = input$tax_level
           ) +
-          facet_grid(. ~ get(group_var), scales = "free_x", space = "free_x")
-      } else {
-        # Create the non-grouped stacked bar plot. Reorder samples by abundance if requested
-        if (input$sort_by_abundance) {
-          sample_order <- ps_melt %>%
-            group_by(Sample) %>%
-            summarize(TotalAbundance = sum(Abundance), .groups = "drop") %>%
-            arrange(desc(TotalAbundance)) %>%
-            pull(Sample)
-          ps_melt$Sample <- factor(ps_melt$Sample, levels = sample_order)
-        }
-        
-        p <- ggplot(ps_melt, aes(x = Sample, y = Abundance, fill = get(tax_level))) +
-          geom_bar(stat = "identity") +
-          labs(x = "Sample", y = "Relative Abundance (%)", fill = tax_level) +
           theme_minimal() +
           theme(
             axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-            legend.position = if(input$show_legend) "right" else "none"
+            legend.position = ifelse(input$show_legend, "right", "none")
+          ) +
+          facet_grid(. ~ !!sym(input$group_var), scales = "free_x", space = "free_x")
+        
+      } else {
+        # Non-grouped bar plot
+        if(input$sort_by_abundance) {
+          # Sort samples by abundance
+          sample_order <- tax_data %>%
+            group_by(Sample_ID) %>%
+            summarize(TotalAbundance = sum(Abundance), .groups = "drop") %>%
+            arrange(desc(TotalAbundance)) %>%
+            pull(Sample_ID)
+          
+          tax_data$Sample_ID <- factor(tax_data$Sample_ID, levels = sample_order)
+        }
+        
+        # Create stacked bar plot
+        p <- ggplot(tax_data, aes(x = Sample_ID, y = Abundance, fill = !!sym(tax_level_col))) +
+          geom_bar(stat = "identity") +
+          labs(
+            title = paste("Taxonomic Composition at", input$tax_level, "Level"),
+            x = "Sample",
+            y = ifelse(input$normalization == "percentage", "Relative Abundance (%)", "Abundance"),
+            fill = input$tax_level
+          ) +
+          theme_minimal() +
+          theme(
+            axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+            legend.position = ifelse(input$show_legend, "right", "none")
           )
       }
       
-      # Use a colorful palette 
-      if (length(unique(ps_melt[[tax_level]])) <= 9) {
-        p <- p + scale_fill_brewer(palette = "Set1")
-      } else {
-        p <- p + scale_fill_viridis_d()
+      # Add error bars if requested and if grouping is enabled
+      if(!is.null(input$show_error_bars) && input$show_error_bars && !is.null(input$group_var) && input$group_var != "None") {
+        # Calculate mean and std error for each group
+        error_data <- tax_data %>%
+          group_by(!!sym(input$group_var), !!sym(tax_level_col)) %>%
+          summarize(
+            MeanAbundance = mean(Abundance),
+            SE = sd(Abundance) / sqrt(n()),
+            .groups = "drop"
+          )
+        
+        # Create a new position variable for error bars
+        group_counts <- length(unique(tax_data[[input$group_var]]))
+        error_data$position <- as.numeric(factor(error_data[[input$group_var]]))
+        
+        # Add error bars to the plot
+        p <- p + 
+          geom_errorbar(
+            data = error_data,
+            aes(
+              x = position,  
+              y = MeanAbundance,
+              ymin = MeanAbundance - SE,
+              ymax = MeanAbundance + SE
+            ),
+            width = 0.2,
+            position = position_dodge(0.9)
+          )
       }
-    } else if (input$plot_type == "heatmap") {
-      # Create heatmap for taxonomic abundance. Summarize data for heatmap
-      if (input$group_var != "None") {
+      
+      # Apply color scheme
+      if(input$bar_color_scheme == "viridis") {
+        p <- p + scale_fill_viridis_d()
+      } else {
+        p <- p + scale_fill_brewer(palette = input$bar_color_scheme)
+      }
+    } else if(input$plot_type == "heatmap") {
+      # For heatmap plot - simplified implementation here since ComplexHeatmap might not be available
+      # Use ggplot2 for a basic heatmap instead
+      
+      if(!is.null(input$group_var) && input$group_var != "None") {
         # Group samples for heatmap
-        heat_data <- ps_melt %>%
-          group_by(get(tax_level), !!sym(input$group_var)) %>%
-          summarize(MeanAbundance = mean(Abundance), .groups = "drop") %>%
-          spread(key = !!sym(input$group_var), value = MeanAbundance, fill = 0)
+        heat_data <- tax_data %>%
+          group_by(!!sym(tax_level_col), !!sym(input$group_var)) %>%
+          summarize(MeanAbundance = mean(Abundance), .groups = "drop")
         
-        # Convert back to long format for ggplot 
-        heat_data_long <- gather(heat_data, key = "Group", value = "Abundance", -1)
-        colnames(heat_data_long)[1] <- tax_level
-        
-        # Order taxa by overall abundance 
-        taxa_order <- ps_melt %>%
-          group_by(!!sym(tax_level)) %>%
+        # Create a basic heatmap using ggplot2
+        p <- ggplot(heat_data, aes(x = !!sym(input$group_var), y = !!sym(tax_level_col), fill = MeanAbundance)) +
+          geom_tile() +
+          labs(
+            title = paste("Heatmap of", input$tax_level, "by", input$group_var),
+            x = input$group_var,
+            y = input$tax_level,
+            fill = ifelse(input$normalization == "percentage", "Mean Abundance (%)", "Mean Abundance")
+          ) +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      } else {
+        # Sample-level heatmap
+        # Limit to top taxa for readability
+        taxa_abundance <- tax_data %>%
+          group_by(!!sym(tax_level_col)) %>%
           summarize(MeanAbundance = mean(Abundance), .groups = "drop") %>%
           arrange(desc(MeanAbundance)) %>%
-          pull(!!sym(tax_level))
-        heat_data_long[[tax_level]] <- factor(heat_data_long[[tax_level]], levels = taxa_order)
+          head(20)
         
-        # Create heatmap
-        p <- ggplot(heat_data_long, aes(x = Group, y =!!sym(tax_level), fill = Abundance)) +
+        top_taxa <- taxa_abundance %>% pull(!!sym(tax_level_col))
+        
+        # Filter for top taxa
+        filtered_data <- tax_data %>%
+          filter(!!sym(tax_level_col) %in% top_taxa)
+        
+        p <- ggplot(filtered_data, aes(x = Sample_ID, y = !!sym(tax_level_col), fill = Abundance)) +
           geom_tile() +
-          scale_fill_viridis_c(option = "plasma") +
-          labs(x = input$group_var, y = tax_level, fill = "Mean\nAbundance (%)") +
+          labs(
+            title = paste("Heatmap of Top", input$tax_level),
+            x = "Sample",
+            y = input$tax_level,
+            fill = ifelse(input$normalization == "percentage", "Abundance (%)", "Abundance")
+          ) +
           theme_minimal() +
           theme(
-            axis.text.x = element_text(angle = 45, hjust = 1),
-            legend.position = "right"
+            axis.text.x = element_text(angle = 90, hjust = 1, size = 7)
           )
+      }
+      
+      # Apply color palette
+      if(input$heatmap_palette == "viridis") {
+        p <- p + scale_fill_viridis_c()
+      } else if(input$heatmap_palette %in% c("plasma", "magma", "inferno")) {
+        p <- p + scale_fill_viridis_c(option = input$heatmap_palette)
       } else {
-        # Sample-level heatmap. Order taxa and samples
-        taxa_order <- ps_melt %>%
-          group_by(!!sym(tax_level)) %>%
+        p <- p + scale_fill_distiller(palette = input$heatmap_palette)
+      }
+      
+    } else if(input$plot_type == "bubble") {
+      # Bubble plot implementation
+      if(!is.null(input$group_var) && input$group_var != "None") {
+        # Group samples
+        bubble_data <- tax_data %>%
+          group_by(!!sym(tax_level_col), !!sym(input$group_var)) %>%
+          summarize(MeanAbundance = mean(Abundance), .groups = "drop")
+        
+        p <- ggplot(bubble_data, aes(x = !!sym(input$group_var), y = !!sym(tax_level_col), 
+                                     size = MeanAbundance, color = !!sym(tax_level_col))) +
+          geom_point(alpha = 0.7) +
+          scale_size_continuous(range = c(1, 10)) +
+          labs(
+            title = paste("Bubble Plot of", input$tax_level, "by", input$group_var),
+            x = input$group_var,
+            y = input$tax_level,
+            size = ifelse(input$normalization == "percentage", "Mean Abundance (%)", "Abundance")
+          ) +
+          theme_minimal() +
+          guides(color = guide_legend(title = input$tax_level))
+        
+      } else {
+        # Sample-level bubble plot (limited to top taxa)
+        taxa_abundance <- tax_data %>%
+          group_by(!!sym(tax_level_col)) %>%
           summarize(MeanAbundance = mean(Abundance), .groups = "drop") %>%
           arrange(desc(MeanAbundance)) %>%
-          head(20) %>% # Limit to top taxa for readability 
-          pull(!!sym(tax_level))
+          head(15)
         
-        # Filter for top taxa 
-        ps_melt_filtered <- ps_melt %>%
-          filter(!!sym(tax_level) %in% taxa_order)
+        top_taxa <- taxa_abundance %>% pull(!!sym(tax_level_col))
         
-        ps_melt_filtered[[tax_level]] <- factor(ps_melt_filtered[[tax_level]], levels = taxa_order)
+        filtered_data <- tax_data %>%
+          filter(!!sym(tax_level_col) %in% top_taxa)
         
-        # Create heatmap
-        p <- ggplot(ps_melt_filtered, aes(x = Sample, y = !!sym(tax_level), fill = Abundance)) +
-          geom_tile() +
-          scale_fill_viridis_c(option = "plasma") +
-          labs(x = "Sample", y = tax_level, fill = "Abundance (%)") +
+        p <- ggplot(filtered_data, aes(x = Sample_ID, y = !!sym(tax_level_col), 
+                                       size = Abundance, color = !!sym(tax_level_col))) +
+          geom_point(alpha = 0.7) +
+          scale_size_continuous(range = c(1, 8)) +
+          labs(
+            title = paste("Bubble Plot of Top", input$tax_level),
+            x = "Sample",
+            y = input$tax_level,
+            size = ifelse(input$normalization == "percentage", "Abundance (%)", "Abundance")
+          ) +
           theme_minimal() +
           theme(
             axis.text.x = element_text(angle = 90, hjust = 1, size = 7),
-            legend.position = "right"
+            legend.position = ifelse(input$show_legend, "right", "none")
           )
       }
+      
+    } else if(input$plot_type == "geo_map") {
+      # Geographic map implementation (simplified)
+      
+      # Verify map_color_var exists
+      if(is.null(input$map_color_var) || !input$map_color_var %in% unique(tax_data[[tax_level_col]])) {
+        return(ggplot() + 
+                 geom_text(aes(0.5, 0.5, label = "Please select a valid taxon for mapping.")) +
+                 theme_void())
+      }
+      
+      # Aggregate data by geographic region and selected taxon
+      geo_data <- tax_data %>%
+        filter(!!sym(tax_level_col) == input$map_color_var) %>%
+        group_by(Geographical_origin) %>%
+        summarize(MeanAbundance = mean(Abundance), .groups = "drop")
+      
+      # Check if we have data after filtering
+      if(nrow(geo_data) == 0) {
+        return(ggplot() + 
+                 geom_text(aes(0.5, 0.5, label = "No geographic data available for selected taxon.")) +
+                 theme_void())
+      }
+      
+      # This is a simplified placeholder for a geographic map
+      p <- ggplot(geo_data, aes(x = Geographical_origin, y = MeanAbundance, fill = Geographical_origin)) +
+        geom_bar(stat = "identity") +
+        labs(
+          title = paste("Geographic Distribution of", input$map_color_var),
+          x = "Geographic Region",
+          y = ifelse(input$normalization == "percentage", "Mean Abundance (%)", "Mean Abundance"),
+          fill = "Region"
+        ) +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      
+    } else if(input$plot_type == "demo_pattern") {
+      # Demographic pattern implementation
+      
+      # Make sure selected_taxa exists
+      if(is.null(input$selected_taxa) || !input$selected_taxa %in% unique(tax_data[[tax_level_col]])) {
+        return(ggplot() + 
+                 geom_text(aes(0.5, 0.5, label = "Please select a valid taxon.")) +
+                 theme_void())
+      }
+      
+      # Filter for selected taxon
+      demo_data <- tax_data %>%
+        filter(!!sym(tax_level_col) == input$selected_taxa)
+      
+      # Check if we have any data after filtering
+      if(nrow(demo_data) == 0) {
+        return(ggplot() + 
+                 geom_text(aes(0.5, 0.5, label = "No data available for selected taxon.")) +
+                 theme_void())
+      }
+      
+      if(!is.null(input$pattern_type) && input$pattern_type == "trend") {
+        # Trend analysis by demographic variable
+        if(!is.null(input$demo_variable) && input$demo_variable == "Age") {
+          # For age, we can do a scatter plot with trend line
+          p <- ggplot(demo_data, aes(x = Age, y = Abundance)) +
+            geom_point(alpha = 0.6) +
+            geom_smooth(method = "loess", se = TRUE) +
+            labs(
+              title = paste("Abundance of", input$selected_taxa, "by Age"),
+              x = "Age",
+              y = ifelse(input$normalization == "percentage", "Abundance (%)", "Abundance")
+            ) +
+            theme_minimal()
+          
+        } else if(!is.null(input$demo_variable) && input$demo_variable == "BMI") {
+          # Similar approach for BMI
+          p <- ggplot(demo_data, aes(x = BMI, y = Abundance)) +
+            geom_point(alpha = 0.6) +
+            geom_smooth(method = "loess", se = TRUE) +
+            labs(
+              title = paste("Abundance of", input$selected_taxa, "by BMI"),
+              x = "BMI",
+              y = ifelse(input$normalization == "percentage", "Abundance (%)", "Abundance")
+            ) +
+            theme_minimal()
+          
+        } else {
+          # For categorical variables like Gender
+          p <- ggplot(demo_data, aes(x = !!sym(input$demo_variable), y = Abundance, fill = !!sym(input$demo_variable))) +
+            geom_boxplot() +
+            labs(
+              title = paste("Abundance of", input$selected_taxa, "by", input$demo_variable),
+              x = input$demo_variable,
+              y = ifelse(input$normalization == "percentage", "Abundance (%)", "Abundance")
+            ) +
+            theme_minimal()
+        }
+        
+      } else if(!is.null(input$pattern_type) && input$pattern_type == "distribution") {
+        # Distribution analysis
+        if(!is.null(input$demo_variable) && input$demo_variable %in% c("Age", "BMI")) {
+          # For continuous variables, create density plots
+          p <- ggplot(demo_data, aes(x = Abundance, fill = cut_width(!!sym(input$demo_variable), width = 5))) +
+            geom_density(alpha = 0.7) +
+            labs(
+              title = paste("Distribution of", input$selected_taxa, "by", input$demo_variable, "Groups"),
+              x = ifelse(input$normalization == "percentage", "Abundance (%)", "Abundance"),
+              y = "Density",
+              fill = paste(input$demo_variable, "Group")
+            ) +
+            theme_minimal()
+          
+        } else {
+          # For categorical variables
+          p <- ggplot(demo_data, aes(x = Abundance, fill = !!sym(input$demo_variable))) +
+            geom_density(alpha = 0.7) +
+            labs(
+              title = paste("Distribution of", input$selected_taxa, "by", input$demo_variable),
+              x = ifelse(input$normalization == "percentage", "Abundance (%)", "Abundance"),
+              y = "Density",
+              fill = input$demo_variable
+            ) +
+            theme_minimal()
+        }
+      }
     }
+    
     return(p)
   })
   
-  # Top taxa table
-  output$taxa_table <- renderDataTable({
-    ps <- phyloseq_obj()
-    if (is.null(ps)) {
-      return(NULL)
+  # Plotly output
+  output$plotly_bar <- renderPlotly({
+    req(process_taxonomy_data())
+    
+    # Get processed data
+    processed <- process_taxonomy_data()
+    tax_data <- processed$data
+    tax_level_col <- processed$tax_level
+    
+    # Check if we have data
+    if(nrow(tax_data) == 0) {
+      # Return an empty plotly plot with a message
+      return(plot_ly() %>% 
+               add_trace(type = "scatter", mode = "text", text = "No data available") %>%
+               layout(title = "No Data"))
     }
-    # Get selected taxonomic level 
-    tax_level <- input$tax_level
     
-    # Agglomerate and calculate relative abundance 
-    ps_glom <- tax_glom(ps, taxrank = tax_level)
-    ps_rel <- transform_sample_counts(ps_glom, function(x) x / sum(x) * 100)
-    ps_melt <- psmelt(ps_rel)
+    # Handle different grouping scenarios
+    if(!is.null(input$group_var) && input$group_var != "None") {
+      # Group by selected variable
+      if(input$sort_by_abundance) {
+        # Sort samples by group and abundance
+        sample_order <- tax_data %>%
+          group_by(Sample_ID, !!sym(input$group_var)) %>%
+          summarize(TotalAbundance = sum(Abundance), .groups = "drop") %>%
+          arrange(!!sym(input$group_var), desc(TotalAbundance)) %>%
+          pull(Sample_ID)
+        
+        tax_data$Sample_ID <- factor(tax_data$Sample_ID, levels = sample_order)
+      }
+      
+      # Create grouped stacked bar plot with plotly
+      p <- plot_ly(tax_data, x = ~Sample_ID, y = ~Abundance, color = ~get(tax_level_col),
+                   type = "bar", text = ~paste(get(tax_level_col), ": ", round(Abundance, 2)),
+                   hoverinfo = "text") %>%
+        layout(
+          title = paste("Taxonomic Composition at", input$tax_level, "Level"),
+          xaxis = list(title = "Sample", tickangle = 45),
+          yaxis = list(title = ifelse(input$normalization == "percentage", "Relative Abundance (%)", "Abundance")),
+          barmode = "stack",
+          showlegend = input$show_legend,
+          margin = list(b = 100)  # Add margin to bottom for rotated labels
+        )
+      
+      # Add faceting by group
+      # Since plotly doesn't have direct faceting, we create annotations for groups
+      group_levels <- unique(tax_data[[input$group_var]])
+      samples_by_group <- split(tax_data$Sample_ID, tax_data[[input$group_var]])
+      
+      annotations <- list()
+      for(i in seq_along(group_levels)) {
+        grp <- group_levels[i]
+        samples <- unique(samples_by_group[[as.character(grp)]])
+        
+        # Check if samples exist for this group
+        if(length(samples) > 0) {
+          # Find the level indices that match our samples
+          level_indices <- which(levels(tax_data$Sample_ID) %in% samples)
+          
+          # Only proceed if we found matching indices
+          if(length(level_indices) > 0) {
+            midpoint <- mean(level_indices)
+            
+            annotations[[i]] <- list(
+              x = midpoint,
+              y = 1.05, 
+              text = as.character(grp),
+              xref = "x",
+              yref = "paper",
+              showarrow = FALSE,
+              font = list(size = 14)
+            )
+          }
+        }
+      }
+      
+      # Only add annotations if we have some
+      if(length(annotations) > 0) {
+        p <- p %>% layout(annotations = annotations)
+      }
+      
+    } else {
+      # Non-grouped bar plot
+      if(input$sort_by_abundance) {
+        # Sort samples by abundance
+        sample_order <- tax_data %>%
+          group_by(Sample_ID) %>%
+          summarize(TotalAbundance = sum(Abundance), .groups = "drop") %>%
+          arrange(desc(TotalAbundance)) %>%
+          pull(Sample_ID)
+        
+        tax_data$Sample_ID <- factor(tax_data$Sample_ID, levels = sample_order)
+      }
+      
+      # Create stacked bar plot with plotly
+      p <- plot_ly(tax_data, x = ~Sample_ID, y = ~Abundance, color = ~get(tax_level_col),
+                   type = "bar", text = ~paste(get(tax_level_col), ": ", round(Abundance, 2)),
+                   hoverinfo = "text") %>%
+        layout(
+          title = paste("Taxonomic Composition at", input$tax_level, "Level"),
+          xaxis = list(title = "Sample", tickangle = 45),
+          yaxis = list(title = ifelse(input$normalization == "percentage", "Relative Abundance (%)", "Abundance")),
+          barmode = "stack",
+          showlegend = input$show_legend,
+          margin = list(b = 100)  # Add margin to bottom for rotated labels
+        )
+    }
     
-    # Summarize by selected taxonomic level 
-    taxa_summary <- ps_melt %>%
-      group_by(!!sym(tax_level)) %>%
-      summarize(
-        MeanRelativeAbundance = mean(Abundance),
-        MaxRelativeAbundance = max(Abundance), 
-        Prevalence = sum(Abundance > 0) / length(unique(Sample)) * 100, 
-        .groups = "drop"
-      ) %>%
-      arrange(desc(MeanRelativeAbundance))
+    # Apply color scheme through plotly
+    # Count unique taxa safely
+    n_taxa <- length(unique(tax_data[[tax_level_col]]))
     
-    datatable(taxa_summary, 
-              options = list(pageLength = 10, scrollX = TRUE),
-              rownames = FALSE) %>%
-      formatRound(columns = c("MeanRelativeAbundance", "MaxRelativeAbundance", "Prevalence"), digits = 2)
+    if(input$bar_color_scheme == "viridis") {
+      colors <- viridis::viridis(max(n_taxa, 1))
+    } else {
+      # Use a safe approach to get colors
+      if(n_taxa <= 9) {
+        colors <- RColorBrewer::brewer.pal(max(n_taxa, 3), input$bar_color_scheme)
+        if(n_taxa < 3) colors <- colors[1:n_taxa]
+      } else {
+        base_colors <- RColorBrewer::brewer.pal(9, input$bar_color_scheme)
+        colors <- colorRampPalette(base_colors)(n_taxa)
+      }
+    }
+    
+    # Apply colors to plotly
+    p <- p %>% layout(colorway = colors)
+    
+    return(p)
   })
+  
+  # # Generate comparison plot
+  # output$comparison_plot <- renderPlot({
+  #   req(process_taxonomy_data(), input$enable_comparison, input$compare_var, 
+  #       input$compare_value1, input$compare_value2)
+  #   
+  #   # Get processed data
+  #   processed <- process_taxonomy_data()
+  #   tax_data <- processed$data
+  #   tax_level_col <- processed$tax_level
+  #   
+  #   # Filter data for the two comparison groups
+  #   comp_data <- tax_data %>%
+  #     filter(!!sym(input$compare_var) %in% c(input$compare_value1, input$compare_value2))
+  #   
+  #   # Calculate mean abundance by taxon and group
+  #   comp_summary <- comp_data %>%
+  #     group_by(!!sym(tax_level_col), !!sym(input$compare_var)) %>%
+  #     summarize(
+  #       MeanAbundance = mean(Abundance),
+  #       SE = sd(Abundance) / sqrt(n()),
+  #       .groups = "drop"
+  #     )
+  #   
+  #   # Filter to top taxa for readability
+  #   if(nrow(comp_summary) > 0) {
+  #     # Get top taxa based on overall abundance
+  #     top_taxa <- comp_data %>%
+  #       group_by(!!sym(tax_level_col)) %>%
+  #       summarize(MeanAbundance = mean(Abundance), .groups = "drop") %>%
+  #       arrange(desc(MeanAbundance)) %>%
+  #       head(15) %>%
+  #       pull(!!sym(tax_level_col))
+  #     
+  #     # Filter for top taxa
+  #     comp_summary <- comp_summary %>%
+  #       filter(!!sym(tax_level_col) %in% top_taxa)
+  #     
+  #     # Create comparison plot
+  #     p <- ggplot(comp_summary, aes(x = !!sym(tax_level_col), y = MeanAbundance, 
+  #                                   fill = !!sym(input$compare_var))) +
+  #       geom_bar(stat = "identity", position = position_dodge()) +
+  #       geom_errorbar(aes(ymin = MeanAbundance - SE, ymax = MeanAbundance + SE),
+  #                     position = position_dodge(0.9), width = 0.25) +
+  #       labs(
+  #         title = paste("Comparison of", input$tax_level, "between", input$compare_value1, "and", input$compare_value2),
+  #         x = input$tax_level,
+  #         y = ifelse(input$normalization == "percentage", "Mean Abundance (%)", "Mean Abundance"),
+  #         fill = input$compare_var
+  #       ) +
+  #       theme_minimal() +
+  #       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  #     
+  #     return(p)
+  #   }
+  #   
+  #   # Return empty plot if no data
+  #   ggplot() + 
+  #     theme_void() + 
+  #     geom_text(aes(0, 0, label = "No data available for comparison"))
+  # })
+  # 
+  # # Generate taxa table by demographics
+  # output$taxa_demo_table <- renderDataTable({
+  #   req(process_taxonomy_data(), input$demo_table_var)
+  #   
+  #   # Get processed data
+  #   processed <- process_taxonomy_data()
+  #   tax_data <- processed$data
+  #   tax_level_col <- processed$tax_level
+  #   
+  #   # Summarize by taxonomic level and demographic variable
+  #   taxa_demo_summary <- tax_data %>%
+  #     group_by(!!sym(tax_level_col), !!sym(input$demo_table_var)) %>%
+  #     summarize(
+  #       MeanAbundance = mean(Abundance),
+  #       MedianAbundance = median(Abundance),
+  #       StdDev = sd(Abundance),
+  #       Prevalence = sum(Abundance > 0) / n() * 100,
+  #       SampleCount = n(),
+  #       .groups = "drop"
+  #     ) %>%
+  #     arrange(!!sym(input$demo_table_var), desc(MeanAbundance))
+  #   
+  #   # Render the data table
+  #   datatable(taxa_demo_summary,
+  #             options = list(pageLength = 10, scrollX = TRUE),
+  #             rownames = FALSE) %>%
+  #     formatRound(columns = c("MeanAbundance", "MedianAbundance", "StdDev", "Prevalence"), digits = 2)
+  # })
+  # 
+  # # Generate overall taxa table
+  # output$taxa_table <- renderDataTable({
+  #   req(process_taxonomy_data())
+  #   
+  #   # Get processed data
+  #   processed <- process_taxonomy_data()
+  #   tax_data <- processed$data
+  #   tax_level_col <- processed$tax_level
+  #   
+  #   # Summarize by taxonomic level
+  #   taxa_summary <- tax_data %>%
+  #     group_by(!!sym(tax_level_col)) %>%
+  #     summarize(
+  #       MeanAbundance = mean(Abundance),
+  #       MedianAbundance = median(Abundance),
+  #       MaxAbundance = max(Abundance),
+  #       StdDev = sd(Abundance),
+  #       Prevalence = sum(Abundance > 0) / n() * 100,
+  #       SampleCount = n(),
+  #       .groups = "drop"
+  #     ) %>%
+  #     arrange(desc(MeanAbundance))
+  #   
+  #   # Render the data table
+  #   datatable(taxa_summary,
+  #             options = list(pageLength = 10, scrollX = TRUE),
+  #             rownames = FALSE) %>%
+  #     formatRound(columns = c("MeanAbundance", "MedianAbundance", "MaxAbundance", "StdDev", "Prevalence"), digits = 2)
+  # })
+  # 
+  # # Download handler for taxonomy plot
+  # output$download_tax_plot <- downloadHandler(
+  #   filename = function() {
+  #     paste("taxonomy_plot_", input$tax_level, "_", Sys.Date(), ".png", sep = "")
+  #   },
+  #   content = function(file) {
+  #     # Directly render the plot again instead of trying to access output objects
+  #     if(input$tax_plot_tabs == "Main View") {
+  #       # Get processed data again
+  #       processed <- process_taxonomy_data()
+  #       tax_data <- processed$data
+  #       tax_level_col <- processed$tax_level
+  #       
+  #       # Recreate the plot logic from taxonomy_plot_static
+  #       # Handle different plot types
+  #       if(input$plot_type == "bar") {
+  #         # Stacked bar plot logic (simplified)
+  #         p <- ggplot(tax_data, aes(x = Sample_ID, y = Abundance, fill = !!sym(tax_level_col))) +
+  #           geom_bar(stat = "identity") +
+  #           labs(title = paste("Taxonomic Composition at", input$tax_level, "Level"))
+  #       } else if(input$plot_type == "heatmap") {
+  #         # Heatmap logic (simplified)
+  #         p <- ggplot(tax_data, aes(x = Sample_ID, y = !!sym(tax_level_col), fill = Abundance)) +
+  #           geom_tile() +
+  #           labs(title = paste("Heatmap of", input$tax_level))
+  #       } else {
+  #         # Default plot if other types not handled
+  #         p <- ggplot(tax_data, aes(x = Sample_ID, y = Abundance)) +
+  #           geom_bar(stat = "identity") +
+  #           labs(title = "Taxonomy Plot")
+  #       }
+  #     } else {
+  #       # For comparison plot
+  #       processed <- process_taxonomy_data()
+  #       tax_data <- processed$data
+  #       tax_level_col <- processed$tax_level
+  #       
+  #       # Filter data for the two comparison groups
+  #       comp_data <- tax_data %>%
+  #         filter(!!sym(input$compare_var) %in% c(input$compare_value1, input$compare_value2))
+  #       
+  #       # Check if we have data after filtering
+  #       if(nrow(comp_data) > 0) {
+  #         # Calculate mean abundance
+  #         comp_summary <- comp_data %>%
+  #           group_by(!!sym(tax_level_col), !!sym(input$compare_var)) %>%
+  #           summarize(
+  #             MeanAbundance = mean(Abundance),
+  #             SE = sd(Abundance) / sqrt(max(1, n())), # Avoid division by zero
+  #             .groups = "drop"
+  #           )
+  #         
+  #         # Check if we have data after summarizing
+  #         if(nrow(comp_summary) > 0) {
+  #           # Create comparison plot
+  #           p <- ggplot(comp_summary, aes(x = !!sym(tax_level_col), y = MeanAbundance, 
+  #                                         fill = !!sym(input$compare_var))) +
+  #             geom_bar(stat = "identity", position = position_dodge()) +
+  #             labs(title = paste("Comparison Plot"))
+  #         } else {
+  #           # No data after summarizing
+  #           p <- ggplot() + 
+  #             annotate("text", x = 0, y = 0, label = "No data available for comparison") +
+  #             theme_void()
+  #         }
+  #       } else {
+  #         # No data after filtering
+  #         p <- ggplot() + 
+  #           annotate("text", x = 0, y = 0, label = "No data available for comparison") +
+  #           theme_void()
+  #       }
+  #     }
+  #     
+  #     # Save the plot safely
+  #     tryCatch({
+  #       ggsave(file, plot = p, width = 10, height = 8, dpi = 300)
+  #     }, error = function(e) {
+  #       # Create a simple error message plot if ggsave fails
+  #       png(file, width = 800, height = 600)
+  #       plot(1, 1, type = "n", axes = FALSE, xlab = "", ylab = "")
+  #       text(1, 1, "Error generating plot: No data available")
+  #       dev.off()
+  #     })
+  
+  
+  # 
+  # # Taxonomy plot 
+  # output$taxonomy_plot <- renderPlot({
+  #   ps <- phyloseq_obj()
+  #   if (is.null(ps)) {
+  #     return(NULL)
+  #   }
+  #   
+  #   # Get selected taxonomic level 
+  #   tax_level <- input$tax_level
+  #   
+  #   # Agglomerate at the selected taxonomic level 
+  #   ps_glom <- tax_glom(ps, taxrank = tax_level)
+  #   
+  #   # Transform to relavtive abundance
+  #   ps_rel <- transform_sample_counts(ps_glom, function(x) x / sum(x) * 100)
+  #   
+  #   # Melt to long format for ggplot 
+  #   ps_melt <- psmelt(ps_rel)
+  #   
+  #   # Filter low abundance taxa 
+  #   ps_melt <- ps_melt %>%
+  #     group_by(get(tax_level)) %>%
+  #     mutate(MeanAbundance = mean(Abundance)) %>%
+  #     ungroup()
+  #   
+  #   low_abundance_taxa <- ps_melt %>%
+  #     filter(MeanAbundance < input$min_abundance) %>%
+  #     pull(!!sym(tax_level)) %>%
+  #     unique()
+  #   
+  #   if (length(low_abundance_taxa) > 0) {
+  #     ps_melt <- ps_melt %>%
+  #       mutate(!!tax_level := ifelse(get(tax_level) %in% low_abundance_taxa, "Other", get(tax_level)))
+  #   }
+  #   
+  #   # Create plot based on plot type
+  #   if (input$plot_type == "bar") {
+  #     # Group by the selected variable if not "None"
+  #     if (input$group_var != "None") {
+  #       group_var <- input$group_var
+  #       
+  #       # Reorder samples by group and abundance if requested 
+  #       if (input$sort_by_abundance) {
+  #         sample_order <- ps_melt %>%
+  #           group_by(Sample, !!sym(group_var)) %>%
+  #           summarize(TotalAbundance = sum(Abundance), .groups = "drop") %>%
+  #           arrange(!!sym(group_var), desc(TotalAbundance)) %>%
+  #           pull(Sample)
+  #         ps_melt$Sample <- factor(ps_melt$Sample, levels = sample_order)
+  #       }
+  #       
+  #       # Create the grouped stacked bar plot 
+  #       p <- ggplot(ps_melt, aes(x = Sample, y = Abundance, fill = get(tax_level))) +
+  #         geom_bar(stat = "identity") +
+  #         labs(x = "Sample", y = "Relative Abundance (%)", fill = "tax_level") +
+  #         theme_minimal() +
+  #         theme(
+  #           axis.text.x = element_text(angle = 45, hjust = 1, size = 8), 
+  #           legend.position = if (input$show_legend) "right" else "none"
+  #         ) +
+  #         facet_grid(. ~ get(group_var), scales = "free_x", space = "free_x")
+  #     } else {
+  #       # Create the non-grouped stacked bar plot. Reorder samples by abundance if requested
+  #       if (input$sort_by_abundance) {
+  #         sample_order <- ps_melt %>%
+  #           group_by(Sample) %>%
+  #           summarize(TotalAbundance = sum(Abundance), .groups = "drop") %>%
+  #           arrange(desc(TotalAbundance)) %>%
+  #           pull(Sample)
+  #         ps_melt$Sample <- factor(ps_melt$Sample, levels = sample_order)
+  #       }
+  #       
+  #       p <- ggplot(ps_melt, aes(x = Sample, y = Abundance, fill = get(tax_level))) +
+  #         geom_bar(stat = "identity") +
+  #         labs(x = "Sample", y = "Relative Abundance (%)", fill = tax_level) +
+  #         theme_minimal() +
+  #         theme(
+  #           axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+  #           legend.position = if(input$show_legend) "right" else "none"
+  #         )
+  #     }
+  #     
+  #     # Use a colorful palette 
+  #     if (length(unique(ps_melt[[tax_level]])) <= 9) {
+  #       p <- p + scale_fill_brewer(palette = "Set1")
+  #     } else {
+  #       p <- p + scale_fill_viridis_d()
+  #     }
+  #   } else if (input$plot_type == "heatmap") {
+  #     # Create heatmap for taxonomic abundance. Summarize data for heatmap
+  #     if (input$group_var != "None") {
+  #       # Group samples for heatmap
+  #       heat_data <- ps_melt %>%
+  #         group_by(get(tax_level), !!sym(input$group_var)) %>%
+  #         summarize(MeanAbundance = mean(Abundance), .groups = "drop") %>%
+  #         spread(key = !!sym(input$group_var), value = MeanAbundance, fill = 0)
+  #       
+  #       # Convert back to long format for ggplot 
+  #       heat_data_long <- gather(heat_data, key = "Group", value = "Abundance", -1)
+  #       colnames(heat_data_long)[1] <- tax_level
+  #       
+  #       # Order taxa by overall abundance 
+  #       taxa_order <- ps_melt %>%
+  #         group_by(!!sym(tax_level)) %>%
+  #         summarize(MeanAbundance = mean(Abundance), .groups = "drop") %>%
+  #         arrange(desc(MeanAbundance)) %>%
+  #         pull(!!sym(tax_level))
+  #       heat_data_long[[tax_level]] <- factor(heat_data_long[[tax_level]], levels = taxa_order)
+  #       
+  #       # Create heatmap
+  #       p <- ggplot(heat_data_long, aes(x = Group, y =!!sym(tax_level), fill = Abundance)) +
+  #         geom_tile() +
+  #         scale_fill_viridis_c(option = "plasma") +
+  #         labs(x = input$group_var, y = tax_level, fill = "Mean\nAbundance (%)") +
+  #         theme_minimal() +
+  #         theme(
+  #           axis.text.x = element_text(angle = 45, hjust = 1),
+  #           legend.position = "right"
+  #         )
+  #     } else {
+  #       # Sample-level heatmap. Order taxa and samples
+  #       taxa_order <- ps_melt %>%
+  #         group_by(!!sym(tax_level)) %>%
+  #         summarize(MeanAbundance = mean(Abundance), .groups = "drop") %>%
+  #         arrange(desc(MeanAbundance)) %>%
+  #         head(20) %>% # Limit to top taxa for readability 
+  #         pull(!!sym(tax_level))
+  #       
+  #       # Filter for top taxa 
+  #       ps_melt_filtered <- ps_melt %>%
+  #         filter(!!sym(tax_level) %in% taxa_order)
+  #       
+  #       ps_melt_filtered[[tax_level]] <- factor(ps_melt_filtered[[tax_level]], levels = taxa_order)
+  #       
+  #       # Create heatmap
+  #       p <- ggplot(ps_melt_filtered, aes(x = Sample, y = !!sym(tax_level), fill = Abundance)) +
+  #         geom_tile() +
+  #         scale_fill_viridis_c(option = "plasma") +
+  #         labs(x = "Sample", y = tax_level, fill = "Abundance (%)") +
+  #         theme_minimal() +
+  #         theme(
+  #           axis.text.x = element_text(angle = 90, hjust = 1, size = 7),
+  #           legend.position = "right"
+  #         )
+  #     }
+  #   }
+  #   return(p)
+  # })
+  # 
+  # # Top taxa table
+  # output$taxa_table <- renderDataTable({
+  #   ps <- phyloseq_obj()
+  #   if (is.null(ps)) {
+  #     return(NULL)
+  #   }
+  #   # Get selected taxonomic level 
+  #   tax_level <- input$tax_level
+  #   
+  #   # Agglomerate and calculate relative abundance 
+  #   ps_glom <- tax_glom(ps, taxrank = tax_level)
+  #   ps_rel <- transform_sample_counts(ps_glom, function(x) x / sum(x) * 100)
+  #   ps_melt <- psmelt(ps_rel)
+  #   
+  #   # Summarize by selected taxonomic level 
+  #   taxa_summary <- ps_melt %>%
+  #     group_by(!!sym(tax_level)) %>%
+  #     summarize(
+  #       MeanRelativeAbundance = mean(Abundance),
+  #       MaxRelativeAbundance = max(Abundance), 
+  #       Prevalence = sum(Abundance > 0) / length(unique(Sample)) * 100, 
+  #       .groups = "drop"
+  #     ) %>%
+  #     arrange(desc(MeanRelativeAbundance))
+  #   
+  #   datatable(taxa_summary, 
+  #             options = list(pageLength = 10, scrollX = TRUE),
+  #             rownames = FALSE) %>%
+  #     formatRound(columns = c("MeanRelativeAbundance", "MaxRelativeAbundance", "Prevalence"), digits = 2)
+  # })
+  
+  ###################################################################
   
   # Alpha diversity plot interactive
   output$alpha_plot <- renderPlotly({
