@@ -552,6 +552,14 @@ ui <- dashboardPage(
                               selected = "Dark2")
                 ),
                 
+                conditionalPanel(
+                  condition = "input.plot_type_life == 'Heatmap'",
+                  selectInput("heatmap_palette_life", "Heatmap Color Gradient:",
+                              choices = c("YlGnBu", "YlOrRd", "Blues", "Greens", "RdPu", "Oranges", "PuBu", "BuPu"),
+                              selected = "YlGnBu")
+                ),
+                
+                
                 hr(),
                 downloadButton("download_lifestyle_plot", "Download Plot", class = "btn-primary")
               ),
@@ -566,14 +574,14 @@ ui <- dashboardPage(
                 tabsetPanel(
                   id = "active_lifestyle_tab",  ## <-- Needed to detect tab
                   tabPanel("Diversity View", 
-                           plotOutput("lifestyle_diversity_plot"),
+                           plotOutput("lifestyle_diversity_plot", height = "600px"),
                            verbatimTextOutput("lifestyle_stat_test")),
                   
                   tabPanel("Taxon View", 
-                           plotOutput("lifestyle_taxon_plot")),
+                           plotOutput("lifestyle_taxon_plot", height = "600px")),
                   
                   tabPanel("Combined Score", 
-                           plotOutput("lifestyle_score_plot"))
+                           plotOutput("lifestyle_score_plot", height = "600px"))
                 )
               )
             )
@@ -1586,7 +1594,7 @@ server <- function(input, output, session) {
     choices <- if (input$active_lifestyle_tab == "Diversity View") {
       c("Boxplot + Points", "Violin", "Beeswarm", "Trend")
     } else if (input$active_lifestyle_tab == "Taxon View") {
-      c("Stacked Bar")
+      choices = c("Stacked Bar", "Boxplot + Points", "Violin", "Beeswarm", "Trend", "Heatmap")
     } else {
       character(0)
     }
@@ -1692,9 +1700,6 @@ server <- function(input, output, session) {
   
   
   
-  
-  
-  
   output$lifestyle_stat_test <- renderPrint({
     req(data_store$taxonomy_data, data_store$sample_metadata, input$lifestyle_variable)
     
@@ -1723,7 +1728,6 @@ server <- function(input, output, session) {
   })
   
   
-  
   output$lifestyle_taxon_plot <- renderPlot({
     req(input$lifestyle_variable)
     
@@ -1731,7 +1735,7 @@ server <- function(input, output, session) {
     tax_data <- processed$data
     tax_col <- processed$tax_col
     
-    # Normalize again if needed for dynamic reactivity (this is safe)
+    # Normalize abundance
     tax_data <- tax_data %>%
       group_by(Sample_ID) %>%
       mutate(NormAbundance = case_when(
@@ -1743,12 +1747,12 @@ server <- function(input, output, session) {
       )) %>%
       ungroup()
     
-    # Filter by min_abundance (only if percentage)
+    # Filter by minimum abundance
     if (input$normalization == "percentage") {
       tax_data <- tax_data %>% filter(NormAbundance >= input$min_abundance)
     }
     
-    # Top taxa selection
+    # Select top N taxa
     top_taxa <- tax_data %>%
       group_by(!!sym(tax_col)) %>%
       summarise(mean_abund = mean(NormAbundance), .groups = "drop") %>%
@@ -1758,35 +1762,95 @@ server <- function(input, output, session) {
     
     filtered_data <- tax_data %>% filter(!!sym(tax_col) %in% top_taxa)
     
-    plt <- ggplot(filtered_data, aes_string(x = input$lifestyle_variable, y = "NormAbundance", fill = tax_col))
-    
-    if (input$plot_type_life == "box") {
-      plt <- plt + geom_boxplot(alpha = 0.7, position = position_dodge()) +
+    # Plot logic
+    if (input$plot_type_life == "Violin") {
+      plt <- ggplot(filtered_data, aes(x = .data[[input$lifestyle_variable]], y = NormAbundance, fill = .data[[tax_col]])) +
+        geom_violin(alpha = 0.7, trim = FALSE, position = position_dodge()) +
+        scale_fill_brewer(palette = input$group_color_life) +
+        facet_wrap(as.formula(paste("~", tax_col)), scales = "fixed", ncol = 3)
+      
+    } else if (input$plot_type_life == "Boxplot + Points") {
+      plt <- ggplot(filtered_data, aes(x = .data[[input$lifestyle_variable]], y = NormAbundance, fill = .data[[tax_col]])) +
+        geom_boxplot(alpha = 0.6, position = position_dodge(), outlier.shape = NA) +
+        geom_jitter(width = 0.2, alpha = 0.5, shape = 21, color = "black") +
+        scale_fill_brewer(palette = input$group_color_life) +
         facet_wrap(as.formula(paste("~", tax_col)), scales = "free_y")
-    } else if (input$plot_type_life == "violin") {
-      plt <- plt + geom_violin(alpha = 0.7, trim = FALSE, position = position_dodge()) +
+      
+    } else if (input$plot_type_life == "Beeswarm") {
+      if (!requireNamespace("ggbeeswarm", quietly = TRUE)) {
+        showNotification("Install 'ggbeeswarm' to use Beeswarm plots.", type = "error")
+        return(NULL)
+      }
+      plt <- ggplot(filtered_data, aes(x = .data[[input$lifestyle_variable]], y = NormAbundance, fill = .data[[tax_col]])) +
+        ggbeeswarm::geom_beeswarm(priority = "density", cex = 1.5, size = 1.5, shape = 21, alpha = 0.6) +
+        scale_fill_brewer(palette = input$group_color_life) +
         facet_wrap(as.formula(paste("~", tax_col)), scales = "free_y")
-    } else if (input$plot_type_life == "trend") {
+      
+    } else if (input$plot_type_life == "Trend") {
+      plt <- ggplot(filtered_data, aes(x = .data[[input$lifestyle_variable]],
+                                       y = NormAbundance,
+                                       group = .data[[tax_col]],
+                                       color = .data[[tax_col]])) +
+        geom_point(alpha = 0.5)
+      
+      if (input$smooth_trend_life) {
+        plt <- plt + geom_smooth(method = "loess", se = FALSE)
+      } else {
+        plt <- plt + geom_line(linewidth = 1)
+      }
+      
       plt <- plt +
-        geom_point(alpha = 0.5) +
-        geom_smooth(aes(group = !!sym(tax_col), color = !!sym(tax_col)), method = "loess", se = FALSE) +
+        scale_color_brewer(palette = input$trend_palette_life) +
         facet_wrap(as.formula(paste("~", tax_col)), scales = "free_y") +
-        scale_color_brewer(palette = input$trend_palette_life)
+        labs(x = input$lifestyle_variable)
+      
+    } else if (input$plot_type_life == "Heatmap") {
+      # Prepare data for heatmap: average per group x taxon
+      heatmap_data <- filtered_data %>%
+        group_by(.data[[input$lifestyle_variable]], .data[[tax_col]]) %>%
+        summarise(mean_abund = mean(NormAbundance), .groups = "drop") %>%
+        rename(Group = 1, Taxon = 2)
+      
+      plt <- ggplot(heatmap_data, aes(x = Group, y = Taxon, fill = mean_abund)) +
+        geom_tile(color = "white") +
+        scale_fill_distiller(palette = input$heatmap_palette_life, direction = 1) +
+        theme_minimal() +
+        labs(x = input$lifestyle_variable, y = tax_col, fill = "Mean Abundance") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      
     } else {
-      # Bar plot
-      plt <- plt + geom_bar(stat = "summary", fun = mean, position = "stack") +
+      # Default: Stacked Bar Plot
+      plt <- ggplot(filtered_data, aes_string(x = input$lifestyle_variable, y = "NormAbundance", fill = tax_col)) +
+        geom_bar(stat = "summary", fun = mean, position = "stack") +
         scale_fill_brewer(palette = input$bar_color_life)
       if (input$show_error_bars_life) {
         plt <- plt + stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.3)
       }
     }
     
-    plt + theme_minimal() +
-      labs(title = paste("Top", input$tax_level_life, "by", input$lifestyle_variable),
-           x = input$lifestyle_variable,
-           y = paste("Abundance (", input$normalization, ")", sep = "")) +
-      theme(legend.position = ifelse(input$show_legend, "right", "none"))
+    # Final formatting
+    plt +
+      labs(
+        title = paste("Top", input$tax_level_life, "by", input$lifestyle_variable),
+        y = paste("Abundance (", input$normalization, ")")
+      ) +
+      theme(
+        panel.background = element_rect(fill = "white"),
+        plot.background = element_rect(fill = "white"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+        strip.text = element_text(face = "bold", size = 12),
+        strip.background = element_blank(),
+        strip.placement = "outside",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = ifelse(input$show_legend, "right", "none"),
+        panel.spacing = unit(5, "lines"),
+        plot.margin = margin(10, 10, 10, 10)
+      )
   })
+  
+  
   
   
   output$lifestyle_score_plot <- renderPlot({
