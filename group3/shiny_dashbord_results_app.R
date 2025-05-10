@@ -20,6 +20,7 @@ library(umap)
 library(RColorBrewer)
 library(ComplexHeatmap)
 library(circlize)
+
 # librar# librar# library(leaflet)
 
 # Define UI
@@ -462,7 +463,124 @@ ui <- dashboardPage(
     
     # Other possible tabs 
     tabItem(tabName = "clinical", h3("Clinical Factors - Under Development")),
-    tabItem(tabName = "lifestyle", h3("Lifestyle Impact - Under Development")),
+    
+    # TAB 4: Lifestyle Tab 
+    
+    tabItem(tabName = "lifestyle",
+            fluidRow(
+              
+              # LEFT PANEL: Lifestyle Settings
+              box(
+                title = "Lifestyle Settings",
+                status = "primary",
+                solidHeader = TRUE,
+                width = 3,
+                collapsible = TRUE, 
+                
+                selectInput("tax_level_life", "Taxonomic Level:",
+                            choices = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
+                            selected = "Phylum"),
+                selectInput("normalization", "Data Normalization:",
+                            choices = c("Relative Abundance (%)" = "percentage", 
+                                        "Log10 Transformation" = "log10", 
+                                        "Z-Score" = "zscore", 
+                                        "Presence/Absence" = "binary"), 
+                            selected = "percentage"),
+                sliderInput("min_abundance", "Minimum Abundance (%):", min = 0, max = 5, value = 1, step = 0.1),
+                
+                tags$hr(),
+                selectInput("lifestyle_variable", "Group By Lifestyle Variable:",
+                            choices = c("Smoking_status", "Alcohol_consumption", 
+                                        "Exercise_frequency", "Exercise_intensity", 
+                                        "Bowel_movement_frequency", "Bowel_movement_quality", "Diet_type")),
+                checkboxInput("enable_comparison", "Enable Lifestyle Group Comparison", value = FALSE),
+                conditionalPanel(
+                  condition = "input.enable_comparison == true", 
+                  selectInput("compare_var", "Compare Lifestyle Variable:", 
+                              choices = c("Smoking_status", "Alcohol_consumption", 
+                                          "Exercise_frequency", "Exercise_intensity", 
+                                          "Bowel_movement_frequency", "Bowel_movement_quality", "Diet_type"),
+                              selected = "Smoking_status"),
+                  selectInput("compare_value1", "Group 1:", choices = NULL), 
+                  selectInput("compare_value2", "Group 2:", choices = NULL)
+                ),
+                
+                tags$hr(),
+                checkboxInput("sort_by_abundance", "Sort by Abundance", value = TRUE),
+                checkboxInput("show_legend", "Show Legend", value = TRUE),
+                checkboxInput("use_plotly", "Use interactive plot", value = FALSE),
+                
+                tags$hr(),
+                selectInput("diversity_metric_life", "Diversity Metric:",
+                            choices = c("Shannon", "Invsimpson", "Simpson"),
+                            selected = "Shannon"),
+                helpText("Used in Diversity View and Combined Score")
+              ),
+              
+              # MIDDLE PANEL: Visualization Options
+              box(
+                title = "Visualization Options", 
+                status = "primary", 
+                solidHeader = TRUE, 
+                width = 3, 
+                collapsible = TRUE, 
+                
+                # Plot type selector (rendered dynamically in server)
+                uiOutput("plot_type_life_ui"),
+                
+                # Conditional options
+                conditionalPanel(
+                  condition = "input.plot_type_life == 'Stacked Bar'",
+                  selectInput("bar_color_life", "Color Scheme:",
+                              choices = c("Viridis", "Set1", "Dark2", "Pastel1", "Paired"),
+                              selected = "Set1"),
+                  checkboxInput("show_error_bars_life", "Show Error Bars", value = FALSE)
+                ),
+                
+                conditionalPanel(
+                  condition = "input.plot_type_life == 'Boxplot' || input.plot_type_life == 'Boxplot + Points' || input.plot_type_life == 'Violin' || input.plot_type_life == 'Beeswarm'",
+                  selectInput("group_color_life", "Color Palette:",
+                              choices = c("Set1", "Dark2", "Pastel1", "Paired", "Viridis"),
+                              selected = "Set1")
+                ),
+                
+                conditionalPanel(
+                  condition = "input.plot_type_life == 'Trend'",
+                  checkboxInput("smooth_trend_life", "Add Smoothed Line", value = TRUE),
+                  selectInput("trend_palette_life", "Line Colors:",
+                              choices = c("Set1", "Dark2", "Paired", "Pastel1", "Viridis"),
+                              selected = "Dark2")
+                ),
+                
+                hr(),
+                downloadButton("download_lifestyle_plot", "Download Plot", class = "btn-primary")
+              ),
+              
+              # RIGHT PANEL: Output Panel
+              box(
+                title = "Lifestyle Impact",
+                status = "info",
+                solidHeader = TRUE,
+                width = 6,
+                
+                tabsetPanel(
+                  id = "active_lifestyle_tab",  ## <-- Needed to detect tab
+                  tabPanel("Diversity View", 
+                           plotOutput("lifestyle_diversity_plot"),
+                           verbatimTextOutput("lifestyle_stat_test")),
+                  
+                  tabPanel("Taxon View", 
+                           plotOutput("lifestyle_taxon_plot")),
+                  
+                  tabPanel("Combined Score", 
+                           plotOutput("lifestyle_score_plot"))
+                )
+              )
+            )
+    ),
+    
+    
+    
     tabItem(tabName = "interventions", h3("Medical Interventions - Under Development")),
     tabItem(tabName = "multifactor", h3("Multi-factor Analysis - Under Development")),
     
@@ -1416,6 +1534,298 @@ server <- function(input, output, session) {
     
     return(p)
   })
+  
+  #### LIFESTYLE TAB ######
+  
+  process_lifestyle_taxonomy_data <- reactive({
+    req(data_store$taxonomy_data, data_store$sample_metadata)
+    
+    tax_data <- data_store$taxonomy_data
+    tax_level_col <- "Species"  # default
+    
+    # Simulate other levels from Species name
+    if (input$tax_level_life == "Phylum") {
+      tax_data$Phylum <- sapply(strsplit(as.character(tax_data$Species), " "), `[`, 1)
+      tax_level_col <- "Phylum"
+    } else if (input$tax_level_life == "Genus") {
+      tax_data$Genus <- sapply(strsplit(as.character(tax_data$Species), " "), `[`, 1)
+      tax_level_col <- "Genus"
+    }
+    
+    # Normalization
+    if (input$normalization == "percentage") {
+      tax_data <- tax_data %>%
+        group_by(Sample_ID) %>%
+        mutate(Abundance = Abundance / sum(Abundance) * 100) %>%
+        ungroup()
+    } else if (input$normalization == "log10") {
+      tax_data$Abundance <- log10(tax_data$Abundance + 1)
+    } else if (input$normalization == "zscore") {
+      tax_data <- tax_data %>%
+        group_by(Sample_ID) %>%
+        mutate(Abundance = scale(Abundance)[, 1]) %>%
+        ungroup()
+    } else if (input$normalization == "binary") {
+      tax_data$Abundance <- ifelse(tax_data$Abundance > 0, 1, 0)
+    }
+    
+    # Aggregate by taxonomic level
+    tax_data_agg <- tax_data %>%
+      group_by(Sample_ID, !!sym(tax_level_col)) %>%
+      summarise(Abundance = sum(Abundance), .groups = "drop")
+    
+    # Join with metadata
+    tax_data_merged <- left_join(tax_data_agg, data_store$sample_metadata, by = "Sample_ID")
+    
+    return(list(data = tax_data_merged, tax_col = tax_level_col))
+  })
+  
+  output$plot_type_life_ui <- renderUI({
+    req(input$active_lifestyle_tab)
+    
+    choices <- if (input$active_lifestyle_tab == "Diversity View") {
+      c("Boxplot + Points", "Violin", "Beeswarm", "Trend")
+    } else if (input$active_lifestyle_tab == "Taxon View") {
+      c("Stacked Bar")
+    } else {
+      character(0)
+    }
+    
+    radioButtons("plot_type_life", "Plot Type:", choices = choices, selected = choices[1])
+  })
+  
+  
+  output$lifestyle_diversity_plot <- renderPlot({
+    req(data_store$taxonomy_data, data_store$sample_metadata, 
+        input$lifestyle_variable, input$diversity_metric_life, 
+        input$plot_type_life)
+    
+    tax_data <- data_store$taxonomy_data
+    meta_data <- data_store$sample_metadata
+    
+    # Reshape to wide format
+    wide_data <- tax_data %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+    
+    # Compute diversity
+    diversity_metrics <- wide_data %>%
+      column_to_rownames("Sample_ID") %>%
+      as.matrix() %>%
+      {
+        tibble(
+          Sample_ID = rownames(.),
+          Shannon = vegan::diversity(., index = "shannon"),
+          Simpson = vegan::diversity(., index = "simpson"),
+          Invsimpson = vegan::diversity(., index = "invsimpson")
+        )
+      }
+    
+    # Merge with metadata
+    diversity_df <- left_join(diversity_metrics, meta_data, by = "Sample_ID")
+    
+    metric_col <- input$diversity_metric_life
+    group_var <- input$lifestyle_variable
+    palette <- input$group_color_life
+    
+    # Start plot
+    p <- ggplot(diversity_df, aes(x = .data[[group_var]], y = .data[[metric_col]], fill = .data[[group_var]]))
+    
+    # Add selected plot type
+    if (input$plot_type_life == "Boxplot + Points") {
+      p <- p + 
+        geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+        geom_jitter(width = 0.2, shape = 21, alpha = 0.6, color = "black")
+      
+    } else if (input$plot_type_life == "Violin") {
+      p <- p + geom_violin(alpha = 0.7, trim = FALSE)
+      
+    } else if (input$plot_type_life == "Beeswarm") {
+      if (!requireNamespace("ggbeeswarm", quietly = TRUE)) {
+        showNotification("Install 'ggbeeswarm' package to use beeswarm plots.", type = "error")
+        return(NULL)
+      }
+      p <- p + ggbeeswarm::geom_beeswarm(priority = "density", cex = 1.5, size = 1.5, shape = 21, alpha = 0.6)
+      
+    } else if (input$plot_type_life == "Trend") {
+      add_smooth <- isTRUE(input$smooth_trend_life)
+      
+      # Handle palette color safely
+      trend_color <- if (input$trend_palette_life == "Viridis") {
+        viridisLite::viridis(1)
+      } else {
+        RColorBrewer::brewer.pal(8, input$trend_palette_life)[1]
+      }
+      
+      p <- ggplot(diversity_df, aes(x = as.numeric(factor(.data[[group_var]])), 
+                                    y = .data[[metric_col]], group = 1)) +
+        geom_point(alpha = 0.5)
+      
+      if (add_smooth) {
+        p <- p + geom_smooth(method = "loess", se = TRUE, color = trend_color)
+      }
+      
+      p <- p +
+        scale_x_continuous(breaks = 1:length(unique(diversity_df[[group_var]])),
+                           labels = unique(diversity_df[[group_var]])) +
+        labs(x = group_var)
+    }
+    
+    
+    
+    # Labels & Theme
+    p <- p +
+      labs(
+        title = paste(metric_col, "Diversity by", group_var),
+        y = paste(metric_col, "Index")
+      ) +
+      theme_minimal() +
+      theme(legend.position = ifelse(input$show_legend, "right", "none"))
+    
+    # Color palette (except Trend)
+    if (!(input$plot_type_life %in% c("Trend")) && !is.null(palette)) {
+      p <- p + scale_fill_brewer(palette = palette)
+    }
+    
+    return(p)
+  })
+  
+  
+  
+  
+  
+  
+  output$lifestyle_stat_test <- renderPrint({
+    req(data_store$taxonomy_data, data_store$sample_metadata, input$lifestyle_variable)
+    
+    tax_data <- data_store$taxonomy_data
+    meta_data <- data_store$sample_metadata
+    
+    # Reshape to wide
+    wide_data <- tax_data %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+    
+    # Compute diversity
+    diversity_values <- vegan::diversity(as.matrix(wide_data %>% column_to_rownames("Sample_ID")),
+                                         index = tolower(input$diversity_metric_life))
+    
+    # Merge with metadata
+    diversity_df <- tibble(
+      Sample_ID = wide_data$Sample_ID,
+      Diversity = diversity_values
+    ) %>%
+      left_join(meta_data, by = "Sample_ID")
+    
+    # Perform Kruskal-Wallis test
+    formula_str <- as.formula(paste("Diversity ~ `", input$lifestyle_variable, "`", sep = ""))
+    kruskal.test(formula_str, data = diversity_df)
+  })
+  
+  
+  
+  output$lifestyle_taxon_plot <- renderPlot({
+    req(input$lifestyle_variable)
+    
+    processed <- process_lifestyle_taxonomy_data()
+    tax_data <- processed$data
+    tax_col <- processed$tax_col
+    
+    # Normalize again if needed for dynamic reactivity (this is safe)
+    tax_data <- tax_data %>%
+      group_by(Sample_ID) %>%
+      mutate(NormAbundance = case_when(
+        input$normalization == "percentage" ~ Abundance,
+        input$normalization == "log10" ~ log10(Abundance + 1),
+        input$normalization == "zscore" ~ scale(Abundance)[, 1],
+        input$normalization == "binary" ~ as.numeric(Abundance > 0),
+        TRUE ~ Abundance
+      )) %>%
+      ungroup()
+    
+    # Filter by min_abundance (only if percentage)
+    if (input$normalization == "percentage") {
+      tax_data <- tax_data %>% filter(NormAbundance >= input$min_abundance)
+    }
+    
+    # Top taxa selection
+    top_taxa <- tax_data %>%
+      group_by(!!sym(tax_col)) %>%
+      summarise(mean_abund = mean(NormAbundance), .groups = "drop") %>%
+      arrange(desc(mean_abund)) %>%
+      slice_head(n = 5) %>%
+      pull(!!sym(tax_col))
+    
+    filtered_data <- tax_data %>% filter(!!sym(tax_col) %in% top_taxa)
+    
+    plt <- ggplot(filtered_data, aes_string(x = input$lifestyle_variable, y = "NormAbundance", fill = tax_col))
+    
+    if (input$plot_type_life == "box") {
+      plt <- plt + geom_boxplot(alpha = 0.7, position = position_dodge()) +
+        facet_wrap(as.formula(paste("~", tax_col)), scales = "free_y")
+    } else if (input$plot_type_life == "violin") {
+      plt <- plt + geom_violin(alpha = 0.7, trim = FALSE, position = position_dodge()) +
+        facet_wrap(as.formula(paste("~", tax_col)), scales = "free_y")
+    } else if (input$plot_type_life == "trend") {
+      plt <- plt +
+        geom_point(alpha = 0.5) +
+        geom_smooth(aes(group = !!sym(tax_col), color = !!sym(tax_col)), method = "loess", se = FALSE) +
+        facet_wrap(as.formula(paste("~", tax_col)), scales = "free_y") +
+        scale_color_brewer(palette = input$trend_palette_life)
+    } else {
+      # Bar plot
+      plt <- plt + geom_bar(stat = "summary", fun = mean, position = "stack") +
+        scale_fill_brewer(palette = input$bar_color_life)
+      if (input$show_error_bars_life) {
+        plt <- plt + stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.3)
+      }
+    }
+    
+    plt + theme_minimal() +
+      labs(title = paste("Top", input$tax_level_life, "by", input$lifestyle_variable),
+           x = input$lifestyle_variable,
+           y = paste("Abundance (", input$normalization, ")", sep = "")) +
+      theme(legend.position = ifelse(input$show_legend, "right", "none"))
+  })
+  
+  
+  output$lifestyle_score_plot <- renderPlot({
+    req(data_store$taxonomy_data, data_store$sample_metadata, input$lifestyle_variable, input$diversity_metric_life)
+    
+    merged_data <- merge(data_store$taxonomy_data, data_store$sample_metadata, by = "Sample_ID")
+    
+    diversity_scores <- merged_data %>%
+      group_by(Sample_ID) %>%
+      summarize(Diversity = vegan::diversity(Abundance, index = tolower(input$diversity_metric_life)))
+    
+    faecali_data <- merged_data %>%
+      filter(grepl("Faecalibacterium", Species)) %>%
+      group_by(Sample_ID) %>%
+      summarize(Faecali_Abund = sum(Abundance), .groups = "drop")
+    
+    score_df <- merge(diversity_scores, faecali_data, by = "Sample_ID", all = TRUE)
+    score_df$Faecali_Abund[is.na(score_df$Faecali_Abund)] <- 0
+    
+    score_df <- merge(score_df, data_store$sample_metadata[, c("Sample_ID", input$lifestyle_variable)], by = "Sample_ID")
+    colnames(score_df)[ncol(score_df)] <- "LifestyleGroup"
+    
+    score_df$Score <- scale(score_df$Diversity) + scale(score_df$Faecali_Abund)
+    
+    ggplot(score_df, aes(x = LifestyleGroup, y = Score, fill = LifestyleGroup)) +
+      geom_boxplot(alpha = 0.7) +
+      theme_minimal() +
+      labs(title = paste("Combined Score (", input$diversity_metric_life, " + Faecalibacterium)", sep = ""),
+           x = input$lifestyle_variable,
+           y = "Combined Score") +
+      theme(legend.position = ifelse(input$show_legend, "right", "none"))
+  })
+  
+  
+  
+  
+
+  
+  
   
   # # Generate comparison plot
   # output$comparison_plot <- renderPlot({
