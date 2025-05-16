@@ -20,6 +20,7 @@ library(umap)
 library(RColorBrewer)
 library(ComplexHeatmap)
 library(circlize)
+library(ggbeeswarm)
 
 # librar# librar# library(leaflet)
 
@@ -116,528 +117,555 @@ ui <- dashboardPage(
                   )
                 )
               )
-    ), 
-    
-    # TAB 1: Data Upload & Overview
-    tabItem(tabName = "data_overview",
-            fluidRow(
-              box(
-                title = "Upload Microbiome Data", 
-                status = "primary", 
-                solidHeader = TRUE, 
-                width = 8, 
-                fluidRow(
-                  column(
-                    width = 12,
-                    fileInput("sample_metadata", "Upload Sample Metadata (CSV or TSV format):",
-                              accept = c(".csv", ".tsv", ".txt")),
-                    fileInput("run_metadata", "Upload Run Metadata (CSV or TSV format):",
-                              accept = c(".csv", ".tsv", ".txt")),
-                    fileInput("taxonomy_file", "Upload Taxonomy Data (TSV format):",
-                              accept = c(".tsv", ".txt")),
-                    actionButton("load_data", "Load Data", 
-                                 icon = icon("upload"),
-                                 class = "btn-success"),
-                    actionButton("generate_example", "Generate Example Data", 
-                                 icon = icon("database"),
-                                 class = "btn-info")
+      ), 
+      
+      # TAB 1: Data Upload & Overview
+      tabItem(tabName = "data_overview",
+              fluidRow(
+                box(
+                  title = "Upload Microbiome Data", 
+                  status = "primary", 
+                  solidHeader = TRUE, 
+                  width = 8, 
+                  fluidRow(
+                    column(
+                      width = 12,
+                      fileInput("sample_metadata", "Upload Sample Metadata (CSV or TSV format):",
+                                accept = c(".csv", ".tsv", ".txt")),
+                      fileInput("run_metadata", "Upload Run Metadata (CSV or TSV format):",
+                                accept = c(".csv", ".tsv", ".txt")),
+                      fileInput("taxonomy_file", "Upload Taxonomy Data (TSV format):",
+                                accept = c(".tsv", ".txt")),
+                      fileInput("control_sample_metadata", "Upload Control Sample Metadata (CSV or TSV format):", 
+                                accept = c(".csv", ".tsv", ".txt")),
+                      fileInput("control_run_metadata", "Upload Control Run Metadata (CSV or TSV format):", 
+                                accept = c(".csv", ".tsv", ".txt")),
+                      fileInput("control_taxonomy", "Upload Control Taxonomy Data (TSV format):", 
+                                accept = c(".tsv", ".txt")),
+                      actionButton("load_data", "Load Data", 
+                                   icon = icon("upload"),
+                                   class = "btn-success"),
+                      actionButton("generate_example", "Generate Example Data", 
+                                   icon = icon("database"),
+                                   class = "btn-info")
+                    )
+                  )
+                ),
+                column(
+                  width = 4, 
+                  valueBoxOutput("total_samples_box", width = 12), 
+                  valueBoxOutput("total_species_box", width = 12), 
+                  valueBoxOutput("total_runs_box", width = 12)
+                )
+              ), 
+              
+              # Metadata Previews
+              fluidRow(
+                box(
+                  title = "Metadata Tables", 
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 12, 
+                  tabBox(
+                    width = 12, 
+                    tabPanel("Sample Metadata",
+                             fluidRow(
+                               column(width = 12, 
+                                      radioButtons("sample_metadata_filter", "Filter by Condition:",
+                                                   choices = c("All", "Control", "Sample"),
+                                                   selected = "All", 
+                                                   inline = TRUE))
+                             ),
+                             dataTableOutput("sample_metadata_preview")), 
+                    tabPanel("Run Metadata",
+                             fluidRow(
+                               column(width = 12, 
+                                      radioButtons("run_metadata_filter", "Filter by Condition:",
+                                                   choices = c("All", "Control", "Sample"),
+                                                   selected = "All", 
+                                                   inline = TRUE))
+                             ),
+                             dataTableOutput("run_metadata_preview")), 
+                    tabPanel("Taxonomy Data Preview", 
+                             fluidRow(
+                               column(width = 12, 
+                                      radioButtons("taxonomy_data_filter", "Filter by Condition:",
+                                                   choices = c("All", "Control", "Sample"),
+                                                   selected = "All", 
+                                                   inline = TRUE))
+                             ),
+                             dataTableOutput("taxonomy_data_preview"))
+                  )
+                ) 
+              ), 
+              
+              # Data Overview
+              fluidRow(
+                box(
+                  title = "Data Summary",
+                  status = "primary", 
+                  solidHeader = TRUE, 
+                  width = 12,
+                  uiOutput("data_summary_dynamic")
+                )
+              )
+      ),
+      
+      # TAB 2: Taxonomy Tab 
+      tabItem(tabName = "taxonomy",
+              fluidRow(
+                box(
+                  title = "Taxonomy Settings", 
+                  status = "primary", 
+                  solidHeader = TRUE,
+                  width = 3,
+                  collapsible = TRUE, 
+                  
+                  # Core taxonomy settings 
+                  selectInput("tax_level", "Taxonomic Level:",
+                              choices = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
+                              selected = "Phylum"),
+                  
+                  # Metadata filtering options 
+                  selectInput("group_var", "Primary Group By:",
+                              choices = c("None", "Gender", "Geographical_origin", "Age_group", "Institution", 
+                                          "Ongoing_conditions", "Antibiotic_intake", "Smoking_status", 
+                                          "Alcohol_consumption", "Exercise_frequency"),
+                              selected = "None"),
+                  
+                  # Demographic comparison view 
+                  checkboxInput("enable_comparison", "Enable Group Comparison", value = FALSE), 
+                  conditionalPanel(
+                    condition = "input.enable_comparison == true", 
+                    selectInput("compare_var", "Compare By:", 
+                                choices = c("Gender", "Geographical_origin", "Age_group", "Institution", 
+                                            "Ongoing_conditions", "Antibiotic_intake", "Smoking_status", 
+                                            "Alcohol_consumption", "Exercise_frequency"),
+                                selected = "Gender"), 
+                    selectInput("compare_value1", "Group 1:", choices = NULL), 
+                    selectInput("compare_value2", "Group 2:", choices = NULL)
+                  ),
+                  
+                  # Data transformation options
+                  selectInput("normalization", "Data Normalization:",
+                              choices = c("Relative Abundance (%)" = "percentage", 
+                                          "Log10 Transformation" = "log10", 
+                                          "Z-Score" = "zscore", 
+                                          "Presence/Absence" = "binary"), 
+                              selected = "percentage"), 
+                  
+                  # Common settings 
+                  sliderInput("min_abundance", "Minimum Abundance (%):",
+                              min = 0, max = 5, value = 1, step = 0.1), 
+                  checkboxInput("sort_by_abundance", "Sort by Abundance", value = TRUE),
+                  checkboxInput("show_legend", "Show Legend", value = TRUE), 
+                  checkboxInput("use_plotly", "Use interactive plot", value = FALSE)
+                ), 
+                
+                # Visualization settings 
+                box(
+                  title = "Visualization Options", 
+                  status = "primary", 
+                  solidHeader = TRUE, 
+                  width = 3, 
+                  collapsible = TRUE, 
+                  
+                  # Plot types 
+                  radioButtons("plot_type", "Plot Type:", 
+                               choices = c("Stacked Bar" = "bar", 
+                                           "Heatmap" = "heatmap", 
+                                           "Bubble Plot" = "bubble", 
+                                           "Geographic Map" = "geo_map", 
+                                           "Demographic Pattern" = "demo_pattern"), 
+                               selected = "bar"), 
+                  
+                  # Conditional options based on plot type 
+                  conditionalPanel(
+                    condition = "input.plot_type == 'bar'", 
+                    checkboxInput("show_error_bars", "Show Error Bars", value = FALSE), 
+                    selectInput("bar_color_scheme", "Color Scheme:",
+                                choices = c("Viridis" = "viridis", 
+                                            "Set1" = "Set1", 
+                                            "Set2" = "Set2",
+                                            "Dark2" = "Dark2",
+                                            "Paired" = "Paired"),
+                                selected = "viridis")
+                  ),
+                  conditionalPanel(
+                    condition = "input.plot_type == 'heatmap'",
+                    selectInput("heatmap_palette", "Color Palette:",
+                                choices = c("Viridis" = "viridis", 
+                                            "Plasma" = "plasma", 
+                                            "Magma" = "magma",
+                                            "Inferno" = "inferno",
+                                            "RdBu" = "RdBu",
+                                            "RdYlBu" = "RdYlBu"),
+                                selected = "viridis"),
+                    selectInput("cluster_method", "Clustering Method:",
+                                choices = c("None" = "none",
+                                            "Euclidean" = "euclidean",
+                                            "Bray-Curtis" = "bray"),
+                                selected = "none")
+                  ), 
+                  conditionalPanel(
+                    condition = "input.plot_type == 'geo_map'",
+                    selectInput("geo_aggregation", "Geographic Aggregation:",
+                                choices = c("Region" = "region", 
+                                            "Country" = "country"),
+                                selected = "region"),
+                    selectInput("map_color_var", "Color By Taxa:",
+                                choices = NULL)
+                  ),
+                  conditionalPanel(
+                    condition = "input.plot_type == 'demo_pattern'",
+                    selectInput("demo_variable", "Demographic Variable:",
+                                choices = c("Age" = "Age", 
+                                            "Gender" = "Gender",
+                                            "BMI" = "BMI"),
+                                selected = "Age"),
+                    selectInput("pattern_type", "Pattern View:",
+                                choices = c("Trend Analysis" = "trend", 
+                                            "Distribution" = "distribution"),
+                                selected = "trend"),
+                    selectInput("selected_taxa", "Highlight Taxa:", choices = NULL)
+                  ),
+                  
+                  hr(), 
+                  downloadButton("download_tax_plot", "Download Plot:", class = "btn-primary")
+                ), 
+                
+                # Main plot area with tabs for multiple views 
+                box(
+                  title = "Taxonomic Composition", 
+                  status = "info", 
+                  solidHeader = TRUE,
+                  width = 6,
+                  tabsetPanel(
+                    id = "tax_plot_tabs",
+                    tabPanel("Main View", 
+                             plotOutput("taxonomy_plot", height = 600)),
+                    tabPanel("Comparison View", 
+                             conditionalPanel(
+                               condition = "input.enable_comparison == true",
+                               plotOutput("comparison_plot", height = 600)
+                             ),
+                             conditionalPanel(
+                               condition = "input.enable_comparison == false",
+                               div(style = "text-align: center; margin-top: 250px;",
+                                   "Enable comparison in settings to view side-by-side comparisons")
+                             ))
+                  )
+                )
+              ), 
+              fluidRow(
+                # Enhanced taxa table with more metrics
+                box(
+                  title = "Top Taxa Analysis", 
+                  status = "info", 
+                  solidHeader = TRUE,
+                  width = 12,
+                  tabsetPanel(
+                    id = "taxa_table_tabs",
+                    tabPanel("Overall", dataTableOutput("taxa_table")),
+                    tabPanel("By Demographics", 
+                             fluidRow(
+                               column(3,
+                                      selectInput("demo_table_var", "Group By:",
+                                                  choices = c("Gender", "Geographical_origin", "Age_group", 
+                                                              "Ongoing_conditions", "Antibiotic_intake"),
+                                                  selected = "Gender")
+                               ),
+                               column(9, dataTableOutput("taxa_demo_table"))
+                             ))
+                  )
+                )
+              )
+      ),
+      
+      
+      
+      ###################################################3
+      
+      # Alpha Diversity Tab
+      tabItem(tabName = "alpha",
+              fluidRow(
+                box(
+                  title = "Alpha Diversity Settings", 
+                  status = "primary", 
+                  solidHeader = TRUE,
+                  width = 3,
+                  selectInput("alpha_metric", "Alpha Diversity Metric:",
+                              choices = c("Shannon", "Observed", "Simpson", "InvSimpson", "Faith PD", "Chao1"),
+                              selected = "Shannon"),
+                  selectInput("alpha_group", "Group Samples By:",
+                              choices = c("None"), selected = "None"),
+                  conditionalPanel(
+                    condition = "input.alpha_group != 'None'",
+                    selectInput("stat_test", "Statistical Test:",
+                                choices = c("None", "ANOVA", "Kruskal-Wallis", "T-test", "Wilcoxon"),
+                                selected = "None")
+                  ),
+                  sliderInput("rarefaction_depth", "Rarefaction Depth:", 
+                              min = 1000, max = 10000, value = 5000, step = 1000),
+                  checkboxInput("add_boxplot", "Add Box Plot", value = TRUE),
+                  checkboxInput("add_points", "Show Individual Points", value = TRUE),
+                  hr(),
+                  downloadButton("download_alpha_plot", "Download Plot", class = "btn-primary")
+                ),
+                box(
+                  title = "Alpha Diversity Plot", 
+                  status = "info", 
+                  solidHeader = TRUE,
+                  width = 9,
+                  plotlyOutput("alpha_plot", height = 500),
+                  conditionalPanel(
+                    condition = "input.stat_test != 'None'",
+                    h4("Statistical Test Results:"),
+                    verbatimTextOutput("alpha_stats")
                   )
                 )
               ),
-              column(
-                width = 4, 
-                valueBoxOutput("total_samples_box", width = 12), 
-                valueBoxOutput("total_species_box", width = 12), 
-                valueBoxOutput("total_runs_box", width = 12)
-              )
-            ), 
-            
-            # Metadata Previews
-            fluidRow(
-              box(
-                title = "Metadata Tables", 
-                status = "primary",
-                solidHeader = TRUE,
-                width = 12, 
-                tabBox(
-                  width = 12, 
-                  tabPanel("Sample Metadata",
-                           dataTableOutput("sample_metadata_preview")), 
-                  tabPanel("Run Metadata",
-                           dataTableOutput("run_metadata_preview")), 
-                  tabPanel("Taxonomy Data Preview", 
-                           dataTableOutput("taxonomy_data_preview"))
-                )
-              ) 
-            ), 
-            
-            # Data Overview
-            fluidRow(
-              box(
-                title = "Data Summary",
-                status = "primary", 
-                solidHeader = TRUE, 
-                width = 12,
-                uiOutput("data_summary_dynamic")
-              )
-            )
-    ),
-   
-    # TAB 2: Taxonomy Tab 
-    tabItem(tabName = "taxonomy",
-            fluidRow(
-              box(
-                title = "Taxonomy Settings", 
-                status = "primary", 
-                solidHeader = TRUE,
-                width = 3,
-                collapsible = TRUE, 
-                
-                # Core taxonomy settings 
-                selectInput("tax_level", "Taxonomic Level:",
-                            choices = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
-                            selected = "Phylum"),
-                
-                # Metadata filtering options 
-                selectInput("group_var", "Primary Group By:",
-                            choices = c("None", "Gender", "Geographical_origin", "Age_group", "Institution", 
-                                        "Ongoing_conditions", "Antibiotic_intake", "Smoking_status", 
-                                        "Alcohol_consumption", "Exercise_frequency"),
-                            selected = "None"),
-                
-                # Demographic comparison view 
-                checkboxInput("enable_comparison", "Enable Group Comparison", value = FALSE), 
-                conditionalPanel(
-                  condition = "input.enable_comparison == true", 
-                  selectInput("compare_var", "Compare By:", 
-                              choices = c("Gender", "Geographical_origin", "Age_group", "Institution", 
-                                      "Ongoing_conditions", "Antibiotic_intake", "Smoking_status", 
-                                      "Alcohol_consumption", "Exercise_frequency"),
-                              selected = "Gender"), 
-                  selectInput("compare_value1", "Group 1:", choices = NULL), 
-                  selectInput("compare_value2", "Group 2:", choices = NULL)
-                ),
-                
-                # Data transformation options
-                selectInput("normalization", "Data Normalization:",
-                            choices = c("Relative Abundance (%)" = "percentage", 
-                                        "Log10 Transformation" = "log10", 
-                                        "Z-Score" = "zscore", 
-                                        "Presence/Absence" = "binary"), 
-                            selected = "percentage"), 
-                
-                # Common settings 
-                sliderInput("min_abundance", "Minimum Abundance (%):",
-                            min = 0, max = 5, value = 1, step = 0.1), 
-                checkboxInput("sort_by_abundance", "Sort by Abundance", value = TRUE),
-                checkboxInput("show_legend", "Show Legend", value = TRUE), 
-                checkboxInput("use_plotly", "Use interactive plot", value = FALSE)
-              ), 
-              
-              # Visualization settings 
-              box(
-                title = "Visualization Options", 
-                status = "primary", 
-                solidHeader = TRUE, 
-                width = 3, 
-                collapsible = TRUE, 
-                
-                # Plot types 
-                radioButtons("plot_type", "Plot Type:", 
-                             choices = c("Stacked Bar" = "bar", 
-                                         "Heatmap" = "heatmap", 
-                                         "Bubble Plot" = "bubble", 
-                                         "Geographic Map" = "geo_map", 
-                                         "Demographic Pattern" = "demo_pattern"), 
-                             selected = "bar"), 
-                
-                # Conditional options based on plot type 
-                conditionalPanel(
-                  condition = "input.plot_type == 'bar'", 
-                  checkboxInput("show_error_bars", "Show Error Bars", value = FALSE), 
-                  selectInput("bar_color_scheme", "Color Scheme:",
-                              choices = c("Viridis" = "viridis", 
-                                          "Set1" = "Set1", 
-                                          "Set2" = "Set2",
-                                          "Dark2" = "Dark2",
-                                          "Paired" = "Paired"),
-                              selected = "viridis")
-                ),
-                conditionalPanel(
-                  condition = "input.plot_type == 'heatmap'",
-                  selectInput("heatmap_palette", "Color Palette:",
-                              choices = c("Viridis" = "viridis", 
-                                          "Plasma" = "plasma", 
-                                          "Magma" = "magma",
-                                          "Inferno" = "inferno",
-                                          "RdBu" = "RdBu",
-                                          "RdYlBu" = "RdYlBu"),
-                              selected = "viridis"),
-                  selectInput("cluster_method", "Clustering Method:",
-                              choices = c("None" = "none",
-                                          "Euclidean" = "euclidean",
-                                          "Bray-Curtis" = "bray"),
-                              selected = "none")
-                ), 
-                conditionalPanel(
-                  condition = "input.plot_type == 'geo_map'",
-                  selectInput("geo_aggregation", "Geographic Aggregation:",
-                              choices = c("Region" = "region", 
-                                          "Country" = "country"),
-                              selected = "region"),
-                  selectInput("map_color_var", "Color By Taxa:",
-                              choices = NULL)
-                ),
-                conditionalPanel(
-                  condition = "input.plot_type == 'demo_pattern'",
-                  selectInput("demo_variable", "Demographic Variable:",
-                              choices = c("Age" = "Age", 
-                                          "Gender" = "Gender",
-                                          "BMI" = "BMI"),
-                              selected = "Age"),
-                  selectInput("pattern_type", "Pattern View:",
-                              choices = c("Trend Analysis" = "trend", 
-                                          "Distribution" = "distribution"),
-                              selected = "trend"),
-                  selectInput("selected_taxa", "Highlight Taxa:", choices = NULL)
-                ),
-                
-                hr(), 
-                downloadButton("download_tax_plot", "Download Plot:", class = "btn-primary")
-              ), 
-              
-              # Main plot area with tabs for multiple views 
-              box(
-                title = "Taxonomic Composition", 
-                status = "info", 
-                solidHeader = TRUE,
-                width = 6,
-                tabsetPanel(
-                  id = "tax_plot_tabs",
-                  tabPanel("Main View", 
-                           plotOutput("taxonomy_plot", height = 600)),
-                  tabPanel("Comparison View", 
-                           conditionalPanel(
-                             condition = "input.enable_comparison == true",
-                             plotOutput("comparison_plot", height = 600)
-                           ),
-                           conditionalPanel(
-                             condition = "input.enable_comparison == false",
-                             div(style = "text-align: center; margin-top: 250px;",
-                                 "Enable comparison in settings to view side-by-side comparisons")
-                           ))
+              fluidRow(
+                box(
+                  title = "Rarefaction Curve", 
+                  status = "info", 
+                  solidHeader = TRUE,
+                  width = 12,
+                  plotlyOutput("rarefaction_plot", height = 400)
                 )
               )
-            ), 
-            fluidRow(
-              # Enhanced taxa table with more metrics
-              box(
-                title = "Top Taxa Analysis", 
-                status = "info", 
-                solidHeader = TRUE,
-                width = 12,
-                tabsetPanel(
-                  id = "taxa_table_tabs",
-                  tabPanel("Overall", dataTableOutput("taxa_table")),
-                  tabPanel("By Demographics", 
-                           fluidRow(
-                             column(3,
-                                    selectInput("demo_table_var", "Group By:",
-                                                choices = c("Gender", "Geographical_origin", "Age_group", 
-                                                            "Ongoing_conditions", "Antibiotic_intake"),
-                                                selected = "Gender")
-                             ),
-                             column(9, dataTableOutput("taxa_demo_table"))
-                           ))
+      ),
+      
+      # Beta Diversity Tab
+      tabItem(tabName = "beta",
+              fluidRow(
+                box(
+                  title = "Beta Diversity Settings", 
+                  status = "primary", 
+                  solidHeader = TRUE,
+                  width = 3,
+                  selectInput("beta_metric", "Beta Diversity Metric:",
+                              choices = c("Bray-Curtis", "Jaccard", "UniFrac", "Weighted UniFrac"),
+                              selected = "Bray-Curtis"),
+                  selectInput("ordination", "Ordination Method:",
+                              choices = c("PCoA", "NMDS", "t-SNE", "UMAP"),
+                              selected = "PCoA"),
+                  selectInput("beta_group", "Color By:",
+                              choices = c("None"), selected = "None"),
+                  selectInput("shape_by", "Shape By:",
+                              choices = c("None"), selected = "None"),
+                  conditionalPanel(
+                    condition = "input.beta_group != 'None'",
+                    selectInput("permanova", "Run PERMANOVA:",
+                                choices = c("No", "Yes"),
+                                selected = "No")
+                  ),
+                  conditionalPanel(
+                    condition ="input.beta_group != 'None'",
+                    radioButtons("plot_type", "Visualization Type:",
+                                 choices = c("Ellipses" = "ellipse", "Boxplots" = "boxplot"), 
+                                 selected = "ellipse")
+                  ),
+                  conditionalPanel(
+                    condition = "input.plot_type == 'ellipse' && input.beta_group != 'None'", 
+                    checkboxInput("add_ellipse", "Add Confidence Ellipses", value = TRUE)
+                  ),
+                  checkboxInput("add_labels", "Add Sample Labels", value = FALSE),
+                  hr(),
+                  downloadButton("download_beta_plot", "Download Plot", class = "btn-primary")
+                ),
+                box(
+                  title = "Beta Diversity Plot", 
+                  status = "info", 
+                  solidHeader = TRUE,
+                  width = 9,
+                  plotlyOutput("beta_plot", height = 500),
+                  conditionalPanel(
+                    condition = "input.permanova == 'Yes'",
+                    h4("PERMANOVA Results:"),
+                    verbatimTextOutput("permanova_results")
+                  )
                 )
               )
-            )
-    ),
+      ),
+      
+      # Other possible tabs 
+      tabItem(tabName = "clinical", h3("Clinical Factors - Under Development")),
+      
+      # TAB 4: Lifestyle Tab 
+      
+      tabItem(tabName = "lifestyle",
+              fluidRow(
                 
-                
-    
-    ###################################################3
-    
-    # Alpha Diversity Tab
-    tabItem(tabName = "alpha",
-            fluidRow(
-              box(
-                title = "Alpha Diversity Settings", 
-                status = "primary", 
-                solidHeader = TRUE,
-                width = 3,
-                selectInput("alpha_metric", "Alpha Diversity Metric:",
-                            choices = c("Shannon", "Observed", "Simpson", "InvSimpson", "Faith PD", "Chao1"),
-                            selected = "Shannon"),
-                selectInput("alpha_group", "Group Samples By:",
-                            choices = c("None"), selected = "None"),
-                conditionalPanel(
-                  condition = "input.alpha_group != 'None'",
-                  selectInput("stat_test", "Statistical Test:",
-                              choices = c("None", "ANOVA", "Kruskal-Wallis", "T-test", "Wilcoxon"),
-                              selected = "None")
-                ),
-                sliderInput("rarefaction_depth", "Rarefaction Depth:", 
-                            min = 1000, max = 10000, value = 5000, step = 1000),
-                checkboxInput("add_boxplot", "Add Box Plot", value = TRUE),
-                checkboxInput("add_points", "Show Individual Points", value = TRUE),
-                hr(),
-                downloadButton("download_alpha_plot", "Download Plot", class = "btn-primary")
-              ),
-              box(
-                title = "Alpha Diversity Plot", 
-                status = "info", 
-                solidHeader = TRUE,
-                width = 9,
-                plotlyOutput("alpha_plot", height = 500),
-                conditionalPanel(
-                  condition = "input.stat_test != 'None'",
-                  h4("Statistical Test Results:"),
-                  verbatimTextOutput("alpha_stats")
-                )
-              )
-            ),
-            fluidRow(
-              box(
-                title = "Rarefaction Curve", 
-                status = "info", 
-                solidHeader = TRUE,
-                width = 12,
-                plotlyOutput("rarefaction_plot", height = 400)
-              )
-            )
-    ),
-    
-    # Beta Diversity Tab
-    tabItem(tabName = "beta",
-            fluidRow(
-              box(
-                title = "Beta Diversity Settings", 
-                status = "primary", 
-                solidHeader = TRUE,
-                width = 3,
-                selectInput("beta_metric", "Beta Diversity Metric:",
-                            choices = c("Bray-Curtis", "Jaccard", "UniFrac", "Weighted UniFrac"),
-                            selected = "Bray-Curtis"),
-                selectInput("ordination", "Ordination Method:",
-                            choices = c("PCoA", "NMDS", "t-SNE", "UMAP"),
-                            selected = "PCoA"),
-                selectInput("beta_group", "Color By:",
-                            choices = c("None"), selected = "None"),
-                selectInput("shape_by", "Shape By:",
-                            choices = c("None"), selected = "None"),
-                conditionalPanel(
-                  condition = "input.beta_group != 'None'",
-                  selectInput("permanova", "Run PERMANOVA:",
-                              choices = c("No", "Yes"),
-                              selected = "No")
-                ),
-                conditionalPanel(
-                  condition ="input.beta_group != 'None'",
-                  radioButtons("plot_type", "Visualization Type:",
-                               choices = c("Ellipses" = "ellipse", "Boxplots" = "boxplot"), 
-                               selected = "ellipse")
-                ),
-                conditionalPanel(
-                  condition = "input.plot_type == 'ellipse' && input.beta_group != 'None'", 
-                  checkboxInput("add_ellipse", "Add Confidence Ellipses", value = TRUE)
-                ),
-                checkboxInput("add_labels", "Add Sample Labels", value = FALSE),
-                hr(),
-                downloadButton("download_beta_plot", "Download Plot", class = "btn-primary")
-              ),
-              box(
-                title = "Beta Diversity Plot", 
-                status = "info", 
-                solidHeader = TRUE,
-                width = 9,
-                plotlyOutput("beta_plot", height = 500),
-                conditionalPanel(
-                  condition = "input.permanova == 'Yes'",
-                  h4("PERMANOVA Results:"),
-                  verbatimTextOutput("permanova_results")
-                )
-              )
-            )
-    ),
-    
-    # Other possible tabs 
-    tabItem(tabName = "clinical", h3("Clinical Factors - Under Development")),
-    
-    # TAB 4: Lifestyle Tab 
-    
-    tabItem(tabName = "lifestyle",
-            fluidRow(
-              
-              # LEFT PANEL: Lifestyle Settings
-              box(
-                title = "Lifestyle Settings",
-                status = "primary",
-                solidHeader = TRUE,
-                width = 3,
-                collapsible = TRUE, 
-                
-                selectInput("tax_level_life", "Taxonomic Level:",
-                            choices = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
-                            selected = "Phylum"),
-                selectInput("normalization", "Data Normalization:",
-                            choices = c("Relative Abundance (%)" = "percentage", 
-                                        "Log10 Transformation" = "log10", 
-                                        "Z-Score" = "zscore", 
-                                        "Presence/Absence" = "binary"), 
-                            selected = "percentage"),
-                sliderInput("min_abundance", "Minimum Abundance (%):", min = 0, max = 5, value = 1, step = 0.1),
-                
-                tags$hr(),
-                selectInput("lifestyle_variable", "Group By Lifestyle Variable:",
-                            choices = c("Smoking_status", "Alcohol_consumption", 
-                                        "Exercise_frequency", "Exercise_intensity", 
-                                        "Bowel_movement_frequency", "Bowel_movement_quality", "Diet_type")),
-                checkboxInput("enable_comparison", "Enable Lifestyle Group Comparison", value = FALSE),
-                conditionalPanel(
-                  condition = "input.enable_comparison == true", 
-                  selectInput("compare_var", "Compare Lifestyle Variable:", 
+                # LEFT PANEL: Lifestyle Settings
+                box(
+                  title = "Lifestyle Settings",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 3,
+                  collapsible = TRUE, 
+                  
+                  selectInput("tax_level_life", "Taxonomic Level:",
+                              choices = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
+                              selected = "Phylum"),
+                  selectInput("normalization", "Data Normalization:",
+                              choices = c("Relative Abundance (%)" = "percentage", 
+                                          "Log10 Transformation" = "log10", 
+                                          "Z-Score" = "zscore", 
+                                          "Presence/Absence" = "binary"), 
+                              selected = "percentage"),
+                  sliderInput("min_abundance", "Minimum Abundance (%):", min = 0, max = 5, value = 1, step = 0.1),
+                  
+                  tags$hr(),
+                  selectInput("lifestyle_variable", "Group By Lifestyle Variable:",
                               choices = c("Smoking_status", "Alcohol_consumption", 
                                           "Exercise_frequency", "Exercise_intensity", 
-                                          "Bowel_movement_frequency", "Bowel_movement_quality", "Diet_type"),
-                              selected = "Smoking_status"),
-                  selectInput("compare_value1", "Group 1:", choices = NULL), 
-                  selectInput("compare_value2", "Group 2:", choices = NULL)
-                ),
-                
-                tags$hr(),
-                checkboxInput("sort_by_abundance", "Sort by Abundance", value = TRUE),
-                checkboxInput("show_legend", "Show Legend", value = TRUE),
-                checkboxInput("use_plotly", "Use interactive plot", value = FALSE),
-                
-                tags$hr(),
-                selectInput("diversity_metric_life", "Diversity Metric:",
-                            choices = c("Shannon", "Invsimpson", "Simpson"),
-                            selected = "Shannon"),
-                helpText("Used in Diversity View and Combined Score")
-              ),
-              
-              # MIDDLE PANEL: Visualization Options
-              box(
-                title = "Visualization Options", 
-                status = "primary", 
-                solidHeader = TRUE, 
-                width = 3, 
-                collapsible = TRUE, 
-                
-                # Plot type selector (rendered dynamically in server)
-                uiOutput("plot_type_life_ui"),
-                
-                # Conditional options
-                conditionalPanel(
-                  condition = "input.plot_type_life == 'Stacked Bar'",
-                  selectInput("bar_color_life", "Color Scheme:",
-                              choices = c("Viridis", "Set1", "Dark2", "Pastel1", "Paired"),
-                              selected = "Set1"),
-                  checkboxInput("show_error_bars_life", "Show Error Bars", value = FALSE)
-                ),
-                
-                conditionalPanel(
-                  condition = "input.plot_type_life == 'Boxplot' || input.plot_type_life == 'Boxplot + Points' || input.plot_type_life == 'Violin' || input.plot_type_life == 'Beeswarm'",
-                  selectInput("group_color_life", "Color Palette:",
-                              choices = c("Set1", "Dark2", "Pastel1", "Paired", "Viridis"),
-                              selected = "Set1")
-                ),
-                
-                conditionalPanel(
-                  condition = "input.plot_type_life == 'Trend'",
-                  checkboxInput("smooth_trend_life", "Add Smoothed Line", value = TRUE),
-                  selectInput("trend_palette_life", "Line Colors:",
-                              choices = c("Set1", "Dark2", "Paired", "Pastel1", "Viridis"),
-                              selected = "Dark2")
-                ),
-                
-                conditionalPanel(
-                  condition = "input.plot_type_life == 'Heatmap'",
-                  selectInput("heatmap_palette_life", "Heatmap Color Gradient:",
-                              choices = c("YlGnBu", "YlOrRd", "Blues", "Greens", "RdPu", "Oranges", "PuBu", "BuPu"),
-                              selected = "YlGnBu")
-                ),
-                
-                
-                hr(),
-                downloadButton("download_lifestyle_plot", "Download Plot", class = "btn-primary")
-              ),
-              
-              # RIGHT PANEL: Output Panel
-              box(
-                title = "Lifestyle Impact",
-                status = "info",
-                solidHeader = TRUE,
-                width = 6,
-                
-                tabsetPanel(
-                  id = "active_lifestyle_tab",  ## <-- Needed to detect tab
-                  tabPanel("Diversity View", 
-                           plotOutput("lifestyle_diversity_plot", height = "600px"),
-                           verbatimTextOutput("lifestyle_stat_test")),
-                  
-                  tabPanel("Taxon View", 
-                           plotOutput("lifestyle_taxon_plot", height = "600px")),
-                  
-                  tabPanel("Combined Score", 
-                           plotOutput("lifestyle_score_plot", height = "600px"))
-                )
-              )
-            )
-    ),
-    
-    
-    
-    tabItem(tabName = "interventions", h3("Medical Interventions - Under Development")),
-    tabItem(tabName = "multifactor", h3("Multi-factor Analysis - Under Development")),
-    
-    # Reports Tab
-    tabItem(tabName = "reports",
-            fluidRow(
-              box(
-                title = "Generate Reports", 
-                status = "primary", 
-                solidHeader = TRUE,
-                width = 12,
-                fluidRow(
-                  column(
-                    width = 6,
-                    h4("Report Options"),
-                    checkboxGroupInput("report_sections", "Include Sections:",
-                                       choices = c("Taxonomy Analysis" = "taxonomy",
-                                                   "Alpha Diversity" = "alpha",
-                                                   "Beta Diversity" = "beta",
-                                                   "Functional Analysis" = "function",
-                                                   "Metadata Exploration" = "metadata"),
-                                       selected = c("taxonomy", "alpha", "beta")),
-                    radioButtons("report_format", "Report Format:",
-                                 choices = c("PDF" = "pdf", 
-                                             "HTML" = "html",
-                                             "Word Document" = "docx"),
-                                 selected = "html"),
-                    textInput("report_title", "Report Title:", 
-                              value = "Microbiome Analysis Report"),
-                    textAreaInput("report_comments", "Additional Comments:", 
-                                  rows = 3),
-                    hr(),
-                    downloadButton("generate_report", "Generate Report", class = "btn-success")
+                                          "Bowel_movement_frequency", "Bowel_movement_quality", "Diet_type")),
+                  checkboxInput("enable_comparison", "Enable Lifestyle Group Comparison", value = FALSE),
+                  conditionalPanel(
+                    condition = "input.enable_comparison == true", 
+                    selectInput("compare_var", "Compare Lifestyle Variable:", 
+                                choices = c("Smoking_status", "Alcohol_consumption", 
+                                            "Exercise_frequency", "Exercise_intensity", 
+                                            "Bowel_movement_frequency", "Bowel_movement_quality", "Diet_type"),
+                                selected = "Smoking_status"),
+                    selectInput("compare_value1", "Group 1:", choices = NULL), 
+                    selectInput("compare_value2", "Group 2:", choices = NULL)
                   ),
-                  column(
-                    width = 6,
-                    h4("Report Preview"),
-                    htmlOutput("report_preview")
+                  
+                  tags$hr(),
+                  checkboxInput("sort_by_abundance", "Sort by Abundance", value = TRUE),
+                  checkboxInput("show_legend", "Show Legend", value = TRUE),
+                  checkboxInput("use_plotly", "Use interactive plot", value = FALSE),
+                  
+                  tags$hr(),
+                  selectInput("diversity_metric_life", "Diversity Metric:",
+                              choices = c("Shannon", "Invsimpson", "Simpson"),
+                              selected = "Shannon"),
+                  helpText("Used in Diversity View and Combined Score")
+                ),
+                
+                # MIDDLE PANEL: Visualization Options
+                box(
+                  title = "Visualization Options", 
+                  status = "primary", 
+                  solidHeader = TRUE, 
+                  width = 3, 
+                  collapsible = TRUE, 
+                  
+                  # Plot type selector (rendered dynamically in server)
+                  uiOutput("plot_type_life_ui"),
+                  
+                  # Conditional options
+                  conditionalPanel(
+                    condition = "input.plot_type_life == 'Stacked Bar'",
+                    selectInput("bar_color_life", "Color Scheme:",
+                                choices = c("Viridis", "Set1", "Dark2", "Pastel1", "Paired"),
+                                selected = "Set1"),
+                    checkboxInput("show_error_bars_life", "Show Error Bars", value = FALSE)
+                  ),
+                  
+                  conditionalPanel(
+                    condition = "input.plot_type_life == 'Boxplot' || input.plot_type_life == 'Boxplot + Points' || input.plot_type_life == 'Violin' || input.plot_type_life == 'Beeswarm'",
+                    selectInput("group_color_life", "Color Palette:",
+                                choices = c("Set1", "Dark2", "Pastel1", "Paired", "Viridis"),
+                                selected = "Set1")
+                  ),
+                  
+                  conditionalPanel(
+                    condition = "input.plot_type_life == 'Trend'",
+                    checkboxInput("smooth_trend_life", "Add Smoothed Line", value = TRUE),
+                    selectInput("trend_palette_life", "Line Colors:",
+                                choices = c("Set1", "Dark2", "Paired", "Pastel1", "Viridis"),
+                                selected = "Dark2")
+                  ),
+                  
+                  conditionalPanel(
+                    condition = "input.plot_type_life == 'Heatmap'",
+                    selectInput("heatmap_palette_life", "Heatmap Color Gradient:",
+                                choices = c("YlGnBu", "YlOrRd", "Blues", "Greens", "RdPu", "Oranges", "PuBu", "BuPu"),
+                                selected = "YlGnBu")
+                  ),
+                  
+                  
+                  hr(),
+                  downloadButton("download_lifestyle_plot", "Download Plot", class = "btn-primary")
+                ),
+                
+                # RIGHT PANEL: Output Panel
+                box(
+                  title = "Lifestyle Impact",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 6,
+                  
+                  tabsetPanel(
+                    id = "active_lifestyle_tab",  ## <-- Needed to detect tab
+                    tabPanel("Diversity View", 
+                             plotOutput("lifestyle_diversity_plot", height = "600px"),
+                             verbatimTextOutput("lifestyle_stat_test")),
+                    
+                    tabPanel("Taxon View", 
+                             plotOutput("lifestyle_taxon_plot", height = "600px")),
+                    
+                    tabPanel("Combined Score", 
+                             plotOutput("lifestyle_score_plot", height = "600px"))
                   )
                 )
               )
-            )
+      ),
+      
+      
+      
+      tabItem(tabName = "interventions", h3("Medical Interventions - Under Development")),
+      tabItem(tabName = "multifactor", h3("Multi-factor Analysis - Under Development")),
+      
+      # Reports Tab
+      tabItem(tabName = "reports",
+              fluidRow(
+                box(
+                  title = "Generate Reports", 
+                  status = "primary", 
+                  solidHeader = TRUE,
+                  width = 12,
+                  fluidRow(
+                    column(
+                      width = 6,
+                      h4("Report Options"),
+                      checkboxGroupInput("report_sections", "Include Sections:",
+                                         choices = c("Taxonomy Analysis" = "taxonomy",
+                                                     "Alpha Diversity" = "alpha",
+                                                     "Beta Diversity" = "beta",
+                                                     "Functional Analysis" = "function",
+                                                     "Metadata Exploration" = "metadata"),
+                                         selected = c("taxonomy", "alpha", "beta")),
+                      radioButtons("report_format", "Report Format:",
+                                   choices = c("PDF" = "pdf", 
+                                               "HTML" = "html",
+                                               "Word Document" = "docx"),
+                                   selected = "html"),
+                      textInput("report_title", "Report Title:", 
+                                value = "Microbiome Analysis Report"),
+                      textAreaInput("report_comments", "Additional Comments:", 
+                                    rows = 3),
+                      hr(),
+                      downloadButton("generate_report", "Generate Report", class = "btn-success")
+                    ),
+                    column(
+                      width = 6,
+                      h4("Report Preview"),
+                      htmlOutput("report_preview")
+                    )
+                  )
+                )
+              )
+      )
     )
-    )
-    )
-    
   )
-
   
+)
+
+
 # Server logic with mock data
 
 server <- function(input, output, session) {
@@ -645,25 +673,29 @@ server <- function(input, output, session) {
   data_store <- reactiveValues(
     sample_metadata = NULL,
     run_metadata = NULL, 
-    taxonomy_data = NULL
+    taxonomy_data = NULL,
+    control_sample_metadata = NULL, 
+    control_run_metadata = NULL, 
+    control_taxonomy_data = NULL, 
+    error_message = NULL, 
+    success_message = NULL
   )
   
   # Generate example data when button is clicked 
   observeEvent(input$generate_example, {
+    
+    data_store$error_message <- NULL
+    
     # Generate sample metadata 
     sample_metadata <- data.frame(
       Run_ID = paste0("RUN", sprintf("%03d", 1:50)),
       Sample_ID = paste0("SAMPLE", sprintf("%03d", 1:50)),
-      Institution = sample(c("Hospital A", "Hospital B", "Hospital C"), 50, replace = TRUE),
-      Department = sample(c("Gastroenterology", "Immunology", "Microbiology"), 50, replace = TRUE),
       Collection_Date = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-04-30'), by="day"), 50)),
       Collection_Storage_Temperature = sample(c("-80", "-20", "4", "Room Temperature"), 50, replace = TRUE),
       Analyst_Processor_Name = sample(c("John Doe", "Jane Smith", "Alex Johnson"), 50, replace = TRUE),
       Gender = sample(c("Male", "Female", "Other"), 50, replace = TRUE),
       Age = sample(18:80, 50, replace = TRUE),
-      Geographical_origin = sample(c("North America", "Europe", "Asia", "Africa", "South America"), 50, replace = TRUE),
       Ongoing_conditions = sample(c("None", "Diabetes", "Hypertension", "IBS", "Crohn's Disease"), 50, replace = TRUE),
-      Appendix_removed = sample(c("Yes", "No"), 50, replace = TRUE),
       Neurological_Disorders = sample(c("None", "Alzheimer's", "Parkinson's", "Multiple Sclerosis"), 50, replace = TRUE),
       Allergies = sample(c("None", "Pollen", "Food", "Medicine", "Multiple"), 50, replace = TRUE),
       Bowel_movement_frequency = sample(c("Daily", "2-3 times a week", "4-6 times a week", "Multiple times daily"), 50, replace = TRUE),
@@ -696,7 +728,7 @@ server <- function(input, output, session) {
       Technician_name = sample(c("Maria Garcia", "Thomas Johnson", "Sophia Lee", "Michael Brown"), 30, replace = TRUE)
     )
     
-    # Generate taonomy data 
+    # Generate taxonomy data 
     species_names <- c(
       "Bacteroides fragilis", "Escherichia coli", "Lactobacillus acidophilus", "Bifidobacterium longum", 
       "Prevotella copri", "Faecalibacterium prausnitzii", "Akkermansia muciniphila", "Ruminococcus bromii",
@@ -714,6 +746,7 @@ server <- function(input, output, session) {
     data_store$sample_metadata <- sample_metadata
     data_store$run_metadata <- run_metadata
     data_store$taxonomy_data <- taxonomy_data 
+    data_store$success_message <- "Example data generated successfully! Ready for analysis."
     
     # Show notification 
     showNotification("Example data generated successfully!", type = "message")
@@ -721,25 +754,52 @@ server <- function(input, output, session) {
   
   # Load data when button is clicked 
   observeEvent(input$load_data, {
-    # Check if all required files are uploaded 
-    req(input$sample_metadata, input$run_metadata, input$taxonomy_file)
+    # Clear previous messages 
+    data_store$error_message = NULL
+    data_store$success_message = NULL
     
-    # Read sample metadata 
-    sample_metadata <- read.csv(input$sample_metadata$datapath)
-    
-    # Read run metadata 
-    run_metadata <- read.csv(input$run_metadata$datapath)
-    
-    # Read taxonomy data 
-    taxonomy_data <- read.delim(input$taxonomy_file$datapath, sep = "\t")
-    
-    # Store the data in reactive values 
-    data_store$sample_metadata <- sample_metadata
-    data_store$run_metadata <- run_metadata
-    data_store$taxonomy_data <- taxonomy_data
-    
-    # Show notification 
-    showNotification("Data loaded successfully!", type = "message")
+    ##### HANDLE POTENTIAL ERRORS ####
+    tryCatch({
+      # Check if all required files are uploaded 
+      if (is.null(input$sample_metadata) || is.null(input$run_metadata) || is.null(input$taxonomy_file) ||
+          is.null(input$control_sample_metadata) || is.null(input$control_run_metadata) || is.null(input$control_taxonomy)) {
+        data_store$error_message <- "Please upload all required files"
+        return(NULL)
+      }
+      
+      # Read sample metadata 
+      sample_metadata <- read.csv(input$sample_metadata$datapath)
+      
+      # Read run metadata 
+      run_metadata <- read.csv(input$run_metadata$datapath)
+      
+      # Read taxonomy data 
+      taxonomy_data <- read.delim(input$taxonomy_file$datapath, sep = "\t")
+      
+      # Read control sample metadata 
+      control_sample_metadata <- read.csv(input$control_sample_metadata$datapath)
+      
+      # Read control run metadata 
+      control_run_metadata <- read.csv(input$control_run_metadata$datapath)
+      
+      # Read control taxonomy data 
+      control_taxonomy_data <- read.delim(input$control_taxonomy$datapath, sep = "\t")
+      
+      # Store the data in reactive values 
+      data_store$sample_metadata <- sample_metadata
+      data_store$run_metadata <- run_metadata
+      data_store$taxonomy_data <- taxonomy_data
+      data_store$control_sample_metadata <- control_sample_metadata
+      data_store$control_run_metadata <- control_run_metadata
+      data_store$control_taxonomy_data <- control_taxonomy_data
+      
+      # Show notification 
+      showNotification("Data loaded successfully!", type = "message")
+    }, error = function(e) {
+      # Handle any error that occur during file reading
+      data_store$error_message <- paste("Error loading data:", e$message)
+      showNotification(paste("Error:", e$message), type = "error")
+    })
   })
   
   # Value boxes
@@ -891,23 +951,123 @@ server <- function(input, output, session) {
     '))
   })
   
-  # Render metadata table previews 
+  # Render metadata table previews with filtering 
   output$sample_metadata_preview <- renderDataTable({
     req(data_store$sample_metadata)
-    datatable(data_store$sample_metadata, 
-              options = list(pageLength = 10, scrollX = TRUE))
+    
+    # Get filter condition
+    filter_value <- input$sample_metadata_filter 
+    
+    # Filter data based on selection 
+    if (!is.null(filter_value)) {
+      if (filter_value == "Control") {
+        req(data_store$control_sample_metadata)
+        return(datatable(data_store$control_sample_metadata, 
+                         options = list(pageLength = 10, scrollX = TRUE)))
+      } else if (filter_value == "Sample"){
+        return(datatable(data_store$sample_metadata, 
+                         options = list(pageLength = 10, scrollX = TRUE)))
+      } else { # All
+        # Combine both datasets if control data exists 
+        if (!is.null(data_store$control_sample_metadata)) {
+          # Add a column to indicate the source 
+          sample_data <- data_store$sample_metadata
+          sample_data$Data_Source <- "Sample"
+          
+          control_data <- data_store$control_sample_metadata
+          control_data$Data_Source <- "Control"
+          
+          # Combine the datasets (assume they have compatible columns)
+          combined_data <- rbind(sample_data, control_data)
+          return(datatable(combined_data, options = list(pageLength = 10, scrollX = TRUE)))
+        } else {
+          return(datatable(data_store$sample_metadata, 
+                           options = list(pageLength = 10, scrollX = TRUE)))
+        }
+      }
+    } else {
+      # Default display (all data)
+      return(datatable(data_store$sample_metadata, 
+                       options = list(pageLength = 10, scrollX = TRUE)))
+    }
   })
   
   output$run_metadata_preview <- renderDataTable({
     req(data_store$run_metadata)
-    datatable(data_store$run_metadata, 
-              options = list(pageLength = 10, scrollX = TRUE))
+    
+    # Get filter condition 
+    filter_value <- input$run_metadata_filter
+    
+    # Filter data based on selection
+    if (!is.null(filter_value)) {
+      if (filter_value == "Control") {
+        req(data_store$control_run_metadata) 
+        return(datatable(data_store$control_run_metadata, 
+                         options = list(pageLength = 10, scrollX = TRUE)))
+      } else if (filter_value == "Sample") {
+        return(datatable(data_store$run_metadata, 
+                          options = list(pageLength = 10, scrollX = TRUE)))
+      } else {
+        # Combine both datasets 
+        if (!is.null(data_store$control_run_metadata)) {
+          # Add a column to indicate source 
+          sample_data <- data_store$run_metadata
+          sample_data$Data_Source <- "Sample"
+          
+          control_data <- data_store$control_run_metadata
+          control_data$Data_Source <- "Control"
+          
+          # Combine datasets (assume they have compatible columns)
+          combined_data <- rbind(sample_data, control_data)
+          return(datatable(combined_data, options = list(pageLength = 10, scrollX = TRUE)))
+        } else {
+          return(datatable(data_store$run_metadata, 
+                           options = list(pageLength = 10, scrollX = TRUE)))
+        }
+      } 
+    } else {
+      return( datatable(data_store$run_metadata, 
+              options = list(pageLength = 10, scrollX = TRUE)))
+    }
   })
   
   output$taxonomy_data_preview <- renderDataTable({
     req(data_store$taxonomy_data)
-    datatable(data_store$taxonomy_data, 
-              options = list(pageLength = 10, scrollX = TRUE))
+    
+    # Get filter condition 
+    filter_value <- input$taxonomy_data_filter
+    
+    # Filter data based on selection
+    if (!is.null(filter_value)) {
+      if (filter_value == "Control") {
+        req(data_store$control_taxonomy_data)
+        return(datatable(data_store$control_taxonomy_data, 
+                         options = list(pageLength = 10, scrollX = TRUE)))
+      } else if (filter_value == "Sample") {
+        return(datatable(data_store$taxonomy_data, 
+                         options = list(pageLength = 10, scrollX = TRUE)))
+      } else {
+        # Combine both datasets
+        if (!is.null(data_store$control_taxonomy_data)) {
+          # Add a column to indicate the source
+          sample_data <- data_store$taxonomy_data
+          sample_data$Data_Source <- "Sample"
+          
+          control_data <- data_store$control_taxonomy_data
+          control_data$Data_Source <- "Control"
+          
+          # Combine the datasets (assuming they have compatible columns)
+          combined_data <- rbind(sample_data, control_data)
+          return(datatable(combined_data, options = list(pageLength = 10, scrollX = TRUE)))
+        } else {
+          return(datatable(data_store$taxonomy_data, 
+                           options = list(pageLength = 10, scrollX = TRUE)))
+        }
+      }
+    } else {
+      return(datatable(data_store$taxonomy_data, 
+              options = list(pageLength = 10, scrollX = TRUE)))
+    }
   })
   
   #### TAXONOMY TAB ######
