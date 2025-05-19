@@ -17,9 +17,9 @@ params.outdir = "group2_B/results" // Default, override with --outdir
 params.denoiser = "dada2" // Options: 'dada2', 'deblur'
 params.classifier_db = "path/to/your/qiime2_classifier.qza" // <<< IMPORTANT: Specify path to your classifier (e.g., Silva/Greengenes)
 params.sampling_depth = 1000 // <<< IMPORTANT: Adjust based on your data (check feature table summary)
-params.trunc_len_f = 100 // DADA2: Forward read truncation length ### dpends on the demux report!!!!!!
-params.trunc_len_r = 100 // DADA2: Reverse read truncation length
-params.trim_length = 250 // Deblur: Read trim length
+params.trunc_len_f = 220 // DADA2: Forward read truncation length ### dpends on the demux report!!!!!!
+params.trunc_len_r = 220 // DADA2: Reverse read truncation length
+params.trim_length = 0 // Deblur: Read trim length
 
 // == Input Channel ==
 ch_reads = Channel.fromFilePairs(params.reads, flat: true)
@@ -68,6 +68,7 @@ process IMPORT_READS {
     
     output:
     path("${sample_id}_demux.qza", emit: demux_qza)
+    path("demux.qzv", emit: demux_qzv)
     
     script:
     """
@@ -80,7 +81,10 @@ process IMPORT_READS {
         --input-path manifest.tsv \\
         --output-path ${sample_id}_demux.qza \\
         --input-format PairedEndFastqManifestPhred33V2
-    
+
+    qiime demux summarize \
+        --i-data ${sample_id}_demux.qza  \
+        --o-visualization demux.qzv
     """
     
     stub: // Minimal command for testing without actual execution
@@ -107,12 +111,13 @@ process DENOISE_DADA2 {
     """
     qiime dada2 denoise-paired \
         --i-demultiplexed-seqs ${demux_qza} \
+        --p-trim-left-f 13 \
+        --p-trim-left-r 13 \
         --p-trunc-len-f ${params.trunc_len_f} \
         --p-trunc-len-r ${params.trunc_len_r} \
         --o-table table.qza \
         --o-representative-sequences rep-seqs.qza \
         --o-denoising-stats denoising-stats.qza \
-        --p-n-threads ${task.cpus}
     """
     stub:
     """
