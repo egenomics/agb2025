@@ -410,114 +410,113 @@ ui <- dashboardPage(
       ),
       
       
-      
-      ###################################################3
-      
-      # Alpha Diversity Tab
-      tabItem(tabName = "alpha",
+      # TAB 3: Diversity Analysis Tab
+      tabItem(tabName = "diversity",
               fluidRow(
+                
+                # LEFT PANEL: Diversity Analysis Settings
                 box(
-                  title = "Alpha Diversity Settings", 
-                  status = "primary", 
+                  title = "Diversity Analysis Settings",
+                  status = "primary",
                   solidHeader = TRUE,
                   width = 3,
-                  selectInput("alpha_metric", "Alpha Diversity Metric:",
-                              choices = c("Shannon", "Observed", "Simpson", "InvSimpson", "Faith PD", "Chao1"),
-                              selected = "Shannon"),
-                  selectInput("alpha_group", "Group Samples By:",
-                              choices = c("None"), selected = "None"),
+                  collapsible = TRUE,
+                  
+                  # Diversity type selection
+                  radioButtons("diversity_type", "Diversity Type:",
+                               choices = c("Alpha Diversity" = "alpha", 
+                                           "Beta Diversity" = "beta"),
+                               selected = "alpha"),
+                  
+                  # Grouping variable
+                  selectInput("grouping_var", "Group By:",
+                              choices = c("None", "Gender", "Ongoing_conditions", 
+                                          "Antibiotic_intake", "Smoking_status", 
+                                          "Alcohol_consumption", "Exercise_frequency"),
+                              selected = "Ongoing_conditions"),
+                  
+                  # Enable comparison
+                  checkboxInput("enable_div_comparison", "Enable Group Comparison", value = FALSE),
+                  
+                  # Group selection for comparison
                   conditionalPanel(
-                    condition = "input.alpha_group != 'None'",
-                    selectInput("stat_test", "Statistical Test:",
-                                choices = c("None", "ANOVA", "Kruskal-Wallis", "T-test", "Wilcoxon"),
-                                selected = "None")
-                  ),
-                  sliderInput("rarefaction_depth", "Rarefaction Depth:", 
-                              min = 1000, max = 10000, value = 5000, step = 1000),
-                  checkboxInput("add_boxplot", "Add Box Plot", value = TRUE),
-                  checkboxInput("add_points", "Show Individual Points", value = TRUE),
-                  hr(),
-                  downloadButton("download_alpha_plot", "Download Plot", class = "btn-primary")
-                ),
-                box(
-                  title = "Alpha Diversity Plot", 
-                  status = "info", 
-                  solidHeader = TRUE,
-                  width = 9,
-                  plotlyOutput("alpha_plot", height = 500),
-                  conditionalPanel(
-                    condition = "input.stat_test != 'None'",
-                    h4("Statistical Test Results:"),
-                    verbatimTextOutput("alpha_stats")
+                    condition = "input.enable_div_comparison == true",
+                    selectInput("compare_group1", "Group 1:", choices = NULL),
+                    selectInput("compare_group2", "Group 2:", choices = NULL)
                   )
-                )
-              ),
-              fluidRow(
+                ),
+                
+                # MIDDLE PANEL: Visualization Options
                 box(
-                  title = "Rarefaction Curve", 
-                  status = "info", 
+                  title = "Visualization Options",
+                  status = "primary",
                   solidHeader = TRUE,
-                  width = 12,
-                  plotlyOutput("rarefaction_plot", height = 400)
+                  width = 3,
+                  collapsible = TRUE,
+                  
+                  # Conditional: Alpha Diversity settings
+                  conditionalPanel(
+                    condition = "input.diversity_type == 'alpha'",
+                    
+                    selectInput("alpha_metric", "Alpha Metric:",
+                                choices = c("Observed OTUs", "Shannon", "Simpson"),
+                                selected = "Shannon"),
+                    
+                    selectInput("alpha_plot_type", "Plot Type:",
+                                choices = c("Boxplot + Dots", "Violin", "Jittered Scatterplot"),
+                                selected = "Boxplot + Dots"),
+                    
+                    selectInput("alpha_color_palette", "Color Palette:",
+                                choices = c("Set1", "Dark2", "Pastel1", "Paired", "Viridis"),
+                                selected = "Set1")
+                  ),
+                  
+                  # Conditional: Beta Diversity settings
+                  conditionalPanel(
+                    condition = "input.diversity_type == 'beta'",
+                    
+                    selectInput("distance_metric", "Distance Metric:",
+                                choices = c("Bray-Curtis", "Euclidean", "Jaccard"),
+                                selected = "Bray-Curtis"),
+                    
+                    selectInput("ordination_method", "Ordination Method:",
+                                choices = c("PCoA", "NMDS"),
+                                selected = "PCoA"),
+                    
+                    checkboxInput("show_group_ellipses", "Show Group Ellipses", value = TRUE),
+                    checkboxInput("show_clustering_dendrogram", "Show Clustering Dendrogram", value = TRUE)
+                  ),
+                  
+                  checkboxInput("show_diversity_legend", "Show Legend", value = TRUE),
+                  
+                  hr(),
+                  downloadButton("download_diversity_plot", "Download Plot", class = "btn-primary")
+                ),
+                
+                # RIGHT PANEL: Output Panel
+                box(
+                  title = "Diversity Analysis",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 6,
+                  
+                  tabsetPanel(
+                    id = "diversity_output_tabs",
+                    tabPanel("Diversity Plot",
+                             div(style = "text-align: center; margin-top: 250px;",
+                                 "Plot will appear here once implemented.")),
+                    
+                    tabPanel("Statistical Summary",
+                             div(style = "text-align: center; margin-top: 250px;",
+                                 "Statistical results will appear here.")),
+                    
+                    tabPanel("Ordination & Clustering",
+                             div(style = "text-align: center; margin-top: 250px;",
+                                 "PCoA/NMDS and clustering plots will appear here."))
+                  )
                 )
               )
       ),
-      
-      # Beta Diversity Tab
-      tabItem(tabName = "beta",
-              fluidRow(
-                box(
-                  title = "Beta Diversity Settings", 
-                  status = "primary", 
-                  solidHeader = TRUE,
-                  width = 3,
-                  selectInput("beta_metric", "Beta Diversity Metric:",
-                              choices = c("Bray-Curtis", "Jaccard", "UniFrac", "Weighted UniFrac"),
-                              selected = "Bray-Curtis"),
-                  selectInput("ordination", "Ordination Method:",
-                              choices = c("PCoA", "NMDS", "t-SNE", "UMAP"),
-                              selected = "PCoA"),
-                  selectInput("beta_group", "Color By:",
-                              choices = c("None"), selected = "None"),
-                  selectInput("shape_by", "Shape By:",
-                              choices = c("None"), selected = "None"),
-                  conditionalPanel(
-                    condition = "input.beta_group != 'None'",
-                    selectInput("permanova", "Run PERMANOVA:",
-                                choices = c("No", "Yes"),
-                                selected = "No")
-                  ),
-                  conditionalPanel(
-                    condition ="input.beta_group != 'None'",
-                    radioButtons("plot_type", "Visualization Type:",
-                                 choices = c("Ellipses" = "ellipse", "Boxplots" = "boxplot"), 
-                                 selected = "ellipse")
-                  ),
-                  conditionalPanel(
-                    condition = "input.plot_type == 'ellipse' && input.beta_group != 'None'", 
-                    checkboxInput("add_ellipse", "Add Confidence Ellipses", value = TRUE)
-                  ),
-                  checkboxInput("add_labels", "Add Sample Labels", value = FALSE),
-                  hr(),
-                  downloadButton("download_beta_plot", "Download Plot", class = "btn-primary")
-                ),
-                box(
-                  title = "Beta Diversity Plot", 
-                  status = "info", 
-                  solidHeader = TRUE,
-                  width = 9,
-                  plotlyOutput("beta_plot", height = 500),
-                  conditionalPanel(
-                    condition = "input.permanova == 'Yes'",
-                    h4("PERMANOVA Results:"),
-                    verbatimTextOutput("permanova_results")
-                  )
-                )
-              )
-      ),
-      
-      # Other possible tabs 
-      tabItem(tabName = "clinical", h3("Clinical Factors - Under Development")),
       
       # TAB 4: Lifestyle Tab 
       
