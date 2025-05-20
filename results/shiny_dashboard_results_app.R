@@ -21,6 +21,7 @@ library(RColorBrewer)
 library(ComplexHeatmap)
 library(circlize)
 library(ggbeeswarm)
+library(dplyr)
 
 # librar# librar# library(leaflet)
 
@@ -148,6 +149,31 @@ ui <- dashboardPage(
                       actionButton("generate_example", "Generate Example Data", 
                                    icon = icon("database"),
                                    class = "btn-info")
+                    ),
+                  ),
+                  br(), 
+                  fluidRow(
+                    box(
+                      title = "Sample Selection",
+                      status = "warning",
+                      solidHeader = TRUE, 
+                      width = 12,
+                      fluidRow(
+                        column(
+                          width = 4,
+                          selectizeInput("selected_sample_id", "Select Sample to Analyze:",
+                                         choices = NULL,
+                                         options = list(
+                                           placeholder = "Choose a sample...", 
+                                           onInitialize = I('function() { this.setValue(""); }')
+                                         )),
+                        ),
+                        column(
+                          width = 8, 
+                          htmlOutput("selected_sample_info"),
+                          htmlOutput("comparison_info")
+                        )
+                      )
                     )
                   )
                 ),
@@ -155,7 +181,8 @@ ui <- dashboardPage(
                   width = 4, 
                   valueBoxOutput("total_samples_box", width = 12), 
                   valueBoxOutput("total_species_box", width = 12), 
-                  valueBoxOutput("total_runs_box", width = 12)
+                  valueBoxOutput("total_runs_box", width = 12), 
+                  valueBoxOutput("total_control_samples_box", width = 12)
                 )
               ), 
               
@@ -742,10 +769,82 @@ server <- function(input, output, session) {
       Abundance = round(runif(50 * length(species_names), min = 0, max = 10000))
     )
     
+    # Generate CONTROL sample metadata with some different characteristics 
+    control_sample_metadata <- data.frame(
+      Run_ID = paste0("CTRL_RUN", sprintf("%03d", 1:30)),
+      Sample_ID = paste0("CTRL_SAMPLE", sprintf("%03d", 1:30)),
+      Collection_Date = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-04-30'), by="day"), 30)),
+      Collection_Storage_Temperature = sample(c("-80", "-20", "4", "Room Temperature"), 30, replace = TRUE),
+      Analyst_Processor_Name = sample(c("John Doe", "Jane Smith", "Alex Johnson"), 30, replace = TRUE),
+      Gender = sample(c("Male", "Female", "Other"), 30, replace = TRUE),
+      Age = sample(18:80, 30, replace = TRUE),
+      Ongoing_conditions = "None",  # Controls have no conditions
+      Neurological_Disorders = "None",  # Controls have no neurological disorders
+      Allergies = sample(c("None", "Pollen", "Food", "Medicine"), 30, replace = TRUE),
+      Bowel_movement_frequency = sample(c("Daily", "2-3 times a week", "4-6 times a week"), 30, replace = TRUE),
+      Bowel_movement_quality = sample(c("Normal", "Variable"), 30, replace = TRUE, prob = c(0.8, 0.2)),
+      Antibiotic_intake = sample(c("None in past year", "Within past 6 months"), 30, replace = TRUE, prob = c(0.9, 0.1)),
+      Medications = "None",  # Controls take no medications
+      Cancer = "No",  # Controls have no cancer
+      Cancer_treatment = "None",  # Controls have no cancer treatment
+      BMI = round(rnorm(30, mean = 22, sd = 2), 1),  # Controls have healthier BMI
+      Exercise_frequency = sample(c("3-4 times a week", "5+ times a week"), 30, replace = TRUE),  # Controls exercise more
+      Exercise_intensity = sample(c("Moderate", "High"), 30, replace = TRUE),
+      Smoking_status = sample(c("Never smoked", "Former smoker"), 30, replace = TRUE, prob = c(0.9, 0.1)),
+      Cigarettes_per_day = NA,
+      Stopped_smoking = NA,
+      Alcohol_consumption = sample(c("Never", "Occasionally"), 30, replace = TRUE),
+      Alcohol_frequency = NA,
+      Drinks_per_day = NA
+    )
+    
+    # Generate CONTROL run metadata 
+    control_run_metadata <- data.frame(
+      Timestamp = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-04-30'), by="day"), 20)),
+      Run_ID = paste0("CTRL_RUN", sprintf("%03d", 1:20)),
+      Sequencing_Date = as.character(sample(seq(as.Date('2023-01-15'), as.Date('2025-05-01'), by="day"), 20)),
+      Sequencing_Platform = sample(c("Illumina", "Ion Torrent"), 20, replace = TRUE),  # Controls use only two platforms
+      Sequencing_Type = sample(c("16S rRNA", "Shotgun"), 20, replace = TRUE),  # Controls use only two types
+      Expected_read_length = sample(c("250bp", "300bp"), 20, replace = TRUE),
+      Sequencing_depth_target = paste0(sample(c("20", "30", "50"), 20, replace = TRUE), "M reads"),
+      Library_preparation_kit = sample(c("Nextera XT", "TruSeq Nano"), 20, replace = TRUE),
+      Technician_name = sample(c("Maria Garcia", "Thomas Johnson"), 20, replace = TRUE)
+    )
+    
+    # Generate CONTROL taxonomy data with different abundances 
+    control_taxonomy_data <- data.frame(
+      Sample_ID = rep(paste0("CTRL_SAMPLE", sprintf("%03d", 1:30)), each = length(species_names)),
+      Species = rep(species_names, 30),
+      Abundance = round(runif(30 * length(species_names), min = 0, max = 10000))
+    )
+    
+    # Modify control taxonomy to have more of the "healthy" microbiome species
+    healthy_indices <- which(control_taxonomy_data$Species %in% c(
+      "Faecalibacterium prausnitzii", "Akkermansia muciniphila", 
+      "Bifidobacterium longum", "Lactobacillus acidophilus"
+    ))
+    
+    # Increase abundance of healthy species
+    control_taxonomy_data$Abundance[healthy_indices] <- 
+      control_taxonomy_data$Abundance[healthy_indices] * sample(seq(1.5, 3, 0.1), length(healthy_indices), replace = TRUE)
+    
+    # Decrease abundance of potentially problematic species
+    problematic_indices <- which(control_taxonomy_data$Species %in% c(
+      "Clostridium difficile", "Bacteroides fragilis"
+    ))
+    control_taxonomy_data$Abundance[problematic_indices] <- 
+      control_taxonomy_data$Abundance[problematic_indices] * sample(seq(0.1, 0.4, 0.05), length(problematic_indices), replace = TRUE)
+    
+    # Ensure abundances don't exceed our max range
+    control_taxonomy_data$Abundance <- pmin(control_taxonomy_data$Abundance, 10000)
+    
     # Store the data in reactive values 
     data_store$sample_metadata <- sample_metadata
     data_store$run_metadata <- run_metadata
     data_store$taxonomy_data <- taxonomy_data 
+    data_store$control_sample_metadata <- control_sample_metadata
+    data_store$control_run_metadata <- control_run_metadata
+    data_store$control_taxonomy_data <- control_taxonomy_data
     data_store$success_message <- "Example data generated successfully! Ready for analysis."
     
     # Show notification 
@@ -768,22 +867,22 @@ server <- function(input, output, session) {
       }
       
       # Read sample metadata 
-      sample_metadata <- read.csv(input$sample_metadata$datapath)
+      sample_metadata <- read.csv(input$sample_metadata$datapath, header = TRUE)
       
       # Read run metadata 
-      run_metadata <- read.csv(input$run_metadata$datapath)
+      run_metadata <- read.csv(input$run_metadata$datapath, header = TRUE)
       
       # Read taxonomy data 
-      taxonomy_data <- read.delim(input$taxonomy_file$datapath, sep = "\t")
+      taxonomy_data <- read.delim(input$taxonomy_file$datapath, sep = "\t", header = TRUE)
       
       # Read control sample metadata 
-      control_sample_metadata <- read.csv(input$control_sample_metadata$datapath)
+      control_sample_metadata <- read.csv(input$control_sample_metadata$datapath, header = TRUE)
       
       # Read control run metadata 
-      control_run_metadata <- read.csv(input$control_run_metadata$datapath)
+      control_run_metadata <- read.csv(input$control_run_metadata$datapath, header = TRUE)
       
       # Read control taxonomy data 
-      control_taxonomy_data <- read.delim(input$control_taxonomy$datapath, sep = "\t")
+      control_taxonomy_data <- read.delim(input$control_taxonomy$datapath, sep = "\t", header = TRUE)
       
       # Store the data in reactive values 
       data_store$sample_metadata <- sample_metadata
@@ -833,6 +932,22 @@ server <- function(input, output, session) {
     )
   })
   
+  # Add a control samples value box
+  output$total_control_samples_box <- renderValueBox({
+    req(data_store$control_sample_metadata)
+    valueBox(
+      nrow(data_store$control_sample_metadata), 
+      "Control Samples", 
+      icon = icon("vial"), 
+      color = "yellow"
+    )
+  })
+  
+  ###############################################################
+  ##### FUTURE: Handle missing values in Dynamic summary ########
+  ###############################################################
+  
+  
   # Dynamic summary content 
   output$data_summary_dynamic <- renderUI({
     req(data_store$sample_metadata, data_store$run_metadata, data_store$taxonomy_data)
@@ -843,8 +958,8 @@ server <- function(input, output, session) {
     total_species <- length(unique(data_store$taxonomy_data$Species))
     sample_date_range <- paste(min(as.Date(data_store$sample_metadata$Collection_Date)), "to", 
                                max(as.Date(data_store$sample_metadata$Collection_Date)))
-    seq_date_range <- paste(min(as.Date(data_store$sample_metadata$Sequencing_Date)), "to", 
-                            max(as.Date(data_store$sample_metadata$Sequencing_Date)))
+    seq_date_range <- paste(min(as.Date(data_store$run_metadata$Sequencing_Date)), "to", 
+                            max(as.Date(data_store$run_metadata$Sequencing_Date)))
     
     # Sequencing Summary
     platform_counts <- table(data_store$run_metadata$Sequencing_Platform)
@@ -862,9 +977,6 @@ server <- function(input, output, session) {
     bmi_stats <- paste("mean:", round(mean(data_store$sample_metadata$BMI), 1),
                        "± SD:", round(sd(data_store$sample_metadata$BMI), 1))
     
-    geo_counts <- sort(table(data_store$sample_metadata$Geographical_origin), decreasing = TRUE)
-    geo_origins <- paste(names(geo_counts), paste0("(", geo_counts, ")"), collapse = ", ")
-    
     condition_counts <- sort(table(data_store$sample_metadata$Ongoing_conditions), decreasing = TRUE)
     top_conditions <- paste(names(condition_counts)[1:min(3, length(condition_counts))],
                             paste0("(", condition_counts[1:min(3, length(condition_counts))], ")"), 
@@ -877,11 +989,11 @@ server <- function(input, output, session) {
     allergy_counts <- table(data_store$sample_metadata$Allergies)
     allergies <- paste(names(allergy_counts), paste0("(", allergy_counts, ")"), collapse = ", ")
     
-    smoking_counts <- table(data_store$sample_metadata$Smoking)
-    smoking <- paste(names(smoking_counts), paste0("(", smoking_counts, ")"), collapse = ", ")
-    
-    alcohol_counts <- table(data_store$sample_metadata$Alcohol_Consumption)
-    alcohol <- paste(names(alcohol_counts), paste0("(", alcohol_counts, ")"), collapse = ", ")
+    # smoking_counts <- table(data_store$sample_metadata$Smoking)
+    # smoking <- paste(names(smoking_counts), paste0("(", smoking_counts, ")"), collapse = ", ")
+    # 
+    # alcohol_counts <- table(data_store$sample_metadata$Alcohol_Consumption)
+    # alcohol <- paste(names(alcohol_counts), paste0("(", alcohol_counts, ")"), collapse = ", ")
     
     exercise_counts <- table(data_store$sample_metadata$Exercise_frequency)
     exercise <- paste(names(exercise_counts), paste0("(", exercise_counts, ")"), collapse = ", ")
@@ -928,7 +1040,6 @@ server <- function(input, output, session) {
           <li><strong>Gender:</strong> ', gender_dist, '</li>
           <li><strong>Age range:</strong> ', age_range, '</li>
           <li><strong>BMI:</strong> ', bmi_stats, '</li>
-          <li><strong>Geographical Origins:</strong> ', geo_origins, '</li>
           <li><strong>Ongoing conditions (top 3):</strong> ', top_conditions, '</li>
         </ul>
         
@@ -951,14 +1062,100 @@ server <- function(input, output, session) {
     '))
   })
   
+  ############################################################## 
+  
+  ## Filter by 1 sample 
+  # Update sample selection dropdown 
+  observe({
+    req(data_store$sample_metadata)
+    sample_choices <- data_store$sample_metadata$Sample_ID
+    names(sample_choices) <- paste0(data_store$sample_metadata$Sample_ID, 
+                                    " (", data_store$sample_metadata$Collection_Date, ")")
+    
+    updateSelectizeInput(session, "selected_sample_id", 
+                         choices = c("All Samples" = "", sample_choices), 
+                         selected = "")
+  })
+  
+  # Create reactive for filtered data 
+  filtered_data <- reactive({
+    req(data_store$sample_metadata, data_store$taxonomy_data)
+    
+    selected_sample <- input$selected_sample_id
+    
+    if (selected_sample == "" || is.null(selected_sample)) {
+      return(list(
+        sample_metadata = data_store$sample_metadata, 
+        taxonomy_data = data_store$taxonomy_data, 
+        filtered = FALSE
+      ))
+    } else {
+      # Filter the metadata to just selected sample
+      filtered_sample_metadata <- data_store$sample_metadata 
+      if ("Sample_ID" %in% colnames(filtered_sample_metadata)) {
+        filtered_sample_metadata <- filtered_sample_metadata[filtered_sample_metadata$Sample_ID == selected_sample, ]
+      } else if ("SampleID" %in% colnames(filtered_sample_metadata)) {
+        filtered_sample_metadata <- filtered_sample_metadata[filtered_sample_metadata$SampleID == selected_sample, ]
+      }
+      
+      # Filter taxonomy data to just selected sample
+      filtered_taxonomy_data <- data_store$taxonomy_data 
+      if ("Sample_ID" %in% colnames(filtered_taxonomy_data)) {
+        filtered_taxonomy_data <- filtered_taxonomy_data[filtered_taxonomy_data$Sample_ID == selected_sample, ]
+      } else if ("SampleID" %in% colnames(filtered_taxonomy_data)) {
+        filtered_taxonomy_data <- filtered_taxonomy_data[filtered_taxonomy_data$SampleID == selected]
+      }
+
+      return(list(
+        sample_metadata = filtered_sample_metadata,
+        taxonomy_data = filtered_taxonomy_data, 
+        filtered = TRUE
+      ))
+    }
+  })
+  
+  # Render information about the selected sample
+  output$selected_sample_info <- renderUI({
+    req(filtered_data())
+    
+    if (!filtered_data()$filtered) {
+      return(HTML("<p><i>No specific sample selected. Showing data for all samples.</i></p>"))
+    }
+    sample_data <- filtered_data()$sample_metadata
+    
+    # Extract relevant information 
+    HTML(paste0(
+      "<h4>Selected Sample Information</h4>",
+      "<table class='table table-condensed table-bordered'>",
+      "<tr><th>Sample ID</th><td>", sample_data$Sample_ID, "</td></tr>",
+      "<tr><th>Collection Date</th><td>", sample_data$Collection_Date, "</td></tr>",
+      "<tr><th>Gender</th><td>", sample_data$Gender, "</td></tr>",
+      "<tr><th>Age</th><td>", sample_data$Age, "</td></tr>",
+      "<tr><th>BMI</th><td>", sample_data$BMI, "</td></tr>",
+      "<tr><th>Ongoing Conditions</th><td>", sample_data$Ongoing_conditions, "</td></tr>",
+      "<tr><th>Collection Storage</th><td>", sample_data$Collection_Storage_Temperature, "</td></tr>",
+      "</table>"
+    ))
+  })
+  
+
   # Render metadata table previews with filtering 
   output$sample_metadata_preview <- renderDataTable({
     req(data_store$sample_metadata)
     
     # Get filter condition
     filter_value <- input$sample_metadata_filter 
+    selected_sample <- input$selected_sample_id
     
-    # Filter data based on selection 
+    # Start with base data 
+    sample_data <- data_store$sample_metadata
+    
+    # Apply sample filter if selected 
+    if (selected_sample != "" && !is.null(selected_sample)) {
+      sample_data <- sample_data %>% filter(Sample_ID == selected_sample)
+    }
+    
+    # Filter data based on condition selection 
     if (!is.null(filter_value)) {
       if (filter_value == "Control") {
         req(data_store$control_sample_metadata)
@@ -998,7 +1195,7 @@ server <- function(input, output, session) {
     # Get filter condition 
     filter_value <- input$run_metadata_filter
     
-    # Filter data based on selection
+    # Filter data based on condition selection
     if (!is.null(filter_value)) {
       if (filter_value == "Control") {
         req(data_store$control_run_metadata) 
@@ -1036,6 +1233,15 @@ server <- function(input, output, session) {
     
     # Get filter condition 
     filter_value <- input$taxonomy_data_filter
+    selected_sample <- input$selected_sample_id
+    
+    # Start with base data 
+    taxonomy_data <- data_store$taxonomy_data 
+    
+    # Apply sample filter if selected
+    if (selected_sample != "" && !is.null(selected_sample)) {
+      taxonomy_data <- taxonomy_data %>% filter(Sample_ID == selected_sample)
+    }
     
     # Filter data based on selection
     if (!is.null(filter_value)) {
@@ -1069,6 +1275,16 @@ server <- function(input, output, session) {
               options = list(pageLength = 10, scrollX = TRUE)))
     }
   })
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   #### TAXONOMY TAB ######
   
@@ -1702,6 +1918,13 @@ server <- function(input, output, session) {
     
     return(p)
   })
+  
+  
+  
+  
+  
+  
+  ##################
   
   #### LIFESTYLE TAB ######
   
