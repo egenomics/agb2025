@@ -15,7 +15,7 @@ log.info """\
 params.reads = "group2_B/data/simulated_reads/*_R{1,2}.fastq.gz" // Default, override with --reads
 params.outdir = "group2_B/results" // Default, override with --outdir
 params.denoiser = "dada2" // Options: 'dada2', 'deblur'
-params.classifier_db = "path/to/your/qiime2_classifier.qza" // <<< IMPORTANT: Specify path to your classifier (e.g., Silva/Greengenes)
+params.classifier_db = "group2_B/proba_data/silva138_noEuk_AB_classifier.qza" // <<< IMPORTANT: Specify path to your classifier (e.g., Silva/Greengenes)
 params.sampling_depth = 1000 // <<< IMPORTANT: Adjust based on your data (check feature table summary)
 params.trunc_len_f = 220 // DADA2: Forward read truncation length ### dpends on the demux report!!!!!!
 params.trunc_len_r = 220 // DADA2: Reverse read truncation length
