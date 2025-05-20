@@ -1,2 +1,4 @@
 PROJECT_RULES.md 
-.DS_Store 
+.DS_Store testing/.nextflow*
+testing/work/
+agb2025/
