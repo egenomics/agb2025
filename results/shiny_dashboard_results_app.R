@@ -1318,6 +1318,25 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  observe({
+    req(input$enable_div_comparison, input$grouping_var, data_store$sample_metadata)
+    
+    # Don't proceed if 'None' is selected
+    if (input$grouping_var == "None") return()
+    
+    group_values <- unique(na.omit(data_store$sample_metadata[[input$grouping_var]]))
+    
+    updateSelectInput(session, "compare_group1", 
+                      choices = group_values,
+                      selected = group_values[1])
+    
+    updateSelectInput(session, "compare_group2", 
+                      choices = group_values,
+                      selected = if (length(group_values) > 1) group_values[2] else group_values[1])
+  })
+  
+  
   # Update the selected taxa choices for demographic pattern plots
   observe({
     req(data_store$taxonomy_data)
