@@ -46,10 +46,8 @@ ui <- dashboardPage(
       menuItem(" Data Upload & Overview", tabName = "data_overview", icon = icon("upload")),
       menuItem(" Taxonomic Composition", tabName = "taxonomy", icon = icon("bacteria")),
       menuItem(" Diversity Analysis", tabName = "diversity", icon = icon("chart-line")),
-      menuItem(" Clinical Factors", tabName = "clinical", icon = icon("notes-medical")),
-      menuItem(" Lifestyle Impact", tabName = "lifestyle", icon = icon("heartbeat")),
+      menuItem(" Clinical & Lifestyle Correlations", tabName = "multifactor", icon = icon("notes-medical")),
       menuItem(" Medical Interventions", tabName = "interventions", icon = icon("prescription-bottle-medical")), 
-      menuItem(" Multi-factor Analysis", tabName = "multifactor", icon = icon("sitemap")), 
       menuItem(" Reports", tabName = "reports", icon = icon("file-export"))
     )
   ),
@@ -522,8 +520,19 @@ ui <- dashboardPage(
               ),
       
       # TAB 4: Lifestyle Tab 
-      tabItem(tabName = "lifestyle"), 
-      
+      tabItem(tabName = "multifactor",
+              fluidRow(
+                box(
+                  title = "Parallel Coordinates Plot",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 12,
+                  helpText("Visualize the relationship between microbial taxa and selected metadata."),
+                  uiOutput("parallel_var_select"),
+                  plotlyOutput("parallel_plot", height = "600px")
+                )
+              )
+      ),
       
       # Reports Tab
       tabItem(tabName = "reports",
@@ -867,11 +876,11 @@ server <- function(input, output, session) {
     allergy_counts <- table(data_store$sample_metadata$Allergies)
     allergies <- paste(names(allergy_counts), paste0("(", allergy_counts, ")"), collapse = ", ")
     
-    # smoking_counts <- table(data_store$sample_metadata$Smoking)
-    # smoking <- paste(names(smoking_counts), paste0("(", smoking_counts, ")"), collapse = ", ")
+    smoking_counts <- table(data_store$sample_metadata$Smoking)
+    smoking <- paste(names(smoking_counts), paste0("(", smoking_counts, ")"), collapse = ", ")
     # 
-    # alcohol_counts <- table(data_store$sample_metadata$Alcohol_Consumption)
-    # alcohol <- paste(names(alcohol_counts), paste0("(", alcohol_counts, ")"), collapse = ", ")
+    alcohol_counts <- table(data_store$sample_metadata$Alcohol_Consumption)
+    alcohol <- paste(names(alcohol_counts), paste0("(", alcohol_counts, ")"), collapse = ", ")
     
     exercise_counts <- table(data_store$sample_metadata$Exercise_frequency)
     exercise <- paste(names(exercise_counts), paste0("(", exercise_counts, ")"), collapse = ", ")
@@ -1819,15 +1828,74 @@ server <- function(input, output, session) {
     
     plot(hc, main = paste("Hierarchical Clustering (", input$distance_metric, ")"), xlab = "", sub = "")
   })
+  
+  output$parallel_var_select <- renderUI({
+    req(data_store$sample_metadata)
+    selectizeInput("parallel_vars", "Select Metadata Variables:",
+                   choices = names(data_store$sample_metadata),
+                   selected = c("Age", "Gender", "BMI", "Ongoing_conditions"),
+                   multiple = TRUE)
+  })
+  
+  output$parallel_plot <- renderPlotly({
+    req(data_store$sample_metadata, data_store$taxonomy_data, input$parallel_vars)
+    
+    # Calcular Total Abundance por muestra
+    taxa_data <- data_store$taxonomy_data %>%
+      group_by(Sample_ID) %>%
+      summarize(Total_Abundance = sum(Abundance), .groups = "drop")
+    
+    # Unir con metadata
+    combined <- merge(data_store$sample_metadata, taxa_data, by = "Sample_ID")
+    
+    # Variables seleccionadas
+    vars <- input$parallel_vars
+    
+    # Añadir Total_Abundance al final
+    all_vars <- c(vars, "Total_Abundance")
+    
+    # Seleccionar columnas y preparar datos
+    plot_data <- combined %>%
+      select(all_of(all_vars)) %>%
+      na.omit() %>%
+      mutate(across(where(is.character), as.factor)) %>%
+      mutate(across(where(is.factor), ~ as.numeric(as.factor(.))))
+    
+    # Crear el gráfico
+    plot_ly(
+      type = 'parcoords',
+      line = list(
+        color = plot_data$Total_Abundance,
+        colorscale = 'Viridis',
+        showscale = TRUE  # 🔹 Oculta leyenda flotante, usamos solo el eje
+      ),
+      dimensions = lapply(names(plot_data), function(col) {
+        if (is.character(combined[[col]]) || is.factor(combined[[col]])) {
+          # Es cualitativa, convertir a factor y mostrar etiquetas
+          f <- factor(combined[[col]])
+          list(
+            label = col,
+            values = as.numeric(f),
+            tickvals = seq_along(levels(f)),
+            ticktext = levels(f)
+          )
+        } else {
+          # Variable numérica normal
+          list(
+            label = col,
+            values = plot_data[[col]]
+          )
+        }
+      })
+    )
+  })
+  
 }
 
 
 
 
 
-  
-  
-  
   
   
   
