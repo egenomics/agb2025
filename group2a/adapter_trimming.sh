@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ADAPTERS="./adapters/TruSeq3-PE-2.fa"
-IN_DIR="raw_data"
+IN_DIR="../raw_data"
 OUT_DIR="fastq_trimmed"
 mkdir -p ${OUT_DIR}
 
