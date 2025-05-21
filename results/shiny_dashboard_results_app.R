@@ -413,7 +413,7 @@ ui <- dashboardPage(
               )
       ),
                   
-     # TAB 3: Diversity Analysis Tab
+      # TAB 3: Diversity Analysis Tab
       tabItem(tabName = "diversity",
               fluidRow(
                 
@@ -1494,7 +1494,334 @@ server <- function(input, output, session) {
       ggsave(file, plot = p, width = 10, height = 8, dpi = 300)
     }
   )
+  
+  ###### DIVERSITY ANALYSIS TAB ######
+  output$alpha_plot_type_ui <- renderUI({
+    req(input$alpha_metric)
+    
+    if (input$alpha_metric == "Observed OTUs") {
+      selectInput("alpha_plot_type", "Plot Type:",
+                  choices = c("Violin", "Jittered Scatterplot"),
+                  selected = "Violin")
+    } else {
+      selectInput("alpha_plot_type", "Plot Type:",
+                  choices = c("Boxplot + Dots", "Violin", "Jittered Scatterplot"),
+                  selected = "Boxplot + Dots")
+    }
+  })
+  
+  
+  output$diversity_main_plot <- renderPlotly({
+    req(data_store$sample_metadata, data_store$taxonomy_data)
+    req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
+    req(input$diversity_type == "alpha")
+    req(input$alpha_metric, input$alpha_plot_type, input$alpha_color_palette)
+    
+    set.seed(42)
+    jitter_pos <- position_jitter(width = 0.2, height = 0)
+    
+    sample_meta <- data_store$sample_metadata
+    control_meta <- data_store$control_sample_metadata
+    
+    sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
+    control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
+    
+    sample_wide <- sample_tax %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+    
+    sample_div <- sample_wide %>%
+      column_to_rownames("Sample_ID") %>%
+      as.matrix() %>%
+      {
+        tibble(
+          Sample_ID = rownames(.),
+          Observed = rowSums(. > 0),
+          Shannon = vegan::diversity(., index = "shannon"),
+          Simpson = vegan::diversity(., index = "simpson")
+        )
+      }
+    
+    if (input$subdivide_samples) {
+      req(input$condition_column)
+      selected_col <- input$condition_column
+      sample_div <- left_join(sample_div,
+                              sample_meta %>% select(Sample_ID, !!sym(selected_col)),
+                              by = "Sample_ID")
+      sample_div$GroupLabel <- sample_div[[selected_col]]
+    } else {
+      sample_div$GroupLabel <- "Sample"
+    }
+    
+    control_wide <- control_tax %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+    
+    control_div <- control_wide %>%
+      column_to_rownames("Sample_ID") %>%
+      as.matrix() %>%
+      {
+        tibble(
+          Sample_ID = rownames(.),
+          Observed = rowSums(. > 0),
+          Shannon = vegan::diversity(., index = "shannon"),
+          Simpson = vegan::diversity(., index = "simpson"),
+          GroupLabel = "Control"
+        )
+      }
+    
+    diversity_df <- bind_rows(sample_div, control_div)
+    
+    group_levels <- c("Control", sort(unique(diversity_df$GroupLabel[diversity_df$GroupLabel != "Control"])))
+    diversity_df$GroupLabel <- factor(diversity_df$GroupLabel, levels = group_levels)
+    
+    metric_col <- switch(input$alpha_metric,
+                         "Observed OTUs" = "Observed",
+                         "Shannon" = "Shannon",
+                         "Simpson" = "Simpson")
+    
+    p <- ggplot(diversity_df, aes(x = GroupLabel, y = .data[[metric_col]], fill = GroupLabel))
+    
+    if (input$alpha_plot_type == "Boxplot + Dots") {
+      p <- p +
+        geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+        geom_jitter(aes(text = Sample_ID), shape = 21, alpha = 0.6, color = "black", position = jitter_pos)
+    } else if (input$alpha_plot_type == "Violin") {
+      p <- p + geom_violin(alpha = 0.7, trim = FALSE)
+    } else if (input$alpha_plot_type == "Jittered Scatterplot") {
+      p <- p + geom_jitter(aes(text = Sample_ID), shape = 21, alpha = 0.7, color = "black", position = jitter_pos)
+    }
+    
+    if (!is.null(input$selected_sample_id) && input$selected_sample_id %in% diversity_df$Sample_ID) {
+      highlighted <- diversity_df %>% filter(Sample_ID == input$selected_sample_id)
+      p <- p + geom_point(data = highlighted,
+                          aes(x = GroupLabel, y = .data[[metric_col]]),
+                          shape = 21, size = 4, stroke = 1.5,
+                          color = "red", fill = "yellow")
+    }
+    
+    p <- p +
+      labs(title = paste(input$alpha_metric, "Diversity across Groups"),
+           x = "Group", y = paste(input$alpha_metric, "Index")) +
+      theme_minimal() +
+      theme(legend.position = ifelse(input$show_diversity_legend, "right", "none")) +
+      scale_fill_brewer(palette = input$alpha_color_palette)
+    
+    ggplotly(p, tooltip = c("x", "y", "text")) %>%
+      layout(dragmode = "zoom")
+  })
+  
+  
+  
+  output$alpha_stats_table <- renderPrint({
+    req(data_store$sample_metadata, data_store$taxonomy_data)
+    req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
+    
+    # Get metadata and taxonomy
+    sample_meta <- data_store$sample_metadata
+    control_meta <- data_store$control_sample_metadata
+    
+    sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
+    control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
+    
+    # Sample diversity
+    sample_wide <- sample_tax %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+    
+    sample_div <- sample_wide %>%
+      column_to_rownames("Sample_ID") %>%
+      as.matrix() %>%
+      {
+        tibble(
+          Sample_ID = rownames(.),
+          Observed = rowSums(. > 0),
+          Shannon = vegan::diversity(., index = "shannon"),
+          Simpson = vegan::diversity(., index = "simpson")
+        )
+      }
+    
+    # Add GroupLabel from condition or default
+    if (input$subdivide_samples) {
+      req(input$condition_column)
+      selected_col <- input$condition_column
+      sample_div <- left_join(sample_div,
+                              sample_meta %>% select(Sample_ID, !!sym(selected_col)),
+                              by = "Sample_ID")
+      sample_div$GroupLabel <- sample_div[[selected_col]]
+    } else {
+      sample_div$GroupLabel <- "Sample"
+    }
+    
+    # Control diversity
+    control_wide <- control_tax %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+    
+    control_div <- control_wide %>%
+      column_to_rownames("Sample_ID") %>%
+      as.matrix() %>%
+      {
+        tibble(
+          Sample_ID = rownames(.),
+          Observed = rowSums(. > 0),
+          Shannon = vegan::diversity(., index = "shannon"),
+          Simpson = vegan::diversity(., index = "simpson"),
+          GroupLabel = "Control"
+        )
+      }
+    
+    # Combine
+    diversity_df <- bind_rows(sample_div, control_div) %>%
+      filter(!is.na(GroupLabel))  # Clean up NAs
+    
+    # Choose metric
+    metric_col <- switch(input$alpha_metric,
+                         "Observed OTUs" = "Observed",
+                         "Shannon" = "Shannon",
+                         "Simpson" = "Simpson")
+    
+    # Check group count
+    n_groups <- dplyr::n_distinct(diversity_df$GroupLabel)
+    if (n_groups < 2) {
+      cat("Not enough groups to compare.")
+      return(NULL)
+    }
+    
+    cat("\n")
+    
+    if (n_groups == 2) {
+      cat("✅ Only 2 groups detected — using Wilcoxon rank-sum test (non-parametric):\n")
+      wilcox_result <- wilcox.test(as.formula(paste(metric_col, "~ GroupLabel")), data = diversity_df)
+      print(wilcox_result)
+      
+    } else {
+      cat("🔍 Pairwise comparisons (Dunn’s test, BH corrected):\n")
+      if (!requireNamespace("FSA", quietly = TRUE)) {
+        cat("❌ Please install the 'FSA' package to enable Dunn's test.\n")
+      } else {
+        suppressPackageStartupMessages(library(FSA))
+        dunn_res <- FSA::dunnTest(
+          as.formula(paste(metric_col, "~ GroupLabel")),
+          data = diversity_df,
+          method = "bh"
+        )
+        print(dunn_res)
+      }
+    }
+  })
+  
+  output$ordination_plot <- renderPlotly({
+    req(input$diversity_type == "beta")
+    req(data_store$sample_metadata, data_store$taxonomy_data)
+    req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
+    req(input$distance_metric, input$ordination_method)
+    
+    # Combine sample and control taxonomy
+    all_tax <- bind_rows(
+      data_store$taxonomy_data,
+      data_store$control_taxonomy_data
+    ) %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
+      column_to_rownames("Sample_ID")
+    
+    # Calculate distance matrix
+    dist_method <- switch(input$distance_metric,
+                          "Bray-Curtis" = "bray",
+                          "Euclidean"   = "euclidean",
+                          "Jaccard"     = "jaccard")
+    dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+    
+    # Perform ordination
+    ord_result <- if (input$ordination_method == "PCoA") {
+      ape::pcoa(dist_matrix)$vectors[, 1:2]
+    } else {
+      MASS::isoMDS(dist_matrix, k = 2)$points
+    }
+    
+    ord_df <- as.data.frame(ord_result)
+    colnames(ord_df)[1:2] <- c("Axis1", "Axis2")  
+    ord_df$Sample_ID <- rownames(ord_result)
+    
+    
+    # Add grouping
+    all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
+    ord_df <- left_join(ord_df, all_meta, by = "Sample_ID")
+    
+    # Assign group label
+    ord_df$GroupLabel <- if (input$subdivide_samples) {
+      req(input$condition_column)
+      ord_df[[input$condition_column]]
+    } else {
+      ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
+    }
+    
+    # Plot
+    p <- ggplot(ord_df, aes(x = Axis1, y = Axis2, color = GroupLabel)) +
+      geom_point(size = 3, alpha = 0.8) +
+      labs(x = "Axis 1", y = "Axis 2",
+           title = paste(input$ordination_method, "on", input$distance_metric, "distance")) +
+      theme_minimal()
+    
+    
+    if (input$show_group_ellipses) {
+      p <- p + stat_ellipse(type = "norm", linetype = "dashed", alpha = 0.4)
+    }
+    
+    ggplotly(p)
+  })
+  
+  output$beta_stats_table <- renderPrint({
+    req(input$diversity_type == "beta")
+    req(data_store$sample_metadata, data_store$taxonomy_data)
+    req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
+    
+    # Combine taxonomy
+    all_tax <- bind_rows(
+      data_store$taxonomy_data,
+      data_store$control_taxonomy_data
+    ) %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
+      column_to_rownames("Sample_ID")
+    
+    # Combine metadata
+    all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
+    group_label <- if (input$subdivide_samples) {
+      req(input$condition_column)
+      all_meta[[input$condition_column]]
+    } else {
+      ifelse(all_meta$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
+    }
+    
+    adonis_result <- vegan::adonis2(all_tax ~ group_label, method = tolower(input$distance_metric))
+    print(adonis_result)
+  })
+  
+  
+  output$clustering_plot <- renderPlot({
+    req(input$diversity_type == "beta")
+    req(data_store$sample_metadata, data_store$taxonomy_data)
+    req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
+    req(input$show_clustering_dendrogram)
+    
+    all_tax <- bind_rows(
+      data_store$taxonomy_data,
+      data_store$control_taxonomy_data
+    ) %>%
+      select(Sample_ID, Species, Abundance) %>%
+      pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
+      column_to_rownames("Sample_ID")
+    
+    dist_matrix <- vegan::vegdist(all_tax, method = tolower(input$distance_metric))
+    hc <- hclust(dist_matrix, method = "ward.D2")
+    
+    plot(hc, main = paste("Hierarchical Clustering (", input$distance_metric, ")"), xlab = "", sub = "")
+  })
 }
+
+
 
 
 
