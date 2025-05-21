@@ -9,7 +9,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-params.raw_data = "raw_data"
+params.raw_data = "../raw_data"
 params.out_dir  = "multiqc_report"
 
 process multiQC {
