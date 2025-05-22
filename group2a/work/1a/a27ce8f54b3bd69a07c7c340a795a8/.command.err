@@ -1,0 +1,22 @@
+
+  /// MultiQC 🔍 | v1.18
+
+|           multiqc | MultiQC Version v1.28 now available!
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328415_2_fastqc.zip
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328415_2_fastqc.html
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328415_1_fastqc.zip
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328415_1_fastqc.html
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328363_1_fastqc.zip
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328363_1_fastqc.html
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328366_2_fastqc.zip
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328366_2_fastqc.html
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328366_1_fastqc.zip
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328366_1_fastqc.html
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328363_2_fastqc.zip
+|           multiqc | Search path : /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/1a/a27ce8f54b3bd69a07c7c340a795a8/ERR1328363_2_fastqc.html
+|         searching | ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 12/12  
+|            fastqc | Found 6 reports
+|           multiqc | Report      : multiqc_report/multiqc_report.html
+|           multiqc | Data        : multiqc_report/multiqc_data
+|           multiqc | Could not include file 'assets/js/packages/jszip.min.js': [Errno 2] No such file or directory: '/tmp/tmpxxb_uxo5/assets/js/packages/jszip.min.js'
+|           multiqc | MultiQC complete
