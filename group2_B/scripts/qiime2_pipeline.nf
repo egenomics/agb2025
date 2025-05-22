@@ -20,9 +20,12 @@ params.sampling_depth = 1000 // <<< IMPORTANT: Adjust based on your data (check 
 params.trunc_len_f = 220 // DADA2: Forward read truncation length ### dpends on the demux report!!!!!!
 params.trunc_len_r = 220 // DADA2: Reverse read truncation length
 params.trim_length = 0 // Deblur: Read trim length
+params.metadata = "group2_B/proba_data/metadata.tsv"
 
 // == Input Channel ==
 ch_reads = Channel.fromFilePairs(params.reads, flat: true)
+ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
+ch_metadata = Channel.fromPath(params.metadata, checkIfExists: true)
 
 
 // == Workflow ==
@@ -48,7 +51,7 @@ workflow {
     SUMMARIZE_SEQS( ch_denoised_reps )
 
     // 4. Taxonomic Classification
-    CLASSIFY_TAXONOMY( ch_denoised_reps )
+    CLASSIFY_TAXONOMY( ch_denoised_reps, ch_classifier )
 
     // 5. Phylogenetic Tree Construction
     BUILD_TREE( ch_denoised_reps )
@@ -176,7 +179,7 @@ process SUMMARIZE_TABLE {
     qiime feature-table summarize \
       --i-table ${table_qza} \
       --o-visualization table.qzv
-      --m-sample-metadata-file metadata.tsv 
+      --m-sample-metadata-file ${params.metadata} 
     """
     stub:
     """
@@ -213,6 +216,7 @@ process CLASSIFY_TAXONOMY {
 
     input:
     path(rep_seqs_qza)
+    path(classifier_db)
 
     output:
     path("taxonomy.qza", emit: taxonomy)
@@ -224,7 +228,7 @@ process CLASSIFY_TAXONOMY {
     }
     """
     qiime feature-classifier classify-sklearn \
-      --i-classifier ${params.classifier_db} \
+      --i-classifier ${classifier_db} \
       --i-reads ${rep_seqs_qza} \
       --o-classification taxonomy.qza \
       --p-n-jobs ${task.cpus}
@@ -315,7 +319,7 @@ process CORE_DIVERSITY {
       --p-sampling-depth ${params.sampling_depth} \
       --output-dir core-metrics-results \
       --p-n-jobs-or-threads ${task.cpus}
-      # Add metadata if available: --m-metadata-file ${metadata}
+      --m-metadata-file ${metadata}
 
     # Move results out of the directory created by qiime
     mv core-metrics-results/* .
