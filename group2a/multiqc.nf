@@ -48,6 +48,23 @@ process multiQC {
     """
 }
 
+process kraken2 {
+    tag "Kraken2"
+    conda 'bioconda::kraken2=2.1.1'
+
+    input:
+    path reads
+
+    output:
+    path("kraken_report", type: 'dir')
+
+    script:
+    """
+    mkdir -p ${params.out_dir}
+    kraken2 --db ${params.kraken_db} --report ${params.out_dir}/kraken_report.txt ${reads}
+    """
+}
+
 workflow {
     raw_data_ch = Channel.fromPath(params.raw_data)
 

@@ -1,12 +1,14 @@
 nextflow.enable.dsl=2
 
-include { FASTQC as FASTQC_RAW } from './modules/nf-core/fastqc/main.nf'
-include { FASTQC as FASTQC_TRIM } from './modules/nf-core/fastqc/main.nf'
-include { TRIMMOMATIC } from './modules/nf-core/trimmomatic/main.nf'
+include { FASTQC as FASTQC_RAW      } from './modules/nf-core/fastqc/main.nf'
+include { FASTQC as FASTQC_TRIM     } from './modules/nf-core/fastqc/main.nf'
+include { TRIMMOMATIC               } from './modules/nf-core/trimmomatic/main.nf'
+include { KRAKEN2_KRAKEN2 as KRAKEN } from './modules/nf-core/kraken2/kraken2/main.nf'
 
 // Define outdir globalmente
 def timestamp = new Date().format("yyyyMMdd_HHmmss")
 def outdir = "outputs/run_${timestamp}"
+def kraken2_db = file('group2a/database/k2_minusb_20250402') // THIS IS A LOCAL FILE AS THE DB IS HUGE
 
 workflow {
     println "Timestamp: ${timestamp}"
@@ -42,6 +44,20 @@ workflow {
                 new_meta.id = "${meta.id}_trimmed"
                 return tuple(new_meta, reads)
             }
+    )
+
+    // Run Kraken2
+    KRAKEN(
+        TRIMMOMATIC.out.trimmed_reads
+            .map { meta, reads ->
+                tuple(meta, reads)
+            },
+            ${kraken2_db},
+            false,
+            true
+        )
+    
+            
     )
 }
 

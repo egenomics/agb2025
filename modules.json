@@ -15,6 +15,11 @@
             "git_sha": "b1966f36ec9de31927b2603d8f499960b2a4c294",
             "installed_by": ["modules"]
           },
+          "kraken2/kraken2": {
+            "branch": "master",
+            "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
+            "installed_by": ["modules"]
+          },
           "trimmomatic": {
             "branch": "master",
             "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
