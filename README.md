@@ -48,7 +48,25 @@ In this wiki page you will find the information about the pipeline context, the 
 │           └── …
 ├── 📁 results/             # Final summary tables and plots per run (or sample?)
 │   └── summary_report.html
-│ 
+│
 └── 📁 logs/                # Pipeline logs
     └── run_YYYYmmdd_hhmmss_pipeline.log
+```
 
+## Quick start (Docker edition)
+
+### 1 · Prerequisites
+
+| Tool               | macOS (Homebrew)                                                            | Ubuntu / Debian                                                           | Notes                                                         |
+|--------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------|
+| **Docker ≥ 24**    | `brew install --cask docker`<br/>Launch *Docker Desktop*                     | `sudo apt install docker.io`                                              | Ensure the Docker daemon is running and your user has access. |
+| **Nextflow ≥ 23.10** | `brew install nextflow`                                                    | `curl -s https://get.nextflow.io \| bash && sudo mv nextflow /usr/local/bin/` | No extra software needed – the pipeline pulls everything in containers. |
+
+
+### 2 · Run the pipeline
+```bash
+# minimal
+nextflow run main.nf -profile docker
+
+# resume an interrupted run (skips completed tasks)
+nextflow run main.nf -profile docker -resume

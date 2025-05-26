@@ -1,4 +1,9 @@
-PROJECT_RULES.md 
+PROJECT_RULES.md
 .DS_Store testing/.nextflow*
 testing/work/
 agb2025/
+.nextflow/
+work/
+.nextflow.log*
+.nextflow/history
+.DS_Store

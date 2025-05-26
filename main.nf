@@ -13,7 +13,7 @@ def kraken2_db = file('group2a/database/k2_minusb_20250402') // THIS IS A LOCAL 
 workflow {
     println "Timestamp: ${timestamp}"
     println "Output directory: ${outdir}"
-    
+
     // Channel with paired-end fastq files
     Channel
         .fromFilePairs("raw_data/*_{1,2}.fastq.gz", size: 2)
@@ -26,20 +26,20 @@ workflow {
             return tuple(meta, reads)
         }
         .set { raw_reads }
-    
+
     // Debug: view the channel contents
     raw_reads.view { meta, reads -> "Sample: ${meta.id}, Files: ${reads}" }
-    
+
     // Run FastQC on raw reads
     FASTQC_RAW(raw_reads)
-    
+
 	// Run Trimmomatic
     TRIMMOMATIC(raw_reads)
-    
+
     // Run FastQC on trimmed reads
     FASTQC_TRIM(
         TRIMMOMATIC.out.trimmed_reads
-            .map { meta, reads -> 
+            .map { meta, reads ->
                 def new_meta = meta.clone()
                 new_meta.id = "${meta.id}_trimmed"
                 return tuple(new_meta, reads)
@@ -52,13 +52,11 @@ workflow {
             .map { meta, reads ->
                 tuple(meta, reads)
             },
-            ${kraken2_db},
+            kraken2_db,
             false,
             true
         )
-    
-            
-    )
+
 }
 
 // Workflow completion message
