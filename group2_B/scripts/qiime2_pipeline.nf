@@ -12,15 +12,15 @@ log.info """\
          """
 
 // == Define Parameters ==
-params.reads = "group2_B/data/simulated_reads/*_R{1,2}.fastq.gz" // Default, override with --reads
-params.outdir = "group2_B/results" // Default, override with --outdir
+params.reads = "group2_B/data/simulated_reads/*_{1,2}.fastq.gz" // override with --reads
+params.outdir = "group2_B/results" // override with --outdir
 params.denoiser = "dada2" // Options: 'dada2', 'deblur'
-params.classifier_db = "group2_B/proba_data/silva138_noEuk_AB_classifier.qza" // <<< IMPORTANT: Specify path to your classifier (e.g., Silva/Greengenes)
-params.sampling_depth = 1000 // <<< IMPORTANT: Adjust based on your data (check feature table summary)
-params.trunc_len_f = 220 // DADA2: Forward read truncation length ### dpends on the demux report!!!!!!
-params.trunc_len_r = 220 // DADA2: Reverse read truncation length
-params.trim_length = 0 // Deblur: Read trim length
-params.metadata = "group2_B/proba_data/metadata.tsv"
+params.classifier_db = "group2_B/classifier/silva138_noEuk_AB_classifier.qza"
+params.metadata = "group2_B/metadata/metadata.tsv"
+
+params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on the demux report!!!!!!
+params.trunc_len_r = 180 // DADA2: Reverse read truncation length
+params.sampling_depth = 1000 // Adjust based on the data (check feature table summary)
 
 // == Input Channel ==
 ch_reads = Channel.fromFilePairs(params.reads, flat: true)
@@ -47,7 +47,7 @@ workflow {
     }
 
     // 3. Feature Table Summaries (Useful for picking sampling depth)
-    SUMMARIZE_TABLE( ch_denoised_table )
+    SUMMARIZE_TABLE( ch_denoised_table, ch_metadata)
     SUMMARIZE_SEQS( ch_denoised_reps )
 
     // 4. Taxonomic Classification
@@ -57,7 +57,7 @@ workflow {
     BUILD_TREE( ch_denoised_reps )
 
     // 6. Core Diversity Metrics
-    CORE_DIVERSITY( ch_denoised_table, ch_denoised_reps, BUILD_TREE.out.rooted_tree )
+    // CORE_DIVERSITY( ch_denoised_table, ch_denoised_reps, ch_metadata, BUILD_TREE.out.rooted_tree )
 }
 
 // == Processes ==
@@ -114,8 +114,8 @@ process DENOISE_DADA2 {
     """
     qiime dada2 denoise-paired \
         --i-demultiplexed-seqs ${demux_qza} \
-        --p-trim-left-f 13 \
-        --p-trim-left-r 13 \
+        --p-trim-left-f 0 \
+        --p-trim-left-r 0 \
         --p-trunc-len-f ${params.trunc_len_f} \
         --p-trunc-len-r ${params.trunc_len_r} \
         --o-table table.qza \
@@ -170,6 +170,7 @@ process SUMMARIZE_TABLE {
 
     input:
     path(table_qza)
+    path(metadata_file)
 
     output:
     path("table.qzv", emit: table_summary)
@@ -178,8 +179,9 @@ process SUMMARIZE_TABLE {
     """
     qiime feature-table summarize \
       --i-table ${table_qza} \
-      --o-visualization table.qzv
-      --m-sample-metadata-file ${params.metadata} 
+      --o-visualization table.qzv \
+      --m-sample-metadata-file ${metadata_file}
+
     """
     stub:
     """
@@ -280,6 +282,7 @@ process CORE_DIVERSITY {
     input:
     path(table_qza)
     path(rep_seqs_qza) // Although not directly used, good practice to show dependency
+    path(metadata_file)
     path(rooted_tree_qza)
     // Add metadata file input here if available: path(metadata)
 
