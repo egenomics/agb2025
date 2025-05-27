@@ -1,14 +1,10 @@
-nextflow.enable.dsl=2
+nextflow.enable.dsl = 2
 
-include { FASTQC as FASTQC_RAW      } from './modules/nf-core/fastqc/main.nf'
-include { FASTQC as FASTQC_TRIM     } from './modules/nf-core/fastqc/main.nf'
-include { TRIMMOMATIC               } from './modules/nf-core/trimmomatic/main.nf'
+include { FASTQC as FASTQC_RAW } from './modules/nf-core/fastqc/main.nf'
+include { FASTQC as FASTQC_TRIM } from './modules/nf-core/fastqc/main.nf'
+include { TRIMMOMATIC } from './modules/nf-core/trimmomatic/main.nf'
 include { KRAKEN2_KRAKEN2 as KRAKEN } from './modules/nf-core/kraken2/kraken2/main.nf'
 
-// Define outdir globalmente
-def timestamp = new Date().format("yyyyMMdd_HHmmss")
-def outdir = "outputs/run_${timestamp}"
-def kraken2_db = file('refs/kraken2/k2_minusb_20250402')
 
 process CHECK_OR_DOWNLOAD_DB {
 
@@ -21,10 +17,10 @@ process CHECK_OR_DOWNLOAD_DB {
      * (the same place the rest of your pipeline already uses) */
     publishDir "refs/kraken2", mode: 'copy'
 
-    output:
-        path "k2_minusb_20250402", emit: db_dir       // \<-- tells NF a folder will appear
+    cache 'lenient'
 
-    cache 'lenient'                                   // skip completely when it already ran
+    output:
+    path "k2_minusb_20250402", emit: db_dir
 
     script:
     """
@@ -59,25 +55,27 @@ process CHECK_OR_DOWNLOAD_DB {
 }
 
 workflow {
-    println "Timestamp: ${timestamp}"
-    println "Output directory: ${outdir}"
+    def kraken2_db = file('refs/kraken2/k2_minusb_20250402')
 
-   // ── only download if we don’t already have the DB on the host ──
-    if( ! file('refs/kraken2/k2_minusb_20250402').exists() ) {
-       println "[INFO] Kraken2 DB not found in refs/kraken2 → downloading"
-       CHECK_OR_DOWNLOAD_DB()
-    } else {
-       println "[INFO] Found Kraken2 DB in refs/kraken2 → skipping download"
+    println("Timestamp: ${params.timestamp}")
+    println("Output directory: ${params.outdir}")
+
+    // ── only download if we don’t already have the DB on the host ──
+    if (!file('refs/kraken2/k2_minusb_20250402').exists()) {
+        println("[INFO] Kraken2 DB not found in refs/kraken2 → downloading")
+        CHECK_OR_DOWNLOAD_DB()
+    }
+    else {
+        println("[INFO] Found Kraken2 DB in refs/kraken2 → skipping download")
     }
 
     // Channel with paired-end fastq files
-    Channel
-        .fromFilePairs("raw_data/*_{1,2}.fastq.gz", size: 2)
-        .ifEmpty { error "No paired FASTQ files found in raw_data/" }
+    Channel.fromFilePairs("raw_data/*_{1,2}.fastq.gz", size: 2)
+        .ifEmpty { error("No paired FASTQ files found in raw_data/") }
         .map { sample_id, reads ->
             def meta = [
                 id: sample_id,
-                single_end: false
+                single_end: false,
             ]
             return tuple(meta, reads)
         }
@@ -89,35 +87,29 @@ workflow {
     // Run FastQC on raw reads
     FASTQC_RAW(raw_reads)
 
-	// Run Trimmomatic
+    // Run Trimmomatic
     TRIMMOMATIC(raw_reads)
 
     // Run FastQC on trimmed reads
     FASTQC_TRIM(
-        TRIMMOMATIC.out.trimmed_reads
-            .map { meta, reads ->
-                def new_meta = meta.clone()
-                new_meta.id = "${meta.id}_trimmed"
-                return tuple(new_meta, reads)
-            }
+        TRIMMOMATIC.out.trimmed_reads.map { meta, reads ->
+            def new_meta = meta.clone()
+            new_meta.id = "${meta.id}_trimmed"
+            return tuple(new_meta, reads)
+        }
     )
 
     // Run Kraken2
     KRAKEN(
-        TRIMMOMATIC.out.trimmed_reads
-            .map { meta, reads ->
-                tuple(meta, reads)
-            },
-            kraken2_db,
-            false,
-            true
-        )
+        TRIMMOMATIC.out.trimmed_reads.map { meta, reads ->
+            tuple(meta, reads)
+        },
+        kraken2_db,
+        false,
+        true,
+    )
 
-}
-
-// Workflow completion message
-workflow.onComplete {
-    println "Workflow completed at: ${new Date()}"
-    println "Execution status: ${workflow.success ? 'SUCCESS' : 'FAILED'}"
-    println "Output directory: ${outdir}"
+    println("Workflow completed at: ${new Date()}")
+    println("Execution status: ${workflow.success ? 'SUCCESS' : 'FAILED'}")
+    println("Output directory: ${params.outdir}")
 }
