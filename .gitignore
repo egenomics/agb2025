@@ -7,3 +7,5 @@ work/
 .nextflow.log*
 .nextflow/history
 .DS_Store
+refs/kraken2/
+settings.json

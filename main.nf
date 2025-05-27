@@ -8,11 +8,67 @@ include { KRAKEN2_KRAKEN2 as KRAKEN } from './modules/nf-core/kraken2/kraken2/ma
 // Define outdir globalmente
 def timestamp = new Date().format("yyyyMMdd_HHmmss")
 def outdir = "outputs/run_${timestamp}"
-def kraken2_db = file('group2a/database/k2_minusb_20250402') // THIS IS A LOCAL FILE AS THE DB IS HUGE
+def kraken2_db = file('refs/kraken2/k2_minusb_20250402')
+
+process CHECK_OR_DOWNLOAD_DB {
+
+    tag 'kraken_db'
+
+    // a very small image with Python – lets us `pip install gdown`
+    container 'docker.io/library/python:3.11-slim'
+
+    /* where the files will be kept on the host                *
+     * (the same place the rest of your pipeline already uses) */
+    publishDir "refs/kraken2", mode: 'copy'
+
+    output:
+        path "k2_minusb_20250402", emit: db_dir       // \<-- tells NF a folder will appear
+
+    cache 'lenient'                                   // skip completely when it already ran
+
+    script:
+    """
+        set -euo pipefail
+
+        DB_DIR='k2_minusb_20250402'
+
+        if [ ! -d "\$DB_DIR" ]; then
+            echo "[INFO] Kraken2 DB not found – downloading …"
+
+            # give the unprivileged user a writable HOME and PATH
+            export HOME=/tmp
+            mkdir -p \$HOME/.local/bin
+            export PATH=\$HOME/.local/bin:\$PATH
+
+            # install gdown only for this user
+            pip install --quiet --no-cache-dir --user gdown
+
+            # fetch the archive
+            gdown --id 1C4aisqMEmUiIv-jNBzxTkKX1AqFKgYen -O kraken_db.tar.gz
+
+            # create the DB folder and unpack everything into it
+            mkdir -p "\$DB_DIR"
+            tar -xzf kraken_db.tar.gz -C "\$DB_DIR"
+
+            rm kraken_db.tar.gz
+            echo "[INFO] Kraken2 DB download complete."
+        else
+            echo "[INFO] Kraken2 DB already present – nothing to do."
+        fi
+    """
+}
 
 workflow {
     println "Timestamp: ${timestamp}"
     println "Output directory: ${outdir}"
+
+   // ── only download if we don’t already have the DB on the host ──
+    if( ! file('refs/kraken2/k2_minusb_20250402').exists() ) {
+       println "[INFO] Kraken2 DB not found in refs/kraken2 → downloading"
+       CHECK_OR_DOWNLOAD_DB()
+    } else {
+       println "[INFO] Found Kraken2 DB in refs/kraken2 → skipping download"
+    }
 
     // Channel with paired-end fastq files
     Channel
