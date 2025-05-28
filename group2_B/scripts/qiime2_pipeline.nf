@@ -12,7 +12,7 @@ log.info """\
          """
 
 // == Define Parameters ==
-params.reads = "group2_B/data/simulated_reads/*_{1,2}.fastq.gz" // override with --reads
+params.reads = "group2_B/data/*_{1,2}.fastq.gz" // override with --reads
 params.outdir = "group2_B/results" // override with --outdir
 params.denoiser = "dada2" // Options: 'dada2', 'deblur'
 params.classifier_db = "group2_B/classifier/silva138_noEuk_AB_classifier.qza"
@@ -22,16 +22,17 @@ params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on
 params.trunc_len_r = 180 // DADA2: Reverse read truncation length
 params.sampling_depth = 1000 // Adjust based on the data (check feature table summary)
 
-// == Input Channel ==
-ch_reads = Channel.fromFilePairs(params.reads, flat: true)
+// == Input Channel - Alternative approach ==
+// Get the input directory and create channel from there
+ch_input_dir = Channel.fromPath("group2_B/data", type: 'dir', checkIfExists: true)
+
 ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
 ch_metadata = Channel.fromPath(params.metadata, checkIfExists: true)
-
 
 // == Workflow ==
 workflow {
     // 1. Import Reads
-    IMPORT_READS( ch_reads )
+    IMPORT_READS( ch_input_dir )
 
     // 2. Denoise
     if (params.denoiser == 'dada2') {
@@ -62,39 +63,68 @@ workflow {
 
 // == Processes ==
 
-// 1. Import Reads
+// 1. Import Reads - Simplified approach
 process IMPORT_READS {
     publishDir "${params.outdir}/qiime2_artifacts/01_imported_reads", mode: 'copy'
-
+    
     input:
-    tuple val(sample_id), path(reads_R1), path(reads_R2)
+    path(input_dir)
     
     output:
-    path("${sample_id}_demux.qza", emit: demux_qza)
-    path("demux.qzv", emit: demux_qzv)
+    path("demux.qza"), emit: demux_qza
+    path("demux.qzv"), emit: demux_qzv
     
     script:
     """
-    # Create a manifest file for QIIME2 import
-    echo -e "sample-id\tforward-absolute-filepath\treverse-absolute-filepath" > manifest.tsv
-    echo -e "${sample_id}\t\$PWD/${reads_R1}\t\$PWD/${reads_R2}" >> manifest.tsv
+    # Create manifest file by finding all fastq.gz files
+    echo -e "sample-id\\tforward-absolute-filepath\\treverse-absolute-filepath" > manifest.tsv
     
+    # Find all R1 files and create manifest entries
+    for r1_file in ${input_dir}/*_1.fastq.gz; do
+        if [ -f "\$r1_file" ]; then
+            # Extract sample name (remove path and _1.fastq.gz)
+            sample_name=\$(basename "\$r1_file" _1.fastq.gz)
+            
+            # Construct R2 file path
+            r2_file="${input_dir}/\${sample_name}_2.fastq.gz"
+            
+            # Check if R2 file exists
+            if [ -f "\$r2_file" ]; then
+                # Add to manifest with absolute paths
+                echo -e "\${sample_name}\\t\$(realpath \$r1_file)\\t\$(realpath \$r2_file)" >> manifest.tsv
+            else
+                echo "Warning: R2 file not found for \$sample_name"
+            fi
+        fi
+    done
+    
+    # Check if manifest has any data rows
+    data_rows=\$(tail -n +2 manifest.tsv | wc -l)
+    if [ "\$data_rows" -eq 0 ]; then
+        echo "ERROR: No valid sample pairs found in ${input_dir}"
+        echo "Looking for files matching pattern: *_1.fastq.gz and *_2.fastq.gz"
+        exit 1
+    fi
+    
+    # Import the demultiplexed data
     qiime tools import \\
         --type 'SampleData[PairedEndSequencesWithQuality]' \\
         --input-path manifest.tsv \\
-        --output-path ${sample_id}_demux.qza \\
+        --output-path demux.qza \\
         --input-format PairedEndFastqManifestPhred33V2
-
-    qiime demux summarize \
-        --i-data ${sample_id}_demux.qza  \
+    
+    # Create visualization
+    qiime demux summarize \\
+        --i-data demux.qza \\
         --o-visualization demux.qzv
     """
     
-    stub: // Minimal command for testing without actual execution
+    stub:
     """
-    touch ${sample_id}_demux.qza
+    touch demux.qza demux.qzv
     """
 }
+
 
 
 
