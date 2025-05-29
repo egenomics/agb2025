@@ -13,44 +13,74 @@ In this wiki page you will find the information about the pipeline context, the 
 ## Project Directory Structure
 
 ```text
-├── 📁 raw_data/            # Original FASTQ files (paired-end reads)
-│   ├── sample1_R1.fastq.gz
-│   ├── sample1_R2.fastq.gz
-│   └── ...
-├── 📁 metadata/            # Sample metadata (CSV or TSV)
-│   └── run_metadata.csv
-├── 📁 scripts/             # Custom or pipeline scripts
-│   └── …
-├── 📁 outputs/              # Outputs per run
-│   └── 📁 run_YYYYmmdd_hhmmss
-│       ├── 📁 qc_reports/          # FastQC or MultiQC reports
-│       │   ├── fastqc/
-│       │   └── multiqc_report.html
-│       ├── 📁 processed_data/      # Trimmed, filtered reads
-│       │   ├── data_filtered/
-│       │   └── qiime2_demux/
-│       ├── 📁 feature_tables/      # OTU or ASV tables
-│       │   ├── table.qza
-│       │   └── table.tsv
-│       ├── 📁 taxonomy/            # Taxonomy assignment results
-│       │   ├── classifier.qza
-│       │   ├── taxonomy.qza
-│       │   └── taxonomy.tsv
-│       ├── 📁 phylogeny/           # Phylogenetic tree files
-│       │   ├── rooted-tree.qza
-│       │   └── unrooted-tree.qza
-│       ├── 📁 diversity_analysis/  # Alpha & beta diversity
-│       │   ├── core-metrics-results/
-│       │   └── emperor_plots/
-│       └── 📁 visualizations/      # QIIME 2 visualizations
-│           ├── taxonomy_barplots.qzv
-│           ├── rarefaction_curves.png
-│           └── …
-├── 📁 results/             # Final summary tables and plots per run (or sample?)
-│   └── summary_report.html
+HdMBioinfo-MicrobiotaPipeline/
 │
-└── 📁 logs/                # Pipeline logs
-    └── run_YYYYmmdd_hhmmss_pipeline.log
+├── bin/                         # Helper scripts and small executables
+│   ├── trim_reads.sh
+│   ├── assign_taxonomy.py
+│   └── generate_qc_report.R
+│
+├── conf/                        # Configuration files
+│   ├── base.config              # Default config
+│   ├── hospital.config          # Custom config for Hospital del Mar environment
+│   └── docker.config            # Containerized setup (if needed)
+│
+├── docs/                        # Documentation and metadata templates
+│   ├── metadata_template.yaml
+│   ├── versioning_policy.md
+│   └── pipeline_overview.png
+│
+├── workflows/                   # Main Nextflow scripts
+│   └── main.nf                  # Entry point of the pipeline
+│
+├── modules/                     # DSL2-style modules for each pipeline step
+│   ├── preprocessing/
+│   │   └── trim_reads.nf
+│   ├── taxonomy/
+│   │   └── assign_taxonomy.nf
+│   ├── classification/
+│   │   └── classify_health_status.nf
+│   └── qc/
+│       └── fastqc.nf
+│
+├── raw_data
+│   ├── run1
+│   │    ├── sample1.fastq.gz
+│   │    ├── sample2.fastq.gz
+│   │    ├── sample3.fastq.gz
+│   │    ├── metadata_technical.csv
+│   │    └── metadata_samples.csv
+│   ├── run2
+│   └── run3
+│
+├── metadata                      # Merged technical and sample metadata
+│   ├── run1
+│   │    └── metadata_run1.csv    
+│   ├── run2
+│   └── run3
+│
+├── output
+│   ├── run1
+│   │    ├── taxonomy
+│   │    ├── phylogeny
+│   │    ├── imported_reads
+│   │    ├── denoised_dada2
+│   │    └── ...
+│   ├── run2
+│   └── run3
+│
+├── results/                     
+│   └── Run2025_01/
+│       ├── README.md
+│       ├── pipeline.log
+│       └── final_report.html
+│
+├── .gitignore
+├── nextflow.config             # Main config file
+├── LICENSE
+├── README.md
+├── CHANGELOG.md
+└── environment.yml             # Conda env (if not using containers)
 ```
 
 ## Quick start (Docker edition)
