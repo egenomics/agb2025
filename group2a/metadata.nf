@@ -13,16 +13,21 @@ process merge_metadata {
 
     script:
     """
-   # Step 1: Copy header
-    cp ${metadata_sample} metadata_sample_merged.csv
+    # extract + merge
+    awk -F'\\t' 'NR==1 {
+        for (i = 1; i <= 12; i++) {
+            printf "%s%s", \$i, (i==12 ? "\\n" : "\\t")
+        }
+    }
+    NR > 1 {
+        for (i = 1; i <= 12; i++) {
+            printf "%s%s", \$i, (i==12 ? "\\n" : "\\t")
+        }
+    }' ${multiqc_fastqc} > multiqc_qc_clean.tsv
 
-    # Step 2: Append MultiQC rows (12 columns used, 12 blanks to fill to 24)
-    awk -F'\\t' 'NR > 1 {
-        printf "%s", \$1
-        for (i=2; i<=12; i++) printf ",%s", \$i
-        for (j=13; j<=24; j++) printf ","
-        printf "\\n"
-    }' ${multiqc_fastqc} >> metadata_sample_merged.csv
+    sed 's/\\t/,/g' multiqc_qc_clean.tsv > multiqc_qc_clean.csv
+
+    csvjoin -c Sample_ID,Sample ${metadata_sample} multiqc_qc_clean.csv > metadata_sample_merged.csv
     """
 }
 

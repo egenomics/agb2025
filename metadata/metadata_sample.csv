@@ -1,2 +1,8 @@
 Sample_ID,Institution,Department,Collection_Date,Collection_Storage_Temperature,Analyst_Processor_Name,Gender,Age,Ongoing_conditions_,Appendix_removed,Allergies,Dietary_Information,Bowel_movement_quality,Antibiotic_intake,Medications,Cancer,Body_Mass_Index,Exercise_frequency,Smoking_status,Daily_cigarettes,Alcohol_consumption,Frequency_of_alcohol_consumption,Notes_Samples,RunID
 SHM01180525,hospital del mar,Digestotory unit,15/03/2023,4,Sam 1,Male,34,,yes,,,,,,,,,smoker,,yes,,ahhh,RHM01_01
+ERR1328363_1,,,,,,,,,,,,,,,,,,,,,,,
+ERR1328363_2,,,,,,,,,,,,,,,,,,,,,,,
+ERR1328366_1,,,,,,,,,,,,,,,,,,,,,,,
+ERR1328366_2,,,,,,,,,,,,,,,,,,,,,,,
+ERR1328415_1,,,,,,,,,,,,,,,,,,,,,,,
+ERR1328415_2,,,,,,,,,,,,,,,,,,,,,,,
