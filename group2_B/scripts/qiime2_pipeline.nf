@@ -39,11 +39,11 @@ workflow {
     if (params.denoiser == 'dada2') {
         DENOISE_DADA2( IMPORT_READS.out.demux_qza )
         ch_denoised_table = DENOISE_DADA2.out.table
-        ch_denoised_reps = DENOISE_DADA2.out.rep_seqs
+        ch_denoised_reps =  DENOISE_DADA2.out.rep_seqs
     } else if (params.denoiser == 'deblur') {
         DENOISE_DEBLUR( IMPORT_READS.out.demux_qza )
         ch_denoised_table = DENOISE_DEBLUR.out.table
-        ch_denoised_reps = DENOISE_DEBLUR.out.rep_seqs
+        ch_denoised_reps =DENOISE_DEBLUR.out.rep_seqs
     } else {
         error "Invalid denoiser option: ${params.denoiser}. Choose 'dada2' or 'deblur'."
     }
@@ -84,7 +84,7 @@ workflow {
 
 // 1. Import Reads
 process IMPORT_READS {
-    publishDir "${params.outdir}/qiime2_artifacts/01_imported_reads", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/01_imported_reads", mode: 'copy'
     
     input:
     path(input_dir)
@@ -146,7 +146,7 @@ process IMPORT_READS {
 
 // 2a. Denoise with DADA2
 process DENOISE_DADA2 {
-    publishDir "${params.outdir}/qiime2_artifacts/02_denoised_dada2", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/02_denoised_dada2", mode: 'copy'
 
     input:
     path(demux_qza)
@@ -176,7 +176,7 @@ process DENOISE_DADA2 {
 
 // 2b. Denoise with Deblur
 process DENOISE_DEBLUR {
-    publishDir "${params.outdir}/qiime2_artifacts/02_denoised_deblur", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/02_denoised_deblur", mode: 'copy'
 
     input:
     path(demux_qza)
@@ -237,7 +237,7 @@ process SUMMARIZE_TABLE {
 
 // 3b. Summarize Representative Sequences
 process SUMMARIZE_SEQS {
-    publishDir "${params.outdir}/qiime2_visualizations/03_summaries", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/03_summaries", mode: 'copy'
 
     input:
     path(rep_seqs_qza)
@@ -259,7 +259,7 @@ process SUMMARIZE_SEQS {
 
 // 4. Export Feature Table to TSV
 process EXPORT_FEATURE_TABLE {
-    publishDir "${params.outdir}/03_final_results", mode: 'copy'
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
 
     input:
     path(table_qza)
@@ -287,7 +287,7 @@ process EXPORT_FEATURE_TABLE {
 
 // 5. Export Representative Sequences to FASTA
 process EXPORT_REP_SEQS {
-    publishDir "${params.outdir}/03_final_results", mode: 'copy'
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
 
     input:
     path(rep_seqs_qza)
@@ -311,7 +311,7 @@ process EXPORT_REP_SEQS {
 
 // 6. Taxonomic Classification
 process CLASSIFY_TAXONOMY {
-    publishDir "${params.outdir}/qiime2_artifacts/04_taxonomy", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/04_taxonomy", mode: 'copy'
 
     input:
     path(rep_seqs_qza)
@@ -344,7 +344,7 @@ process CLASSIFY_TAXONOMY {
 
 // 7. Export Taxonomy to TSV
 process EXPORT_TAXONOMY {
-    publishDir "${params.outdir}/03_final_results", mode: 'copy'
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
 
     input:
     path(taxonomy_qza)
@@ -368,7 +368,7 @@ process EXPORT_TAXONOMY {
 
 // 8. Build Phylogenetic Tree
 process BUILD_TREE {
-    publishDir "${params.outdir}/qiime2_artifacts/05_phylogeny", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/05_phylogeny", mode: 'copy'
 
     input:
     path(rep_seqs_qza)
@@ -397,7 +397,7 @@ process BUILD_TREE {
 
 // 9. Export Phylogenetic Tree to Newick format
 process EXPORT_TREE {
-    publishDir "${params.outdir}/03_final_results", mode: 'copy'
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
 
     input:
     path(rooted_tree_qza)
@@ -421,7 +421,7 @@ process EXPORT_TREE {
 
 // 10. Create Final Results Summary
 process CREATE_RESULTS_SUMMARY {
-    publishDir "${params.outdir}/03_final_results", mode: 'copy'
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
 
     input:
     path(feature_table_tsv)
