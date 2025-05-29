@@ -13,20 +13,17 @@ process merge_metadata {
 
     script:
     """
-    # Get number of columns in metadata header
-    num_cols=\$(head -n1 ${metadata_sample} | sed 's/[^,]//g' | wc -c)
-
-    # Create header in output
+   # Step 1: Copy header
     cp ${metadata_sample} metadata_sample_merged.csv
 
-    # Extract first 12 columns from multiqc and convert to CSV
+    # Step 2: Append MultiQC rows (12 columns used, 12 blanks to fill to 24)
     awk -F'\\t' 'NR > 1 {
         printf "%s", \$1
         for (i=2; i<=12; i++) printf ",%s", \$i
-        for (j=13; j<=25; j++) printf ","
+        for (j=13; j<=24; j++) printf ","
         printf "\\n"
     }' ${multiqc_fastqc} >> metadata_sample_merged.csv
-"""
+    """
 }
 
 workflow {
