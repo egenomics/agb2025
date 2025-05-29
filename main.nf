@@ -44,6 +44,15 @@ workflow {
     println("Timestamp: ${params.timestamp}")
     println("Output directory: ${params.outdir}")
 
+    // ── only download if we don’t already have the DB on the host ──
+    if (!file('refs/kraken2/k2_minusb_20250402').exists()) {
+        println("[INFO] Kraken2 DB not found in refs/kraken2 → downloading")
+        CHECK_OR_DOWNLOAD_DB()
+    }
+    else {
+        println("[INFO] Found Kraken2 DB in refs/kraken2 → skipping download")
+    }
+
     // Channel with paired-end fastq files
     Channel.fromFilePairs("raw_data/*_{1,2}.fastq.gz", size: 2)
         .ifEmpty { error("No paired FASTQ files found in raw_data/") }
