@@ -1,271 +1,80 @@
-May-21 23:48:17.119 [main] DEBUG nextflow.cli.Launcher - $> nextflow run multiqc.nf -with-conda -resume
-May-21 23:48:17.215 [main] DEBUG nextflow.cli.CmdRun - N E X T F L O W  ~  version 24.10.6
-May-21 23:48:17.235 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/ivon/.nextflow/plugins; core-plugins: nf-amazon@2.9.3,nf-azure@1.10.2,nf-cloudcache@0.4.2,nf-codecommit@0.2.2,nf-console@1.1.4,nf-google@1.15.4,nf-tower@1.9.3,nf-wave@1.7.5
-May-21 23:48:17.261 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
-May-21 23:48:17.261 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
-May-21 23:48:17.264 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
-May-21 23:48:17.276 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
-May-21 23:48:17.346 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
-May-21 23:48:17.360 [main] DEBUG nextflow.cli.CmdRun - Launching `multiqc.nf` [tiny_angela] DSL2 - revision: e6a5516dc8
-May-21 23:48:17.362 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
-May-21 23:48:17.362 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
-May-21 23:48:17.421 [main] DEBUG nextflow.Session - Session UUID: 0d737ce2-3d4a-468a-a7a3-9ab7347b0f94
-May-21 23:48:17.421 [main] DEBUG nextflow.Session - Run name: tiny_angela
-May-21 23:48:17.422 [main] DEBUG nextflow.Session - Executor pool size: 16
-May-21 23:48:17.430 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
-May-21 23:48:17.437 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=48; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
-May-21 23:48:17.457 [main] DEBUG nextflow.cli.CmdRun - 
+May-21 23:50:00.697 [main] DEBUG nextflow.cli.Launcher - $> nextflow run multiqc.nf
+May-21 23:50:00.806 [main] DEBUG nextflow.cli.CmdRun - N E X T F L O W  ~  version 24.10.6
+May-21 23:50:00.830 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/ivon/.nextflow/plugins; core-plugins: nf-amazon@2.9.3,nf-azure@1.10.2,nf-cloudcache@0.4.2,nf-codecommit@0.2.2,nf-console@1.1.4,nf-google@1.15.4,nf-tower@1.9.3,nf-wave@1.7.5
+May-21 23:50:00.855 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+May-21 23:50:00.856 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+May-21 23:50:00.858 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
+May-21 23:50:00.871 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+May-21 23:50:00.939 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
+May-21 23:50:00.955 [main] DEBUG nextflow.cli.CmdRun - Launching `multiqc.nf` [hungry_volhard] DSL2 - revision: 058ce6d0a3
+May-21 23:50:00.957 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+May-21 23:50:00.957 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
+May-21 23:50:01.014 [main] DEBUG nextflow.Session - Session UUID: 5b1a2101-71fe-40d6-8c07-4bdd3801b91b
+May-21 23:50:01.014 [main] DEBUG nextflow.Session - Run name: hungry_volhard
+May-21 23:50:01.015 [main] DEBUG nextflow.Session - Executor pool size: 16
+May-21 23:50:01.024 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
+May-21 23:50:01.031 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=48; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+May-21 23:50:01.058 [main] DEBUG nextflow.cli.CmdRun - 
   Version: 24.10.6 build 5937
   Created: 23-04-2025 16:53 UTC (18:53 CEST)
   System: Linux 6.11.0-25-generic
   Runtime: Groovy 4.0.23 on OpenJDK 64-Bit Server VM 21.0.7+6-Ubuntu-0ubuntu124.04
   Encoding: UTF-8 (UTF-8)
-  Process: 154694@ivon-Cyborg-15-A13VF [127.0.1.1]
-  CPUs: 16 - Mem: 31.1 GB (17.7 GB) - Swap: 8 GB (8 GB)
-May-21 23:48:17.491 [main] DEBUG nextflow.Session - Work-dir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work [ext2/ext3]
-May-21 23:48:17.492 [main] DEBUG nextflow.Session - Script base path does not exist or is not a directory: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/bin
-May-21 23:48:17.507 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
-May-21 23:48:17.516 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
-May-21 23:48:17.545 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
-May-21 23:48:17.553 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 17; maxThreads: 1000
-May-21 23:48:17.610 [main] DEBUG nextflow.Session - Session start
-May-21 23:48:18.210 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
-May-21 23:48:18.226 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/ivon/.nextflow/secrets/store.json
-May-21 23:48:18.237 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@43ac0a68] - activable => nextflow.secret.LocalSecretsProvider@43ac0a68
-May-21 23:48:18.362 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
-May-21 23:48:18.362 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
-May-21 23:48:18.368 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
-May-21 23:48:18.374 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=16; memory=31.1 GB; capacity=16; pollInterval=100ms; dumpInterval=5m
-May-21 23:48:18.376 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
-May-21 23:48:18.479 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
-  Script_d9f8d0e58b280f12: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/multiqc.nf
-May-21 23:48:18.479 [main] DEBUG nextflow.Session - Session aborted -- Cause: Unknown process directive: `dir`
-May-21 23:48:18.480 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
-May-21 23:48:18.494 [main] DEBUG nextflow.Session - The following nodes are still active:
-  [operator] flatMap
-  [operator] collect
-
-May-21 23:48:18.496 [main] DEBUG nextflow.Session - 
-Thread[#50,Actor Thread 2,5,main]
-  java.base@21.0.7/jdk.internal.misc.Unsafe.park(Native Method)
-  java.base@21.0.7/java.util.concurrent.locks.LockSupport.park(LockSupport.java:371)
-  java.base@21.0.7/java.util.concurrent.LinkedTransferQueue$DualNode.await(LinkedTransferQueue.java:458)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue$Transferer.xferLifo(SynchronousQueue.java:194)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue.xfer(SynchronousQueue.java:235)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue.take(SynchronousQueue.java:318)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1070)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-  java.base@21.0.7/java.lang.Thread.runWith(Thread.java:1596)
-  java.base@21.0.7/java.lang.Thread.run(Thread.java:1583)
-
-Thread[#27,Notification Thread,9,system]
-
-Thread[#26,Common-Cleaner,8,InnocuousThreadGroup]
-  java.base@21.0.7/jdk.internal.misc.Unsafe.park(Native Method)
-  java.base@21.0.7/java.util.concurrent.locks.LockSupport.parkNanos(LockSupport.java:269)
-  java.base@21.0.7/java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1852)
-  java.base@21.0.7/java.lang.ref.ReferenceQueue.await(ReferenceQueue.java:71)
-  java.base@21.0.7/java.lang.ref.ReferenceQueue.remove0(ReferenceQueue.java:143)
-  java.base@21.0.7/java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:218)
-  java.base@21.0.7/jdk.internal.ref.CleanerImpl.run(CleanerImpl.java:140)
-  java.base@21.0.7/java.lang.Thread.runWith(Thread.java:1596)
-  java.base@21.0.7/java.lang.Thread.run(Thread.java:1583)
-  java.base@21.0.7/jdk.internal.misc.InnocuousThread.run(InnocuousThread.java:186)
-
-Thread[#44,AnsiLogObserver,5,main]
-  java.base@21.0.7/java.lang.Object.wait0(Native Method)
-  java.base@21.0.7/java.lang.Object.wait(Object.java:366)
-  app//nextflow.trace.AnsiLogObserver.render0(AnsiLogObserver.groovy:185)
-  java.base@21.0.7/java.lang.invoke.DirectMethodHandle$Holder.invokeVirtual(DirectMethodHandle$Holder)
-  java.base@21.0.7/java.lang.invoke.LambdaForm$MH/0x00007f5d0028bc00.invoke(LambdaForm$MH)
-  java.base@21.0.7/java.lang.invoke.Invokers$Holder.invokeExact_MT(Invokers$Holder)
-  java.base@21.0.7/jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(DirectMethodHandleAccessor.java:154)
-  java.base@21.0.7/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-  java.base@21.0.7/java.lang.reflect.Method.invoke(Method.java:580)
-  app//org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:343)
-  app//groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:328)
-  app//groovy.lang.MetaClassImpl.doInvokeMethod(MetaClassImpl.java:1333)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1088)
-  app//groovy.lang.MetaClassImpl.invokeMethodClosure(MetaClassImpl.java:1017)
-  app//groovy.lang.MetaClassImpl.doInvokeMethod(MetaClassImpl.java:1207)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1088)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1007)
-  app//groovy.lang.Closure.call(Closure.java:433)
-  app//groovy.lang.Closure.call(Closure.java:412)
-  app//groovy.lang.Closure.run(Closure.java:505)
-  java.base@21.0.7/java.lang.Thread.runWith(Thread.java:1596)
-  java.base@21.0.7/java.lang.Thread.run(Thread.java:1583)
-
-Thread[#41,process reaper,10,InnocuousThreadGroup]
-  java.base@21.0.7/jdk.internal.misc.Unsafe.park(Native Method)
-  java.base@21.0.7/java.util.concurrent.locks.LockSupport.parkNanos(LockSupport.java:410)
-  java.base@21.0.7/java.util.concurrent.LinkedTransferQueue$DualNode.await(LinkedTransferQueue.java:452)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue$Transferer.xferLifo(SynchronousQueue.java:194)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue.xfer(SynchronousQueue.java:235)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue.poll(SynchronousQueue.java:338)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1069)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-  java.base@21.0.7/java.lang.Thread.runWith(Thread.java:1596)
-  java.base@21.0.7/java.lang.Thread.run(Thread.java:1583)
-  java.base@21.0.7/jdk.internal.misc.InnocuousThread.run(InnocuousThread.java:186)
-
-Thread[#9,Reference Handler,10,system]
-  java.base@21.0.7/java.lang.ref.Reference.waitForReferencePendingList(Native Method)
-  java.base@21.0.7/java.lang.ref.Reference.processPendingReferences(Reference.java:246)
-  java.base@21.0.7/java.lang.ref.Reference$ReferenceHandler.run(Reference.java:208)
-
-Thread[#1,main,5,main]
-  java.base@21.0.7/java.lang.Thread.dumpThreads(Native Method)
-  java.base@21.0.7/java.lang.Thread.getAllStackTraces(Thread.java:2522)
-  app//nextflow.util.SysHelper.dumpThreads(SysHelper.groovy:188)
-  app//nextflow.Session.abort(Session.groovy:800)
-  app//nextflow.script.ScriptRunner.execute(ScriptRunner.groovy:149)
-  app//nextflow.cli.CmdRun.run(CmdRun.groovy:376)
-  app//nextflow.cli.Launcher.run(Launcher.groovy:503)
-  app//nextflow.cli.Launcher.main(Launcher.groovy:658)
-
-Thread[#42,Thread-1,5,main]
-  java.base@21.0.7/jdk.internal.misc.Unsafe.park(Native Method)
-  java.base@21.0.7/java.util.concurrent.locks.LockSupport.parkNanos(LockSupport.java:269)
-  java.base@21.0.7/java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.awaitNanos(AbstractQueuedSynchronizer.java:1763)
-  java.base@21.0.7/java.util.concurrent.LinkedBlockingDeque.pollFirst(LinkedBlockingDeque.java:515)
-  java.base@21.0.7/java.util.concurrent.LinkedBlockingDeque.poll(LinkedBlockingDeque.java:677)
-  app//nextflow.util.SimpleAgent.run(SimpleAgent.groovy:89)
-  java.base@21.0.7/java.lang.invoke.LambdaForm$DMH/0x00007f5d001a8800.invokeVirtual(LambdaForm$DMH)
-  java.base@21.0.7/java.lang.invoke.LambdaForm$MH/0x00007f5d00258000.invoke(LambdaForm$MH)
-  java.base@21.0.7/java.lang.invoke.Invokers$Holder.invokeExact_MT(Invokers$Holder)
-  java.base@21.0.7/jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(DirectMethodHandleAccessor.java:153)
-  java.base@21.0.7/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-  java.base@21.0.7/java.lang.reflect.Method.invoke(Method.java:580)
-  app//org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:343)
-  app//groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:328)
-  app//groovy.lang.MetaClassImpl.doInvokeMethod(MetaClassImpl.java:1333)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1088)
-  app//groovy.lang.MetaClassImpl.invokeMethodClosure(MetaClassImpl.java:1017)
-  app//groovy.lang.MetaClassImpl.doInvokeMethod(MetaClassImpl.java:1207)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1088)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1007)
-  app//groovy.lang.Closure.call(Closure.java:433)
-  app//groovy.lang.Closure.call(Closure.java:412)
-  app//groovy.lang.Closure.run(Closure.java:505)
-  java.base@21.0.7/java.lang.Thread.runWith(Thread.java:1596)
-  java.base@21.0.7/java.lang.Thread.run(Thread.java:1583)
-
-Thread[#10,Finalizer,8,system]
-  java.base@21.0.7/java.lang.Object.wait0(Native Method)
-  java.base@21.0.7/java.lang.Object.wait(Object.java:366)
-  java.base@21.0.7/java.lang.Object.wait(Object.java:339)
-  java.base@21.0.7/java.lang.ref.NativeReferenceQueue.await(NativeReferenceQueue.java:48)
-  java.base@21.0.7/java.lang.ref.ReferenceQueue.remove0(ReferenceQueue.java:158)
-  java.base@21.0.7/java.lang.ref.NativeReferenceQueue.remove(NativeReferenceQueue.java:89)
-  java.base@21.0.7/java.lang.ref.Finalizer$FinalizerThread.run(Finalizer.java:173)
-
-Thread[#11,Signal Dispatcher,9,system]
-
-Thread[#48,Task submitter,5,main]
-  java.base@21.0.7/jdk.internal.misc.Unsafe.park(Native Method)
-  java.base@21.0.7/java.util.concurrent.locks.LockSupport.park(LockSupport.java:371)
-  java.base@21.0.7/java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(AbstractQueuedSynchronizer.java:519)
-  java.base@21.0.7/java.util.concurrent.ForkJoinPool.unmanagedBlock(ForkJoinPool.java:3780)
-  java.base@21.0.7/java.util.concurrent.ForkJoinPool.managedBlock(ForkJoinPool.java:3725)
-  java.base@21.0.7/java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:1712)
-  app//nextflow.processor.TaskPollingMonitor.awaitTasks(TaskPollingMonitor.groovy:388)
-  app//nextflow.processor.TaskPollingMonitor.submitLoop(TaskPollingMonitor.groovy:412)
-  java.base@21.0.7/java.lang.invoke.LambdaForm$DMH/0x00007f5d001a8800.invokeVirtual(LambdaForm$DMH)
-  java.base@21.0.7/java.lang.invoke.LambdaForm$MH/0x00007f5d00258000.invoke(LambdaForm$MH)
-  java.base@21.0.7/java.lang.invoke.Invokers$Holder.invokeExact_MT(Invokers$Holder)
-  java.base@21.0.7/jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(DirectMethodHandleAccessor.java:153)
-  java.base@21.0.7/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-  java.base@21.0.7/java.lang.reflect.Method.invoke(Method.java:580)
-  app//org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:343)
-  app//groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:328)
-  app//groovy.lang.MetaClassImpl.doInvokeMethod(MetaClassImpl.java:1333)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1088)
-  app//groovy.lang.MetaClassImpl.invokeMethodClosure(MetaClassImpl.java:1017)
-  app//groovy.lang.MetaClassImpl.doInvokeMethod(MetaClassImpl.java:1207)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1088)
-  app//groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1007)
-  app//groovy.lang.Closure.call(Closure.java:433)
-  app//groovy.lang.Closure.call(Closure.java:412)
-  app//groovy.lang.Closure.run(Closure.java:505)
-  java.base@21.0.7/java.lang.Thread.runWith(Thread.java:1596)
-  java.base@21.0.7/java.lang.Thread.run(Thread.java:1583)
-
-Thread[#49,Actor Thread 1,5,main]
-  java.base@21.0.7/jdk.internal.misc.Unsafe.park(Native Method)
-  java.base@21.0.7/java.util.concurrent.locks.LockSupport.park(LockSupport.java:371)
-  java.base@21.0.7/java.util.concurrent.LinkedTransferQueue$DualNode.await(LinkedTransferQueue.java:458)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue$Transferer.xferLifo(SynchronousQueue.java:194)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue.xfer(SynchronousQueue.java:235)
-  java.base@21.0.7/java.util.concurrent.SynchronousQueue.take(SynchronousQueue.java:318)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1070)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1130)
-  java.base@21.0.7/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-  java.base@21.0.7/java.lang.Thread.runWith(Thread.java:1596)
-  java.base@21.0.7/java.lang.Thread.run(Thread.java:1583)
-
-May-21 23:48:18.502 [main] ERROR nextflow.cli.Launcher - @unknown
-nextflow.exception.IllegalDirectiveException: Unknown process directive: `dir`
-	at org.codehaus.groovy.vmplugin.v8.IndyInterface.fromCache(IndyInterface.java:321)
-	at nextflow.script.ProcessConfig.checkName(ProcessConfig.groovy:239)
-	at org.codehaus.groovy.vmplugin.v8.IndyInterface.fromCache(IndyInterface.java:321)
-	at nextflow.script.ProcessConfig.methodMissing(ProcessConfig.groovy:258)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:343)
-	at groovy.lang.MetaClassImpl.invokeMissingMethod(MetaClassImpl.java:924)
-	at groovy.lang.MetaClassImpl.invokePropertyOrMissing(MetaClassImpl.java:1413)
-	at groovy.lang.MetaClassImpl.doInvokeMethod(MetaClassImpl.java:1335)
-	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1088)
-	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1007)
-	at org.codehaus.groovy.runtime.InvokerHelper.invokePogoMethod(InvokerHelper.java:645)
-	at org.codehaus.groovy.runtime.InvokerHelper.invokeMethod(InvokerHelper.java:628)
-	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeOnDelegationObjects(ClosureMetaClass.java:391)
-	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeMethod(ClosureMetaClass.java:330)
-	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1007)
-	at org.codehaus.groovy.vmplugin.v8.IndyInterface.fromCache(IndyInterface.java:321)
-	at Script_d9f8d0e58b280f12$_runScript_closure2.doCall(Script_d9f8d0e58b280f12:42)
-	at Script_d9f8d0e58b280f12$_runScript_closure2.doCall(Script_d9f8d0e58b280f12)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:343)
-	at groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:328)
-	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeMethod(ClosureMetaClass.java:279)
-	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1007)
-	at groovy.lang.Closure.call(Closure.java:433)
-	at groovy.lang.Closure.call(Closure.java:412)
-	at nextflow.script.ProcessDef.initialize(ProcessDef.groovy:110)
-	at nextflow.script.ProcessDef.run(ProcessDef.groovy:168)
-	at nextflow.script.BindableDef.invoke_a(BindableDef.groovy:51)
-	at nextflow.script.ComponentDef.invoke_o(ComponentDef.groovy:40)
-	at nextflow.script.WorkflowBinding.invokeMethod(WorkflowBinding.groovy:103)
-	at org.codehaus.groovy.runtime.InvokerHelper.invokePogoMethod(InvokerHelper.java:651)
-	at org.codehaus.groovy.runtime.InvokerHelper.invokeMethod(InvokerHelper.java:628)
-	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeOnDelegationObjects(ClosureMetaClass.java:391)
-	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeMethod(ClosureMetaClass.java:330)
-	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1007)
-	at org.codehaus.groovy.vmplugin.v8.IndyInterface.fromCache(IndyInterface.java:321)
-	at Script_d9f8d0e58b280f12$_runScript_closure3$_closure7.doCall(Script_d9f8d0e58b280f12:62)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.codehaus.groovy.reflection.CachedMethod.invoke(CachedMethod.java:343)
-	at groovy.lang.MetaMethod.doMethodInvoke(MetaMethod.java:328)
-	at org.codehaus.groovy.runtime.metaclass.ClosureMetaClass.invokeMethod(ClosureMetaClass.java:279)
-	at groovy.lang.MetaClassImpl.invokeMethod(MetaClassImpl.java:1007)
-	at groovy.lang.Closure.call(Closure.java:433)
-	at groovy.lang.Closure.call(Closure.java:412)
-	at nextflow.script.WorkflowDef.run0(WorkflowDef.groovy:204)
-	at nextflow.script.WorkflowDef.run(WorkflowDef.groovy:188)
-	at nextflow.script.BindableDef.invoke_a(BindableDef.groovy:51)
-	at org.codehaus.groovy.vmplugin.v8.IndyInterface.fromCache(IndyInterface.java:321)
-	at nextflow.script.BaseScript.run0(BaseScript.groovy:198)
-	at org.codehaus.groovy.vmplugin.v8.IndyInterface.fromCache(IndyInterface.java:321)
-	at nextflow.script.BaseScript.run(BaseScript.groovy:209)
-	at nextflow.script.ScriptParser.runScript(ScriptParser.groovy:236)
-	at nextflow.script.ScriptRunner.run(ScriptRunner.groovy:243)
-	at nextflow.script.ScriptRunner.execute(ScriptRunner.groovy:138)
-	at nextflow.cli.CmdRun.run(CmdRun.groovy:376)
-	at nextflow.cli.Launcher.run(Launcher.groovy:503)
-	at nextflow.cli.Launcher.main(Launcher.groovy:658)
+  Process: 155536@ivon-Cyborg-15-A13VF [127.0.1.1]
+  CPUs: 16 - Mem: 31.1 GB (17.6 GB) - Swap: 8 GB (8 GB)
+May-21 23:50:01.084 [main] DEBUG nextflow.Session - Work-dir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work [ext2/ext3]
+May-21 23:50:01.084 [main] DEBUG nextflow.Session - Script base path does not exist or is not a directory: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/bin
+May-21 23:50:01.106 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+May-21 23:50:01.116 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+May-21 23:50:01.143 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+May-21 23:50:01.149 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 17; maxThreads: 1000
+May-21 23:50:01.200 [main] DEBUG nextflow.Session - Session start
+May-21 23:50:01.833 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+May-21 23:50:01.845 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/ivon/.nextflow/secrets/store.json
+May-21 23:50:01.853 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@5a484ce1] - activable => nextflow.secret.LocalSecretsProvider@5a484ce1
+May-21 23:50:01.986 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+May-21 23:50:01.987 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+May-21 23:50:01.992 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+May-21 23:50:01.999 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=16; memory=31.1 GB; capacity=16; pollInterval=100ms; dumpInterval=5m
+May-21 23:50:02.001 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
+May-21 23:50:02.096 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+May-21 23:50:02.096 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+May-21 23:50:02.101 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: fastQC, multiQC
+May-21 23:50:02.101 [main] DEBUG nextflow.Session - Igniting dataflow network (3)
+May-21 23:50:02.107 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > fastQC
+May-21 23:50:02.107 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > multiQC
+May-21 23:50:02.108 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
+  Script_df6690bab49fc646: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/multiqc.nf
+May-21 23:50:02.108 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
+May-21 23:50:02.108 [main] DEBUG nextflow.Session - Session await
+May-21 23:50:02.111 [PathVisitor-1] DEBUG nextflow.file.PathVisitor - files for syntax: glob; folder: ../raw_data/; pattern: *.fastq.gz; options: [:]
+May-21 23:50:02.340 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+May-21 23:50:02.343 [Task submitter] INFO  nextflow.Session - [ae/6562f7] Submitted process > fastQC (FastQC)
+May-21 23:50:02.353 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+May-21 23:50:02.354 [Task submitter] INFO  nextflow.Session - [49/c2d9b7] Submitted process > fastQC (FastQC)
+May-21 23:50:02.361 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+May-21 23:50:02.362 [Task submitter] INFO  nextflow.Session - [57/63b716] Submitted process > fastQC (FastQC)
+May-21 23:50:02.370 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+May-21 23:50:02.372 [Task submitter] INFO  nextflow.Session - [28/a259ef] Submitted process > fastQC (FastQC)
+May-21 23:50:02.384 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+May-21 23:50:02.385 [Task submitter] INFO  nextflow.Session - [0c/7278a9] Submitted process > fastQC (FastQC)
+May-21 23:50:02.396 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+May-21 23:50:02.399 [Task submitter] INFO  nextflow.Session - [3c/8953e7] Submitted process > fastQC (FastQC)
+May-21 23:50:06.739 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 6; name: fastQC (FastQC); status: COMPLETED; exit: 0; error: -; workDir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/ae/6562f7034fdf266fbd8c5b411602e9]
+May-21 23:50:06.740 [Task monitor] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'TaskFinalizer' minSize=10; maxSize=48; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+May-21 23:50:06.764 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: fastQC (FastQC); status: COMPLETED; exit: 0; error: -; workDir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/57/63b71614aee5128be98a67ccfed226]
+May-21 23:50:06.789 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 5; name: fastQC (FastQC); status: COMPLETED; exit: 0; error: -; workDir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/49/c2d9b78d73934c612bea9cc52cb8d5]
+May-21 23:50:06.795 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: fastQC (FastQC); status: COMPLETED; exit: 0; error: -; workDir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/28/a259ef37706fe765dd918e34b6d3b9]
+May-21 23:50:06.805 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 3; name: fastQC (FastQC); status: COMPLETED; exit: 0; error: -; workDir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/3c/8953e744e097827865a627df1eaf73]
+May-21 23:50:06.811 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 4; name: fastQC (FastQC); status: COMPLETED; exit: 0; error: -; workDir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/0c/7278a9d21f76373071bc725cd92f6c]
+May-21 23:50:06.848 [Task submitter] DEBUG n.executor.local.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+May-21 23:50:06.849 [Task submitter] INFO  nextflow.Session - [a4/b23fe8] Submitted process > multiQC (MultiQC)
+May-21 23:50:08.385 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 7; name: multiQC (MultiQC); status: COMPLETED; exit: 0; error: -; workDir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work/a4/b23fe8d643ef75740000f750c0270c]
+May-21 23:50:08.391 [main] DEBUG nextflow.Session - Session await > all processes finished
+May-21 23:50:08.486 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
+May-21 23:50:08.486 [main] DEBUG nextflow.Session - Session await > all barriers passed
+May-21 23:50:08.488 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'TaskFinalizer' shutdown completed (hard=false)
+May-21 23:50:08.495 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=7; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=27.7s; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=6; peakCpus=6; peakMemory=0; ]
+May-21 23:50:08.659 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+May-21 23:50:08.669 [main] DEBUG nextflow.util.ThreadPoolManager - Thread pool 'FileTransfer' shutdown completed (hard=false)
+May-21 23:50:08.670 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
