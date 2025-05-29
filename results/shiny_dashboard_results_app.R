@@ -415,100 +415,149 @@ ui <- dashboardPage(
       tabItem(tabName = "diversity",
               fluidRow(
                 
-                # LEFT PANEL: Only Diversity Type
-                box(
-                  title = "Diversity Settings",
-                  status = "primary",
-                  solidHeader = TRUE,
-                  width = 3,
-                  collapsible = TRUE,
-                  
-                  radioButtons("diversity_type", "Diversity Type:",
-                               choices = c("Alpha Diversity" = "alpha", 
-                                           "Beta Diversity" = "beta"),
-                               selected = "alpha"),
-                  checkboxInput("subdivide_samples", "Split samples by condition", value = FALSE),
-                  
-                  # Only show if checked
-                  conditionalPanel(
-                    condition = "input.subdivide_samples == true",
-                    selectInput("condition_column", "Clinical condition to group by:",
-                                choices = c("Ongoing_conditions", "Neurological_Disorders", "Allergies", "Cancer"),
-                                selected = "Ongoing_conditions")
-                  )
+                #### COLUMN 1: Input Controls
+                column(width = 3,
+                       
+                       # Diversity Settings
+                       box(
+                         title = "Diversity Settings",
+                         status = "primary",
+                         solidHeader = TRUE,
+                         width = 12,
+                         collapsible = TRUE,
+                         
+                         radioButtons("diversity_type", "Diversity Type:",
+                                      choices = c("Alpha Diversity" = "alpha", 
+                                                  "Beta Diversity" = "beta"),
+                                      selected = "alpha"),
+                         checkboxInput("subdivide_samples", "Split samples by condition", value = FALSE),
+                         conditionalPanel(
+                           condition = "input.subdivide_samples == true",
+                           selectInput("condition_column", "Clinical condition to group by:",
+                                       choices = c("Ongoing_conditions", "Neurological_Disorders", "Allergies", "Cancer"),
+                                       selected = "Ongoing_conditions")
+                         )
+                       ),
+                       
+                       # Visualization Options
+                       box(
+                         title = "Visualization Options",
+                         status = "primary",
+                         solidHeader = TRUE,
+                         width = 12,
+                         collapsible = TRUE,
+                         
+                         conditionalPanel(
+                           condition = "input.diversity_type == 'alpha'",
+                           selectInput("alpha_metric", "Alpha Metric:",
+                                       choices = c("Observed OTUs", "Shannon", "Simpson"),
+                                       selected = "Shannon"),
+                           uiOutput("alpha_plot_type_ui"),
+                           uiOutput("otu_warning_ui"),
+                           selectInput("alpha_color_palette", "Color Palette:",
+                                       choices = c("Set1", "Dark2", "Pastel1", "Paired", "Viridis"),
+                                       selected = "Set1")
+                         ),
+                         conditionalPanel(
+                           condition = "input.diversity_type == 'beta'",
+                           selectInput("distance_metric", "Distance Metric:",
+                                       choices = c("Bray-Curtis", "Euclidean", "Jaccard",
+                                                   "Canberra", "Manhattan", "Kulczynski", "Chord"),
+                                       selected = "Bray-Curtis"),
+                           selectInput("ordination_method", "Ordination Method:",
+                                       choices = c("PCoA", "NMDS", "dbRDA", "t-SNE", "UMAP"),
+                                       selected = "PCoA"),
+                           checkboxInput("show_group_ellipses", "Show Group Ellipses", value = TRUE)
+                         ),
+                         checkboxInput("show_diversity_legend", "Show Legend", value = TRUE)
+                       ),
+                       
+                       # Download Button (below the box)
+                       fluidRow(
+                         column(width = 12, 
+                                align = "center", 
+                                downloadButton("download_diversity_plot", "Download Plot",
+                                               class = "btn-sm btn-info")
+                         )
+                       )
                 ),
                 
-                # MIDDLE PANEL: Plot options
-                box(
-                  title = "Visualization Options",
-                  status = "primary",
-                  solidHeader = TRUE,
-                  width = 3,
-                  collapsible = TRUE,
-                  
-                  conditionalPanel(
-                    condition = "input.diversity_type == 'alpha'",
-                    
-                    selectInput("alpha_metric", "Alpha Metric:",
-                                choices = c("Observed OTUs", "Shannon", "Simpson"),
-                                selected = "Shannon"),
-                    
-                    uiOutput("alpha_plot_type_ui"),
-                    uiOutput("otu_warning_ui"),
-                    
-                    selectInput("alpha_color_palette", "Color Palette:",
-                                choices = c("Set1", "Dark2", "Pastel1", "Paired", "Viridis"),
-                                selected = "Set1")
-                  ),
-                  
-                  conditionalPanel(
-                    condition = "input.diversity_type == 'beta'",
-                    
-                    selectInput("distance_metric", "Distance Metric:",
-                                choices = c("Bray-Curtis", "Euclidean", "Jaccard"),
-                                selected = "Bray-Curtis"),
-                    
-                    selectInput("ordination_method", "Ordination Method:",
-                                choices = c("PCoA", "NMDS"),
-                                selected = "PCoA"),
-                    
-                    checkboxInput("show_group_ellipses", "Show Group Ellipses", value = TRUE),
-                    checkboxInput("show_clustering_dendrogram", "Show Clustering Dendrogram", value = TRUE)
-                  ),
-                  
-                  checkboxInput("show_diversity_legend", "Show Legend", value = TRUE),
-                  hr(),
-                  downloadButton("download_diversity_plot", "Download Plot", class = "btn-primary")
+                
+                #### COLUMN 2: Output Plots (wider)
+                column(width = 6,
+                       box(
+                         title = "Diversity Analysis",
+                         status = "info",
+                         solidHeader = TRUE,
+                         width = 12,
+                         
+                         conditionalPanel(
+                           condition = "input.diversity_type == 'alpha'",
+                           tabsetPanel(
+                             tabPanel("Alpha Diversity Plot", plotlyOutput("diversity_main_plot", height = "600px")),
+                             tabPanel("Alpha Statistical Summary", verbatimTextOutput("alpha_stats_table"))
+                           )
+                         ),
+                         conditionalPanel(
+                           condition = "input.diversity_type == 'beta'",
+                           tabsetPanel(
+                             tabPanel("Beta Ordination Plot", plotlyOutput("ordination_plot", height = "600px")),
+                             tabPanel("Beta Statistical Summary", verbatimTextOutput("beta_stats_table")),
+                             tabPanel("Clustering Dendrogram", plotOutput("clustering_plot", height = "600px"))
+                           )
+                         )
+                       )
                 ),
                 
-                # RIGHT PANEL: Plot Output
-                # RIGHT PANEL: Plot Output
-                box(
-                  title = "Diversity Analysis",
-                  status = "info",
-                  solidHeader = TRUE,
-                  width = 6,
-                  
-                  # ALPHA DIVERSITY TABS
-                  conditionalPanel(
-                    condition = "input.diversity_type == 'alpha'",
-                    tabsetPanel(
-                      tabPanel("Alpha Diversity Plot", plotlyOutput("diversity_main_plot", height = "600px")),
-                      tabPanel("Alpha Statistical Summary", verbatimTextOutput("alpha_stats_table"))
-                    )
-                  ),
-                  
-                  # BETA DIVERSITY TABS
-                  conditionalPanel(
-                    condition = "input.diversity_type == 'beta'",
-                    tabsetPanel(
-                      tabPanel("Beta Ordination Plot", plotlyOutput("ordination_plot", height = "600px")),
-                      tabPanel("Beta Statistical Summary", verbatimTextOutput("beta_stats_table")),
-                      tabPanel("Clustering Dendrogram", plotOutput("clustering_plot", height = "600px"))
-                    )
-                  )
+                #### COLUMN 3: Contextual Explanation (dynamic)
+                column(width = 3,
+                       conditionalPanel(
+                         condition = "input.diversity_type == 'alpha'",
+                         box(
+                           title = "Explanation of Alpha Metrics",
+                           status = "warning",
+                           solidHeader = TRUE,
+                           width = 12,
+                           collapsible = TRUE,
+                           HTML("
+                       <ul>
+                         <li><b>Observed OTUs</b>: The raw count of unique taxa (Operational Taxonomic Units). Reflects richness only, not evenness.</li>
+                         <li><b>Shannon Index</b>: Combines richness and evenness. Increases with more species and more uniform distribution.</li>
+                         <li><b>Simpson Index</b>: Reflects dominance. Lower values mean a few species dominate; higher values indicate evenness.</li>
+                       </ul>
+                     ")
+                         )
+                       ),
+                       conditionalPanel(
+                         condition = "input.diversity_type == 'beta'",
+                         box(
+                           title = "Explanation of Beta Metrics",
+                           status = "warning",
+                           solidHeader = TRUE,
+                           width = 12,
+                           collapsible = TRUE,
+                           HTML("
+                       <ul>
+                         <li><b>Bray-Curtis</b>: Based on abundance. Sensitive to common species.</li>
+                         <li><b>Jaccard</b>: Based on presence/absence. Good for binary comparisons.</li>
+                         <li><b>Euclidean</b>: Straight-line distance in multivariate space.</li>
+                         <li><b>Manhattan</b>: Absolute differences. Robust to outliers.</li>
+                         <li><b>Canberra</b>: Gives weight to rare species. Good for sparse data.</li>
+                         <li><b>Kulczynski</b>: Balanced dissimilarity. Accounts for shared vs total taxa.</li>
+                         <li><b>Chord</b>: Focuses on proportional differences between samples.</li>
+                       </ul>
+                       <h4>Ordination Methods</h4>
+                       <ul>
+                         <li><b>PCoA</b>: Preserves distance dissimilarity. Common and interpretable.</li>
+                         <li><b>NMDS</b>: Non-metric, preserves rank of distances. Good for non-linear patterns.</li>
+                         <li><b>dbRDA</b>: Allows regression-like constraints in ordination.</li>
+                         <li><b>t-SNE</b>: Captures local clusters. Not ideal for global structure.</li>
+                         <li><b>UMAP</b>: Preserves both local and global structure. Scalable.</li>
+                       </ul>
+                     ")
+                         )
+                       )
                 )
-                
               )
       ),
       
@@ -1505,6 +1554,8 @@ server <- function(input, output, session) {
   )
   
   ###### DIVERSITY ANALYSIS TAB ######
+  rv <- reactiveValues(latest_ggplot = NULL)
+  
   output$alpha_plot_type_ui <- renderUI({
     req(input$alpha_metric)
     
@@ -1520,6 +1571,10 @@ server <- function(input, output, session) {
   })
   
   
+  # Add this reactive values object at the top of your server function
+  rv <- reactiveValues(latest_ggplot = NULL)
+  
+  # Modified diversity_main_plot with ggplot storage
   output$diversity_main_plot <- renderPlotly({
     req(data_store$sample_metadata, data_store$taxonomy_data)
     req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
@@ -1616,6 +1671,10 @@ server <- function(input, output, session) {
       theme(legend.position = ifelse(input$show_diversity_legend, "right", "none")) +
       scale_fill_brewer(palette = input$alpha_color_palette)
     
+    # STORE THE GGPLOT OBJECT FOR DOWNLOAD
+    rv$latest_ggplot <- p
+    rv$plot_type <- "alpha"
+    
     ggplotly(p, tooltip = c("x", "y", "text")) %>%
       layout(dragmode = "zoom")
   })
@@ -1629,35 +1688,48 @@ server <- function(input, output, session) {
     # Get metadata and taxonomy
     sample_meta <- data_store$sample_metadata
     control_meta <- data_store$control_sample_metadata
-    
     sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
     control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
     
     # Sample diversity
     sample_wide <- sample_tax %>%
       select(Sample_ID, Species, Abundance) %>%
+      filter(!is.na(Sample_ID), !is.na(Species), !is.na(Abundance)) %>%
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+    
+    if (nrow(sample_wide) == 0) {
+      cat("❌ No valid sample data after cleaning.\n")
+      return(NULL)
+    }
     
     sample_div <- sample_wide %>%
       column_to_rownames("Sample_ID") %>%
       as.matrix() %>%
       {
+        matrix_data <- .
+        matrix_data[is.na(matrix_data)] <- 0
         tibble(
-          Sample_ID = rownames(.),
-          Observed = rowSums(. > 0),
-          Shannon = vegan::diversity(., index = "shannon"),
-          Simpson = vegan::diversity(., index = "simpson")
+          Sample_ID = rownames(matrix_data),
+          Observed = rowSums(matrix_data > 0, na.rm = TRUE),
+          Shannon = vegan::diversity(matrix_data, index = "shannon"),
+          Simpson = vegan::diversity(matrix_data, index = "simpson")
         )
       }
     
-    # Add GroupLabel from condition or default
     if (input$subdivide_samples) {
       req(input$condition_column)
       selected_col <- input$condition_column
+      
+      if (!selected_col %in% names(sample_meta)) {
+        cat("❌ Selected condition column not found in sample metadata.\n")
+        return(NULL)
+      }
+      
       sample_div <- left_join(sample_div,
                               sample_meta %>% select(Sample_ID, !!sym(selected_col)),
-                              by = "Sample_ID")
-      sample_div$GroupLabel <- sample_div[[selected_col]]
+                              by = "Sample_ID") %>%
+        filter(!is.na(.data[[selected_col]]), .data[[selected_col]] != "")
+      sample_div$GroupLabel <- as.character(sample_div[[selected_col]])
     } else {
       sample_div$GroupLabel <- "Sample"
     }
@@ -1665,60 +1737,90 @@ server <- function(input, output, session) {
     # Control diversity
     control_wide <- control_tax %>%
       select(Sample_ID, Species, Abundance) %>%
+      filter(!is.na(Sample_ID), !is.na(Species), !is.na(Abundance)) %>%
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+    
+    if (nrow(control_wide) == 0) {
+      cat("❌ No valid control data after cleaning.\n")
+      return(NULL)
+    }
     
     control_div <- control_wide %>%
       column_to_rownames("Sample_ID") %>%
       as.matrix() %>%
       {
+        matrix_data <- .
+        matrix_data[is.na(matrix_data)] <- 0
         tibble(
-          Sample_ID = rownames(.),
-          Observed = rowSums(. > 0),
-          Shannon = vegan::diversity(., index = "shannon"),
-          Simpson = vegan::diversity(., index = "simpson"),
+          Sample_ID = rownames(matrix_data),
+          Observed = rowSums(matrix_data > 0, na.rm = TRUE),
+          Shannon = vegan::diversity(matrix_data, index = "shannon"),
+          Simpson = vegan::diversity(matrix_data, index = "simpson"),
           GroupLabel = "Control"
         )
       }
     
-    # Combine
-    diversity_df <- bind_rows(sample_div, control_div) %>%
-      filter(!is.na(GroupLabel))  # Clean up NAs
+    diversity_df <- bind_rows(sample_div, control_div)
     
-    # Choose metric
     metric_col <- switch(input$alpha_metric,
                          "Observed OTUs" = "Observed",
                          "Shannon" = "Shannon",
                          "Simpson" = "Simpson")
     
-    # Check group count
-    n_groups <- dplyr::n_distinct(diversity_df$GroupLabel)
+    # Filter invalid entries
+    diversity_df <- diversity_df %>%
+      filter(
+        !is.na(GroupLabel),
+        GroupLabel != "",
+        !is.na(.data[[metric_col]]),
+        is.finite(.data[[metric_col]])
+      )
+    
+    if (nrow(diversity_df) == 0) {
+      cat("❌ No valid data remaining after filtering.\n")
+      return(NULL)
+    }
+    
+    # Drop groups with <2 samples
+    group_counts <- table(diversity_df$GroupLabel)
+    valid_groups <- names(group_counts[group_counts >= 2])
+    diversity_df <- diversity_df %>% filter(GroupLabel %in% valid_groups)
+    diversity_df$GroupLabel <- factor(diversity_df$GroupLabel)
+    
+    n_groups <- n_distinct(diversity_df$GroupLabel)
+    
     if (n_groups < 2) {
-      cat("Not enough groups to compare.")
+      cat("❌ Not enough valid groups to compare after filtering groups with <2 samples.\n")
+      cat("Available groups:", paste(unique(diversity_df$GroupLabel), collapse = ", "), "\n")
       return(NULL)
     }
     
     cat("\n")
     
     if (n_groups == 2) {
-      cat("✅ Only 2 groups detected — using Wilcoxon rank-sum test (non-parametric):\n")
-      wilcox_result <- wilcox.test(as.formula(paste(metric_col, "~ GroupLabel")), data = diversity_df)
-      print(wilcox_result)
-      
+      cat("✅ Two valid groups detected — using Wilcoxon rank-sum test:\n")
+      tryCatch({
+        wilcox_result <- wilcox.test(as.formula(paste(metric_col, "~ GroupLabel")), data = diversity_df)
+        print(wilcox_result)
+      }, error = function(e) {
+        cat("❌ Error in Wilcoxon test:", e$message, "\n")
+      })
     } else {
-      cat("🔍 Pairwise comparisons (Dunn’s test, BH corrected):\n")
-      if (!requireNamespace("FSA", quietly = TRUE)) {
-        cat("❌ Please install the 'FSA' package to enable Dunn's test.\n")
-      } else {
-        suppressPackageStartupMessages(library(FSA))
-        dunn_res <- FSA::dunnTest(
-          as.formula(paste(metric_col, "~ GroupLabel")),
-          data = diversity_df,
-          method = "bh"
-        )
-        print(dunn_res)
-      }
+      cat("🔍 Performing pairwise Wilcoxon comparisons with BH correction:\n")
+      tryCatch({
+        pairwise_res <- pairwise.wilcox.test(diversity_df[[metric_col]],
+                                             diversity_df$GroupLabel,
+                                             p.adjust.method = "BH")
+        print(pairwise_res)
+      }, error = function(e) {
+        cat("❌ Error in pairwise Wilcoxon test:", e$message, "\n")
+      })
+      
     }
   })
+  
+  
+  
   
   output$ordination_plot <- renderPlotly({
     req(input$diversity_type == "beta")
@@ -1726,7 +1828,7 @@ server <- function(input, output, session) {
     req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
     req(input$distance_metric, input$ordination_method)
     
-    # Combine sample and control taxonomy
+    # Combine taxonomy
     all_tax <- bind_rows(
       data_store$taxonomy_data,
       data_store$control_taxonomy_data
@@ -1735,51 +1837,145 @@ server <- function(input, output, session) {
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
       column_to_rownames("Sample_ID")
     
-    # Calculate distance matrix
+    # Distance method
     dist_method <- switch(input$distance_metric,
                           "Bray-Curtis" = "bray",
                           "Euclidean"   = "euclidean",
-                          "Jaccard"     = "jaccard")
-    dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+                          "Jaccard"     = "jaccard",
+                          "Canberra"    = "canberra",
+                          "Manhattan"   = "manhattan",
+                          "Kulczynski"  = "kulczynski",
+                          "Chord"       = "chord")
     
-    # Perform ordination
-    ord_result <- if (input$ordination_method == "PCoA") {
-      ape::pcoa(dist_matrix)$vectors[, 1:2]
-    } else {
-      MASS::isoMDS(dist_matrix, k = 2)$points
+    dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+    coords <- NULL
+    title_prefix <- ""
+    
+    # Ordination methods
+    if (input$ordination_method == "PCoA") {
+      ord <- ape::pcoa(dist_matrix)
+      coords <- ord$vectors[, 1:2]
+      title_prefix <- "PCoA"
+    } else if (input$ordination_method == "NMDS") {
+      ord <- vegan::metaMDS(dist_matrix, k = 2, trymax = 100, autotransform = FALSE, trace = FALSE)
+      coords <- ord$points
+      title_prefix <- "NMDS"
+    } else if (input$ordination_method == "dbRDA") {
+      ord <- vegan::capscale(dist_matrix ~ 1)
+      coords <- scores(ord, display = "sites")[, 1:2]
+      title_prefix <- "dbRDA"
+    } else if (input$ordination_method == "t-SNE") {
+      if (!requireNamespace("Rtsne", quietly = TRUE)) {
+        showNotification("Install 'Rtsne' to use t-SNE", type = "error")
+        return(NULL)
+      }
+      dist_mat <- as.matrix(dist_matrix)
+      n_samples <- nrow(dist_mat)
+      perplexity_val <- min(30, floor((n_samples - 1) / 3))
+      if (perplexity_val < 5) {
+        showNotification("Too few samples for t-SNE.", type = "error")
+        return(NULL)
+      }
+      tsne_result <- tryCatch({
+        Rtsne::Rtsne(dist_mat, is_distance = TRUE, perplexity = perplexity_val)
+      }, error = function(e) {
+        showNotification(paste("t-SNE error:", e$message), type = "error")
+        return(NULL)
+      })
+      if (is.null(tsne_result) || is.null(tsne_result$Y)) return(NULL)
+      coords <- tsne_result$Y
+      rownames(coords) <- rownames(dist_mat)
+      title_prefix <- "t-SNE"
+    } else if (input$ordination_method == "UMAP") {
+      if (!requireNamespace("umap", quietly = TRUE)) {
+        showNotification("Install 'umap' to use UMAP", type = "error")
+        return(NULL)
+      }
+      umap_result <- tryCatch({
+        umap::umap(as.matrix(all_tax))
+      }, error = function(e) {
+        showNotification(paste("UMAP error:", e$message), type = "error")
+        return(NULL)
+      })
+      if (is.null(umap_result) || is.null(umap_result$layout)) return(NULL)
+      coords <- umap_result$layout[, 1:2]
+      rownames(coords) <- rownames(all_tax)
+      title_prefix <- "UMAP"
     }
     
-    ord_df <- as.data.frame(ord_result)
-    colnames(ord_df)[1:2] <- c("Axis1", "Axis2")  
-    ord_df$Sample_ID <- rownames(ord_result)
+    if (is.null(coords)) {
+      showNotification("Ordination failed.", type = "error")
+      return(NULL)
+    }
     
+    # Prepare plotting dataframe
+    ord_df <- as.data.frame(coords)
+    colnames(ord_df)[1:2] <- c("Axis1", "Axis2")
+    ord_df$Sample_ID <- rownames(coords)
     
-    # Add grouping
+    # Merge metadata
     all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
     ord_df <- left_join(ord_df, all_meta, by = "Sample_ID")
     
-    # Assign group label
-    ord_df$GroupLabel <- if (input$subdivide_samples) {
+    # Grouping
+    if (input$subdivide_samples) {
       req(input$condition_column)
-      ord_df[[input$condition_column]]
+      ord_df$GroupLabel <- ifelse(
+        ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
+        "Control",
+        ord_df[[input$condition_column]]
+      )
     } else {
-      ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
+      ord_df$GroupLabel <- ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
+                                  "Control", "Sample")
     }
     
-    # Plot
-    p <- ggplot(ord_df, aes(x = Axis1, y = Axis2, color = GroupLabel)) +
-      geom_point(size = 3, alpha = 0.8) +
+    # Create base ggplot
+    p <- ggplot(ord_df, aes(x = Axis1, y = Axis2, color = GroupLabel, text = Sample_ID)) +
+      geom_point(size = 3, alpha = 0.8)
+    
+    # Add ellipses BEFORE converting to plotly
+    if (input$show_group_ellipses) {
+      p <- p + stat_ellipse(aes(group = GroupLabel, color = GroupLabel), 
+                            type = "norm", linetype = "dashed", alpha = 0.6, size = 1,
+                            show.legend = FALSE)
+    }
+    
+    # Highlight selected sample
+    if (!is.null(input$selected_sample_id) && input$selected_sample_id %in% ord_df$Sample_ID) {
+      highlighted <- ord_df %>% filter(Sample_ID == input$selected_sample_id)
+      p <- p + geom_point(data = highlighted, aes(x = Axis1, y = Axis2),
+                          shape = 21, fill = "yellow", color = "red", size = 5, stroke = 1.5)
+    }
+    
+    p <- p +
       labs(x = "Axis 1", y = "Axis 2",
-           title = paste(input$ordination_method, "on", input$distance_metric, "distance")) +
+           title = paste0(title_prefix, " on ", input$distance_metric, " Distance")) +
       theme_minimal()
     
-    
-    if (input$show_group_ellipses) {
-      p <- p + stat_ellipse(type = "norm", linetype = "dashed", alpha = 0.4)
+    # Control legend visibility
+    if (!input$show_diversity_legend) {
+      p <- p + theme(legend.position = "none")
     }
     
-    ggplotly(p)
+    # STORE THE GGPLOT OBJECT FOR DOWNLOAD
+    rv$latest_ggplot <- p
+    rv$plot_type <- "beta"
+    
+    # Convert to plotly
+    plotly_obj <- ggplotly(p, tooltip = c("x", "y", "text"))
+    
+    # Additional plotly-specific legend control
+    if (!input$show_diversity_legend) {
+      plotly_obj <- plotly_obj %>% 
+        layout(showlegend = FALSE)
+    }
+    
+    return(plotly_obj)
   })
+  
+  
+  
   
   output$beta_stats_table <- renderPrint({
     req(input$diversity_type == "beta")
@@ -1795,25 +1991,54 @@ server <- function(input, output, session) {
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
       column_to_rownames("Sample_ID")
     
-    # Combine metadata
-    all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
-    group_label <- if (input$subdivide_samples) {
-      req(input$condition_column)
-      all_meta[[input$condition_column]]
-    } else {
-      ifelse(all_meta$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
+    # Sanity check for Bray-Curtis
+    if (input$distance_metric == "Bray-Curtis") {
+      if (any(all_tax < 0, na.rm = TRUE)) {
+        stop("Abundance matrix contains negative values — Bray-Curtis is not defined.")
+      }
     }
     
-    adonis_result <- vegan::adonis2(all_tax ~ group_label, method = tolower(input$distance_metric))
+    # Combine metadata
+    all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
+    if (input$subdivide_samples) {
+      req(input$condition_column)
+      group_label <- ifelse(
+        all_meta$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
+        "Control",
+        all_meta[[input$condition_column]]
+      )
+    } else {
+      group_label <- ifelse(all_meta$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
+    }
+    
+    # Distance matrix
+    dist_method <- switch(input$distance_metric,
+                          "Bray-Curtis" = "bray",
+                          "Euclidean"   = "euclidean",
+                          "Jaccard"     = "jaccard",
+                          "Canberra"    = "canberra",
+                          "Manhattan"   = "manhattan",
+                          "Kulczynski"  = "kulczynski",
+                          "Chord"       = "chord")
+    
+    
+    dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+    
+    # Convert to data frame for adonis2
+    stat_df <- data.frame(GroupLabel = group_label)
+    rownames(stat_df) <- rownames(all_tax)
+    
+    # Run adonis2
+    adonis_result <- vegan::adonis2(dist_matrix ~ GroupLabel, data = stat_df)
     print(adonis_result)
   })
+  
   
   
   output$clustering_plot <- renderPlot({
     req(input$diversity_type == "beta")
     req(data_store$sample_metadata, data_store$taxonomy_data)
     req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
-    req(input$show_clustering_dendrogram)
     
     all_tax <- bind_rows(
       data_store$taxonomy_data,
@@ -1823,12 +2048,66 @@ server <- function(input, output, session) {
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
       column_to_rownames("Sample_ID")
     
-    dist_matrix <- vegan::vegdist(all_tax, method = tolower(input$distance_metric))
+    dist_matrix <- vegan::vegdist(all_tax, method = switch(input$distance_metric,
+                                                           "Bray-Curtis" = "bray",
+                                                           "Euclidean"   = "euclidean",
+                                                           "Jaccard"     = "jaccard",
+                                                           "Canberra"    = "canberra",
+                                                           "Manhattan"   = "manhattan",
+                                                           "Kulczynski"  = "kulczynski",
+                                                           "Chord"       = "chord")
+    )
     hc <- hclust(dist_matrix, method = "ward.D2")
     
-    plot(hc, main = paste("Hierarchical Clustering (", input$distance_metric, ")"), xlab = "", sub = "")
+    dend <- as.dendrogram(hc)
+    
+    plot(dend, main = paste("Clustering Dendrogram (", input$distance_metric, ")"))
   })
   
+  
+  output$download_diversity_plot <- downloadHandler(
+    filename = function() {
+      if (input$diversity_type == "alpha") {
+        metric <- tolower(gsub(" ", "_", input$alpha_metric))
+        paste0("diversity_alpha_", metric, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
+      } else {
+        method <- tolower(gsub("[^A-Za-z0-9]", "_", input$ordination_method))
+        distance <- tolower(gsub("[^A-Za-z0-9]", "_", input$distance_metric))
+        paste0("diversity_beta_", method, "_", distance, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
+      }
+    },
+    
+    content = function(file) {
+      # Check if we have a stored ggplot
+      if (is.null(rv$latest_ggplot)) {
+        showNotification("No plot available for download. Please generate a plot first.", type = "error")
+        return(NULL)
+      }
+      
+      # Get the stored ggplot object
+      p <- rv$latest_ggplot
+      
+      # Apply consistent theming for download
+      p <- p + theme_minimal() + 
+        theme(
+          legend.position = "right",
+          plot.title = element_text(size = 14, hjust = 0.5),
+          axis.title = element_text(size = 12),
+          axis.text = element_text(size = 10),
+          legend.text = element_text(size = 10),
+          legend.title = element_text(size = 11)
+        )
+      
+      # Save the plot
+      ggsave(file, plot = p, width = 12, height = 8, dpi = 300, bg = "white")
+    },
+    
+    contentType = "image/png"
+  )
+  
+  
+  
+  ###### LIFESTYLE TAB ######
   output$parallel_var_select <- renderUI({
     req(data_store$sample_metadata)
     selectizeInput("parallel_vars", "Select Metadata Variables:",
