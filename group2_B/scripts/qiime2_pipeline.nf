@@ -8,7 +8,7 @@ log.info """\
          Output Directory : ${params.outdir}
          Denoiser         : ${params.denoiser}
          Classifier DB    : ${params.classifier_db}
-         Sampling Depth   : ${params.sampling_depth}
+         Metadata         : ${params.metadata}
          """
 
 // == Define Parameters ==
@@ -20,7 +20,8 @@ params.metadata = "group2_B/metadata/metadata.tsv"
 
 params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on the demux report!!!!!!
 params.trunc_len_r = 180 // DADA2: Reverse read truncation length
-params.sampling_depth = 1000 // Adjust based on the data (check feature table summary)
+
+
 
 // == Input Channel - Alternative approach ==
 // Get the input directory and create channel from there
@@ -47,7 +48,7 @@ workflow {
         error "Invalid denoiser option: ${params.denoiser}. Choose 'dada2' or 'deblur'."
     }
 
-    // 3. Feature Table Summaries (Useful for picking sampling depth)
+    // 3. Feature Table Summaries
     SUMMARIZE_TABLE( ch_denoised_table, ch_metadata)
     SUMMARIZE_SEQS( ch_denoised_reps )
 
@@ -56,14 +57,11 @@ workflow {
 
     // 5. Phylogenetic Tree Construction
     BUILD_TREE( ch_denoised_reps )
-
-    // 6. Core Diversity Metrics
-    // CORE_DIVERSITY( ch_denoised_table, ch_denoised_reps, ch_metadata, BUILD_TREE.out.rooted_tree )
 }
 
 // == Processes ==
 
-// 1. Import Reads - Simplified approach
+// 1. Import Reads
 process IMPORT_READS {
     publishDir "${params.outdir}/qiime2_artifacts/01_imported_reads", mode: 'copy'
     
@@ -301,72 +299,5 @@ process BUILD_TREE {
     stub:
     """
     touch aligned-rep-seqs.qza masked-aligned-rep-seqs.qza unrooted-tree.qza rooted-tree.qza
-    """
-}
-
-// 6. Core Diversity Metrics
-process CORE_DIVERSITY {
-    publishDir "${params.outdir}/qiime2_artifacts/06_diversity_core", mode: 'copy'
-    publishDir "${params.outdir}/qiime2_visualizations/06_diversity_core", mode: 'copy', pattern: '*.qzv'
-
-    input:
-    path(table_qza)
-    path(rep_seqs_qza) // Although not directly used, good practice to show dependency
-    path(metadata_file)
-    path(rooted_tree_qza)
-    // Add metadata file input here if available: path(metadata)
-
-    output:
-    // Alpha diversity
-    path("faith_pd_vector.qza")
-    path("observed_features_vector.qza")
-    path("shannon_vector.qza")
-    path("evenness_vector.qza")
-    path("faith-pd-group-significance.qzv")
-    path("evenness-group-significance.qzv")
-    path("shannon-group-significance.qzv")
-    // Beta diversity
-    path("unweighted_unifrac_distance_matrix.qza")
-    path("weighted_unifrac_distance_matrix.qza")
-    path("jaccard_distance_matrix.qza")
-    path("bray_curtis_distance_matrix.qza")
-    path("unweighted_unifrac_pcoa_results.qza")
-    path("weighted_unifrac_pcoa_results.qza")
-    path("jaccard_pcoa_results.qza")
-    path("bray_curtis_pcoa_results.qza")
-    path("unweighted_unifrac_emperor.qzv")
-    path("weighted_unifrac_emperor.qzv")
-    path("jaccard_emperor.qzv")
-    path("bray_curtis_emperor.qzv")
-
-    script:
-    if (params.sampling_depth <= 0) {
-        error "Sampling depth (--sampling_depth) must be a positive integer. Check the feature table summary (table.qzv) to choose an appropriate value."
-    }
-    // Metadata is required for group significance testing and PCoA plots with coloring
-    // Add --m-metadata-file path/to/metadata.tsv if available
-    """
-    qiime diversity core-metrics-phylogenetic \
-      --i-phylogeny ${rooted_tree_qza} \
-      --i-table ${table_qza} \
-      --p-sampling-depth ${params.sampling_depth} \
-      --output-dir core-metrics-results \
-      --p-n-jobs-or-threads ${task.cpus}
-      --m-metadata-file ${metadata}
-
-    # Move results out of the directory created by qiime
-    mv core-metrics-results/* .
-    rmdir core-metrics-results
-    """
-    stub:
-    """
-    mkdir core-metrics-results
-    touch core-metrics-results/faith_pd_vector.qza core-metrics-results/observed_features_vector.qza core-metrics-results/shannon_vector.qza core-metrics-results/evenness_vector.qza
-    touch core-metrics-results/faith-pd-group-significance.qzv core-metrics-results/evenness-group-significance.qzv core-metrics-results/shannon-group-significance.qzv
-    touch core-metrics-results/unweighted_unifrac_distance_matrix.qza core-metrics-results/weighted_unifrac_distance_matrix.qza core-metrics-results/jaccard_distance_matrix.qza core-metrics-results/bray_curtis_distance_matrix.qza
-    touch core-metrics-results/unweighted_unifrac_pcoa_results.qza core-metrics-results/weighted_unifrac_pcoa_results.qza core-metrics-results/jaccard_pcoa_results.qza core-metrics-results/bray_curtis_pcoa_results.qza
-    touch core-metrics-results/unweighted_unifrac_emperor.qzv core-metrics-results/weighted_unifrac_emperor.qzv core-metrics-results/jaccard_emperor.qzv core-metrics-results/bray_curtis_emperor.qzv
-    mv core-metrics-results/* .
-    rmdir core-metrics-results
     """
 }
