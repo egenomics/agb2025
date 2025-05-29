@@ -1,0 +1,284 @@
+---
+title: "Development Dataset"
+author: "Anna Korda"
+date: "2025-05-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Creation of a development dataset
+
+## Development Dataset Description
+
+We constructed a development dataset close to the format defined by `metadata_cleaned.tsv` from Group 1, although it might need additional preprocessing. This dataset includes **60 samples** evenly distributed across three conditions:
+
+-   **Healthy controls (n = 20)**
+-   **Capsule patients (n = 20)**
+-   **Clostridioides difficile infection (CDI) patients (n = 20)**
+
+Each condition is sourced from a different published study, all of which employed the same sequencing protocol: **16S rRNA gene sequencing targeting the V4 region**, processed as **ASVs using Illumina MiSeq**. The studies are:
+
+-   **Healthy controls**: *16S rRNA sequencing of samples from universal stool bank donors*\
+    DOI: [10.1186/s13104-021-05520-z](https://doi.org/10.1186/s13104-021-05520-z)\
+    PMID: [PMC7988957](https://pmc.ncbi.nlm.nih.gov/articles/PMC7988957/)
+
+-   **Capsule patients**: *Fecal microbiota transplantation capsules improve symptoms and decrease fecal calprotectin in patients with mild to moderately active ulcerative colitis*\
+    DOI: [10.1038/s41598-021-84152-6](https://doi.org/10.1038/s41598-021-84152-6)
+
+-   **CDI patients**: *Gut microbiome of patients with Clostridioides difficile infection, colonized patients, and those with non-CDI diarrhea*\
+    DOI: [10.3389/fcimb.2023.1237500](https://doi.org/10.3389/fcimb.2023.1237500)
+
+To ensure robust development, we **prioritized diversity in sequencing depth**, selecting samples across a wide range of read counts to capture edge cases. This strategy allows the pipeline to define appropriate thresholds and normalization strategies. External samples from these studies have been reserved as an **independent validation dataset** to test the generalizability and performance of the pipeline.
+
+```{r libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library(dplyr)
+library(readr)
+```
+
+The technical metadata were downloaded from ENA archive and so the columns are matched for all samples. The capsule patient and the c.difficile samples miss a couple of clinical variables but we will try to fill some of them in using tables from their publications. In the end, we are going to transform everything to the format defined by team 1, in order for teams 2a, 2b and 3a to use the pipeline with real samples as needed.
+
+```{r load files, message=FALSE, warning=FALSE}
+# 1. Load TSV files
+healthy <- read_csv("final_healthy_controls.csv")
+capsule <- read_tsv("capsule_patients.tsv")
+cdifficile <- read_tsv("cdifficile.tsv")
+
+```
+
+## Preprocessing
+
+```{r columns, warning=FALSE, message=FALSE}
+list(
+  capsule = colnames(capsule),
+  cdifficile = colnames(cdifficile),
+  healthy = colnames(healthy)
+)
+
+# Add condition column to each dataset
+healthy$condition <- "HC"
+capsule$condition <- "CP"
+cdifficile$condition <- "CD"
+
+```
+
+Now that we have a "condition" column to be able to distinguish the three datasets easily, we can proceed to merging them with caution and then we will process their columns that do not match.
+
+```{r merge, warning=FALSE, message=FALSE}
+# 1. Get all unique column names from all datasets
+all_columns <- union(names(healthy), names(capsule)) %>% union(names(cdifficile))
+
+# 2. Ensure all datasets have all columns (add missing ones as NA)
+add_missing_cols <- function(df, all_cols) {
+  missing <- setdiff(all_cols, names(df))
+  df[missing] <- NA
+  return(df[, all_cols])  # reorder to consistent column order
+}
+
+healthy_full <- add_missing_cols(healthy, all_columns)
+capsule_full <- add_missing_cols(capsule, all_columns)
+cdifficile_full <- add_missing_cols(cdifficile, all_columns)
+
+# 3. Combine into one unified data frame
+all_merged <- bind_rows(healthy_full, capsule_full, cdifficile_full)
+
+```
+
+Set the healthy ones to Illumina MiSeq that we know from its publication.
+
+```{r instrument model, warning=FALSE, message=FALSE}
+all_merged$instrument_model[all_merged$condition == "HC"] <- "Illumina MiSeq"
+
+```
+
+Remove unwanted columns:
+
+```{r remove cols, warning=FALSE, message=FALSE}
+cols_to_remove <- c(
+  "fastq_ftp", "fastq_md5", "fastq_galaxy", "submitted_ftp",
+  "bam_ftp", "experiment_url", "run_url", "sample_url",
+  "study_alias", "broker_name", "library_name",
+  "secondary_sample_accession", "experiment_accession",
+  "experiment_alias", "sample_alias", "suffix", "donation","sample_id"
+)
+
+# Remove unwanted columns
+all_merged <- all_merged %>% select(-all_of(cols_to_remove))
+
+all_merged <- all_merged %>%
+  rename(`donor/patient` = donor)
+
+all_merged <- all_merged %>%
+  select(sample_accession, run_accession, condition, everything())
+
+
+all_merged <- all_merged %>%
+  filter(!(condition == "CD") | grepl("^CDI", sample_title)) #only CDI
+
+all_merged <- all_merged %>%
+  mutate(
+    sample_url = paste0("https://www.ebi.ac.uk/ena/browser/view/", sample_accession),
+    run_url = paste0("https://www.ebi.ac.uk/ena/browser/view/", run_accession)
+  )
+
+all_merged <- all_merged %>%
+  select(sample_accession, run_accession, condition,
+         sample_url, run_url,
+         everything())
+
+
+
+```
+
+Now let's keep 20 samples from each condition with varying sequencing depths:
+
+```{r subset, warning=FALSE, message=FALSE}
+# Ensure read_count is numeric
+all_merged <- all_merged %>%
+  mutate(read_count = as.numeric(read_count))
+
+subset_balanced <- all_merged %>%
+  mutate(read_count = as.numeric(read_count)) %>%
+  group_by(condition) %>%
+  arrange(condition, read_count) %>%
+  slice(round(seq(1, n(), length.out = 20))) %>%
+  ungroup()
+
+
+```
+
+## **Clinical Variable Annotation Strategy**
+
+To generate a development dataset with realistic and clinically meaningful annotations, we integrated structured sample metadata with demographic and clinical insights derived from the original publications of each study. Specifically, we manually added **age**, **BMI**, and **sex** values for the **Capsule Patients (CP)** and **C. difficile Patients (CD)** groups, based on aggregate statistics reported in their respective studies.
+
+------------------------------------------------------------------------
+
+### **Publications & Reported Values**:
+
+#### **Capsule Study (CP)**
+
+From the publication:
+
+-   Mean age was **65 ± 19** for cFMT and **60 ± 20** for eFMT patients.
+
+-   Mean BMI was **28.4 ± 10.8** and **25.9 ± 7.1**, respectively.
+
+-   The proportion of female participants was **83%** in the cFMT group and **78%** in the eFMT group.
+
+We therefore assigned:
+
+-   **Random age values between 45 and 65**
+
+-   **Random BMI values between 25 and 30**
+
+-   **Sex distribution with 83% female and 17% male**
+
+#### **C. difficile Infection Study (CD)**
+
+From the Frontiers in Cellular and Infection Microbiology article:
+
+-   The **median age** of CDI patients was **around 70 years**
+
+-   Female sex represented approximately **56%**
+
+-   BMI was not explicitly given, but based on exclusion criteria and comparison to other groups, **BMI between 25 and 30** is representative.
+
+We therefore assigned:
+
+-   **Random age values between 65 and 75**
+
+-   **Random BMI values between 25 and 30**
+
+-   **Sex distribution with 56% female and 44% male**
+
+#### **Healthy Controls (HC)**
+
+Healthy donor metadata was available, so **age, BMI, and sex values were kept as-is** from the original table.
+
+------------------------------------------------------------------------
+
+This approach can be used when:
+
+-   **Sample-level clini**
+
+    tax_id = 408170
+
+    scientific_name = "human gut metagenome"
+
+    **cal metadata is unavailable**, but **aggregate statistics** are provided in the publication.
+
+-   We are preparing a **development or demonstration dataset** (not a final clinical analysis), and want to simulate **plausible individual values** for stratification, visualization, or method development.
+
+```{r age bmi annotation, message=FALSE, warning=FALSE}
+subset_balanced <- subset_balanced %>%
+  mutate(
+    age = case_when(
+      condition == "CP" ~ sample(45:65, n(), replace = TRUE),
+      condition == "CD" ~ sample(65:75, n(), replace = TRUE),
+      TRUE ~ age  # keep original for HC
+    ),
+    bmi = case_when(
+      condition == "CP" ~ round(runif(n(), min = 25, max = 30), 1),
+      condition == "CD" ~ round(runif(n(), min = 25, max = 30), 1),
+      TRUE ~ bmi  # keep original for HC
+    )
+  )
+set.seed(42)  # for reproducibility
+
+subset_balanced <- subset_balanced %>%
+  mutate(
+    sex = case_when(
+      condition == "CP" ~ sample(c("F", "M"), size = n(), replace = TRUE, prob = c(0.83, 0.17)),
+      condition == "CD" ~ sample(c("F", "M"), size = n(), replace = TRUE, prob = c(0.56, 0.44)),
+      TRUE ~ sex  # keep original for healthy
+    )
+  )
+
+```
+
+Now let's add manually the institution or center name for the three studies based on ENA.
+
+```{r institution, warning=FALSE, message=FALSE}
+subset_balanced <- subset_balanced %>%
+  mutate(
+    center_name = case_when(
+      condition == "CD" ~ "Hospital General Universitario Gregorio Marañón",
+      condition == "CP" ~ "University of Minnesota",
+      condition == "HC" ~ "OpenBiome"
+    )
+  )
+
+```
+
+### Taxonomy ID (tax_id) Standardization
+
+In our development dataset, we noticed that the `tax_id` field included three different values, even though all samples represent human gut microbiome data. This is because the `tax_id` is automatically assigned during ENA submission based on how the study authors described their samples. Specifically:
+
+-   `9606` refers to **Homo sapiens** (human).
+
+-   `408170` refers to **human gut metagenome** (a metagenomic environment specific to humans).
+
+-   `749906` refers to **gut metagenome** (a general term not tied to a specific host).
+
+Although these all correctly describe gut-related microbiome samples, they vary in specificity. To ensure consistency and simplify downstream processing, we standardized all samples to use:
+
+-   `tax_id = 408170`
+
+-   `scientific_name = "human gut metagenome"`
+
+This allows us to treat the dataset uniformly and clearly indicate that all samples derive from the human gut environment, without ambiguity across studies.
+
+```{r taxid, message=FALSE, warning=FALSE}
+subset_balanced$tax_id <- 408170
+subset_balanced$scientific_name <- "human gut metagenome"
+
+```
+
+Now let's save this dataset:
+
+```{r save, message=FALSE, warning=FALSE}
+write.csv(subset_balanced, "development_dataset.csv", row.names = FALSE)
+
+```
