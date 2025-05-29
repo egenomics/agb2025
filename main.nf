@@ -10,11 +10,8 @@ process CHECK_OR_DOWNLOAD_DB {
 
     tag 'kraken_db'
 
-    // a very small image with Python – lets us `pip install gdown`
-    container 'docker.io/library/python:3.11-slim'
+    container 'docker.io/library/bash:latest' // no Python needed
 
-    /* where the files will be kept on the host                *
-     * (the same place the rest of your pipeline already uses) */
     publishDir "refs/kraken2", mode: 'copy'
 
     cache 'lenient'
@@ -26,48 +23,26 @@ process CHECK_OR_DOWNLOAD_DB {
     """
         set -euo pipefail
 
-        DB_DIR='k2_minusb_20250402'
-
-        if [ ! -d "\$DB_DIR" ]; then
+        if [ ! -d "k2_minusb_20250402" ]; then
             echo "[INFO] Kraken2 DB not found – downloading …"
 
-            # give the unprivileged user a writable HOME and PATH
-            export HOME=/tmp
-            mkdir -p \$HOME/.local/bin
-            export PATH=\$HOME/.local/bin:\$PATH
+            curl -L 'https://genome-idx.s3.amazonaws.com/kraken/k2_viral_20250402.tar.gz' -o kraken_db.tar.gz
 
-            # install gdown only for this user
-            pip install --quiet --no-cache-dir --user gdown
-
-            # fetch the archive
-            gdown --id 1C4aisqMEmUiIv-jNBzxTkKX1AqFKgYen -O kraken_db.tar.gz
-
-            # create the DB folder and unpack everything into it
-            mkdir -p "\$DB_DIR"
-            tar -xzf kraken_db.tar.gz -C "\$DB_DIR"
-
+            mkdir -p "k2_minusb_20250402"
+            tar -xzf kraken_db.tar.gz -C "k2_minusb_20250402"
             rm kraken_db.tar.gz
+
             echo "[INFO] Kraken2 DB download complete."
         else
-            echo "[INFO] Kraken2 DB already present – nothing to do."
+            echo "[INFO] Kraken2 DB already present – Using this DB."
         fi
     """
 }
 
-workflow {
-    def kraken2_db = file('refs/kraken2/k2_minusb_20250402')
 
+workflow {
     println("Timestamp: ${params.timestamp}")
     println("Output directory: ${params.outdir}")
-
-    // ── only download if we don’t already have the DB on the host ──
-    if (!file('refs/kraken2/k2_minusb_20250402').exists()) {
-        println("[INFO] Kraken2 DB not found in refs/kraken2 → downloading")
-        CHECK_OR_DOWNLOAD_DB()
-    }
-    else {
-        println("[INFO] Found Kraken2 DB in refs/kraken2 → skipping download")
-    }
 
     // Channel with paired-end fastq files
     Channel.fromFilePairs("raw_data/*_{1,2}.fastq.gz", size: 2)
@@ -99,17 +74,23 @@ workflow {
         }
     )
 
+    // ── only download if we don’t already have the DB on the host ──
+    println("[INFO] Checking Kraken2 DB in refs/kraken2...")
+    CHECK_OR_DOWNLOAD_DB()
+
     // Run Kraken2
     KRAKEN(
         TRIMMOMATIC.out.trimmed_reads.map { meta, reads ->
             tuple(meta, reads)
         },
-        kraken2_db,
+        CHECK_OR_DOWNLOAD_DB.out.db_dir.map { db_dir ->
+            return db_dir
+        },
         false,
         true,
     )
 
     println("Workflow completed at: ${new Date()}")
-    println("Execution status: ${workflow.success ? 'SUCCESS' : 'FAILED'}")
+    //println("Execution status: ${workflow.success ? 'SUCCESS' : 'FAILED'}")
     println("Output directory: ${params.outdir}")
 }

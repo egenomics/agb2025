@@ -9,3 +9,4 @@ work/
 .DS_Store
 refs/kraken2/
 settings.json
+outputs/

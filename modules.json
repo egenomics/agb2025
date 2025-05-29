@@ -1,32 +1,40 @@
 {
-  "name": "",
-  "homePage": "",
-  "repos": {
-    "https://github.com/nf-core/modules.git": {
-      "modules": {
-        "nf-core": {
-          "cutadapt": {
-            "branch": "master",
-            "git_sha": "4c4eacf68c420ce477e945c04c16f4338ddaca36",
-            "installed_by": ["modules"]
-          },
-          "fastqc": {
-            "branch": "master",
-            "git_sha": "b1966f36ec9de31927b2603d8f499960b2a4c294",
-            "installed_by": ["modules"]
-          },
-          "kraken2/kraken2": {
-            "branch": "master",
-            "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
-            "installed_by": ["modules"]
-          },
-          "trimmomatic": {
-            "branch": "master",
-            "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
-            "installed_by": ["modules"]
-          }
+    "name": "",
+    "homePage": "",
+    "repos": {
+        "https://github.com/nf-core/modules.git": {
+            "modules": {
+                "nf-core": {
+                    "cutadapt": {
+                        "branch": "master",
+                        "git_sha": "4c4eacf68c420ce477e945c04c16f4338ddaca36",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "fastqc": {
+                        "branch": "master",
+                        "git_sha": "b1966f36ec9de31927b2603d8f499960b2a4c294",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "kraken2/kraken2": {
+                        "branch": "master",
+                        "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    },
+                    "trimmomatic": {
+                        "branch": "master",
+                        "git_sha": "05954dab2ff481bcb999f24455da29a5828af08d",
+                        "installed_by": [
+                            "modules"
+                        ]
+                    }
+                }
+            }
         }
-      }
     }
-  }
 }
