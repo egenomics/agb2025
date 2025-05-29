@@ -3,5 +3,25 @@
 2025-05-22 17:04:33	-	golden_bartik	-	d7ad374fba93bb7d0cc4d4388b9f8c3b	59ce19a2-401c-4e2f-a2c6-6c3e8fe6e0bc	nextflow run main.nf
 2025-05-26 23:55:58	1m 51s	cranky_mirzakhani	OK	c8bed43a94e3776fb1f36571cb82017d	9663c909-dd2d-4e37-87a2-bf85de768678	nextflow run main.nf -profile docker
 2025-05-27 22:15:53	2m 9s	jolly_jepsen	OK	829a57645b35b2fb2b6344fb5b0271bb	06b92e5a-73e6-45fc-aba7-64822db85668	nextflow run main.nf -profile docker
+<<<<<<< Updated upstream
 2025-05-28 16:24:23	2.3s	dreamy_gates	ERR	f7f7493f4ee8386463938eaca6bc05b0	d5b05115-2c54-4692-bc4b-5d540730b81c	nextflow run group2_B/scripts/qiime2_pipeline.nf --reads 'group2_B/data/*_{1,2}.fastq.gz' --outdir group2_B/results/qiime_output --classifier_db group2_B/classifier/silva-138-99-nb-classifier.qza --sampling_depth 5000 --denoiser dada2 -profile standard
 2025-05-28 16:25:06	7m 10s	mighty_woese	OK	f7f7493f4ee8386463938eaca6bc05b0	97307b32-8c2f-4985-aa88-e36d261a4cec	nextflow run group2_B/scripts/qiime2_pipeline.nf --reads 'group2_B/data/*_{1,2}.fastq.gz' --outdir group2_B/results/qiime_output --classifier_db group2_B/classifier/silva-138-99-nb-classifier.qza --sampling_depth 5000 --denoiser dada2 -profile standard
+=======
+2025-05-28 00:18:56	1.8s	drunk_monod	ERR	79e66c8a363bbafe86c27c0d46cc9c8d	4cefa23e-4f2a-49fb-811b-3dd3db84bca8	nextflow run . -profile docker
+2025-05-28 00:19:58	1.2s	spontaneous_northcutt	ERR	de72d0cfd2c578590f50a311d5e55719	c291d63f-61b9-4c95-bde1-db29e7a8401d	nextflow run . -profile docker
+2025-05-28 00:20:11	-	modest_kalman	-	89143ed62e194d883abdeaac48027764	f3208462-9dd3-4e63-998a-704fbbf2d1c4	nextflow run . -profile docker
+2025-05-28 00:20:46	-	confident_carlsson	-	8e44055578282347946149b302a254fd	fbd9dd05-176e-470b-a4c1-aecb43c4c208	nextflow run . -profile docker
+2025-05-28 00:22:11	-	thirsty_fourier	-	8e44055578282347946149b302a254fd	01a72253-ab7d-44e4-9432-a1ad5e937b93	nextflow run . -profile docker
+2025-05-28 01:04:59	-	fabulous_cuvier	-	1a9fd781799091c6851267857c7edc00	7d2ba6b4-8f3f-4916-b849-8228d7fa301b	nextflow run . -profile docker
+2025-05-28 01:07:37	-	suspicious_sammet	-	efed09d59e21c7a8888fed1ae979daf3	78ccd22f-e5f8-40c0-bb45-7a6e9e0a0a74	nextflow run . -profile docker
+2025-05-28 01:09:12	-	mighty_varahamihira	-	6eb81104202efede5bc14242a08c7685	abaebe52-6a7e-4050-9048-c843d5152638	nextflow run . -profile docker
+2025-05-28 01:10:34	-	furious_hirsch	-	bd832c6784b9c22420be7ee3427684a9	8f3d7a39-8f2f-403e-bf8b-c8c24349fdb6	nextflow run main.nf -profile docker
+2025-05-28 01:13:48	-	grave_dijkstra	-	33851d1247a6dfb6a4a53b1dfb05b6e4	d6f9666e-2c81-4c55-a7af-414a2c673325	nextflow run main.nf -profile docker
+2025-05-28 01:14:40	-	suspicious_lovelace	-	33851d1247a6dfb6a4a53b1dfb05b6e4	960ae870-1d2c-43fa-abf7-12ee2048637a	nextflow run main.nf -profile docker
+2025-05-28 01:19:58	-	zen_bose	-	33851d1247a6dfb6a4a53b1dfb05b6e4	43f1a5eb-7cac-474c-b11f-1adb292072fb	nextflow run main.nf -profile docker
+2025-05-28 01:22:58	-	serene_celsius	-	7c7467db03e8dd1b5ebbf2f1753d0374	2b3d0693-3df9-46f4-8d2b-ecb860107f8f	nextflow run main.nf -profile docker
+2025-05-28 01:24:15	-	evil_morse	-	ddc9630185ceb7f61a6b516f6538769a	0a2225b1-f1f5-4908-88fd-b90acd901ca5	nextflow run main.nf -profile docker
+2025-05-28 01:24:35	-	mad_archimedes	-	605a7ec538e61fd942896d12b67bf1a7	f6dac684-8964-4379-9e71-20d8cb42b484	nextflow run main.nf -profile docker
+2025-05-28 01:25:45	-	tiny_venter	-	f1c5825aa1ad1a5db811af9b9362b0a3	d9b9246c-bf74-4544-a7e1-0c25d9dd36ea	nextflow run main.nf -profile docker
+2025-05-28 01:26:40	-	grave_booth	-	d4caf5b7518f337c7a17790365c44444	bcc8a584-1f34-425b-b02e-67d339f31c1a	nextflow run main.nf -profile docker
+>>>>>>> Stashed changes
