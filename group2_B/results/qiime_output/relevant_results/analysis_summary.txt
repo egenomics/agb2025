@@ -1,0 +1,16 @@
+QIIME 2 Analysis Summary
+========================
+Date: Thu May 29 05:00:57 PM CEST 2025
+Denoiser used: dada2
+Sampling depth: null
+
+Number of samples: 0
+Number of features (ASVs/OTUs): 1365
+Number of representative sequences: 1365
+
+Output files:
+- feature_table.tsv: Feature abundance table
+- representative_sequences.fasta: Representative sequences
+- taxonomy.tsv: Taxonomic classifications
+- phylogenetic_tree.nwk: Phylogenetic tree in Newick format
+- feature_table_with_taxonomy.tsv: Combined feature table with taxonomy
