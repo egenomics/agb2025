@@ -1,9 +1,7 @@
 #!/bin/bash
-# filepath: /Users/radostina.kisleva/agb2025/download_samples.sh
-#!/bin/bash
 
 # Path to the CSV file relative to where the script is run
-CSV_PATH="group4/Development_Dataset/development_dataset.csv"
+CSV_PATH="group4/Dataset/dev.csv"
 
 # Create the output directory
 mkdir -p raw_data

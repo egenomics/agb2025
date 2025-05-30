@@ -55,7 +55,7 @@ HdMBioinfo-MicrobiotaPipeline/
 │
 ├── metadata                      # Merged technical and sample metadata
 │   ├── run1
-│   │    └── metadata_run1.csv    
+│   │    └── metadata_run1.csv
 │   ├── run2
 │   └── run3
 │
@@ -69,7 +69,7 @@ HdMBioinfo-MicrobiotaPipeline/
 │   ├── run2
 │   └── run3
 │
-├── results/                     
+├── results/
 │   └── Run2025_01/
 │       ├── README.md
 │       ├── pipeline.log
@@ -92,11 +92,27 @@ HdMBioinfo-MicrobiotaPipeline/
 | **Docker ≥ 24**    | `brew install --cask docker`<br/>Launch *Docker Desktop*                     | `sudo apt install docker.io`                                              | Ensure the Docker daemon is running and your user has access. |
 | **Nextflow ≥ 23.10** | `brew install nextflow`                                                    | `curl -s https://get.nextflow.io \| bash && sudo mv nextflow /usr/local/bin/` | No extra software needed – the pipeline pulls everything in containers. |
 
+### 2 · Download the Samples
 
-### 2 · Run the pipeline
+Before running the pipeline (main.nf), you need to download sample data for development. The provided script will create a local folder called `raw_data` and download 15 sample datasets into it.
+
+To download the samples:
+
+```bash
+# make the download script executable
+chmod +x download_samples.sh
+
+# run the script to download the sample files
+./download_samples.sh
+```
+
+After running this, the sample FASTQ files will be available directly inside the `raw_data` folder. This folder will not pushed to GitHub.
+
+### 3 · Run the pipeline
 ```bash
 # minimal
 nextflow run main.nf -profile docker
 
 # resume an interrupted run (skips completed tasks)
 nextflow run main.nf -profile docker -resume
+```
