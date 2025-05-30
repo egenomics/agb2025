@@ -1362,6 +1362,7 @@ server <- function(input, output, session) {
     ))
   })
   
+  ## METADATA & DATA PREVIEW 
   # Enhanced data table rendering with better options
   create_enhanced_datatable <- function(data, title = "Data") {
     if(is.null(data) || nrow(data) == 0) {
@@ -1377,6 +1378,7 @@ server <- function(input, output, session) {
     
     datatable(
       data,
+      filter = "top", 
       options = list(
         pageLength = 15,
         scrollX = TRUE,
@@ -1389,7 +1391,9 @@ server <- function(input, output, session) {
         buttons = c('copy', 'csv', 'excel', 'colvis'),
         columnDefs = list(
           list(className = 'dt-center', targets = '_all')
-        )
+        ), 
+        # Additional search options 
+        search = list(regex = TRUE, caseInsentive = TRUE)
       ),
       extensions = c('Buttons', 'FixedHeader'),
       class = 'table-striped table-hover compact',
