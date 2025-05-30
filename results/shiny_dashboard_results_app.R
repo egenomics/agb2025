@@ -56,29 +56,154 @@ ui <- dashboardPage(
   dashboardBody(
     # Use BS theme for consistent styling 
     tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"), 
+      tags$link(rel = "stylesheet", type = "text/css", 
+                href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"), 
       tags$style(HTML("
-                      .box.box-solid.box-primary>.box-header {
-                        background: #3c8dbc;
-                        color: #fff;
-                      }
-                      .nav-tabs-custom>.nav-tabs>li.active {
-                        border-top-color: #3c8dbc;
-                      }
-                      .content-wrapper, .right-side {
-                        background-color: #f4f6f9;
-                      }
-                      .box {
-                        border-radius: 3px;
-                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                      }
-                      .well {
-                        background-color: #fff;
-                        border: 1px solid #e3e3e3;
-                        border-radius: 3px;
-                        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-                      }
-                      "))
+    /* Existing styles */
+    .box.box-solid.box-primary>.box-header {
+      background: #3c8dbc;
+      color: #fff;
+    }
+    .nav-tabs-custom>.nav-tabs>li.active {
+      border-top-color: #3c8dbc;
+    }
+    .content-wrapper, .right-side {
+      background-color: #f4f6f9;
+    }
+    .box {
+      border-radius: 3px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .well {
+      background-color: #fff;
+      border: 1px solid #e3e3e3;
+      border-radius: 3px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    /* NEW: Summary cards styling for shinydashboard */
+    .summary-card {
+      background: #fff;
+      border: 1px solid #d2d6de;
+      border-radius: 3px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      transition: box-shadow 0.3s ease;
+    }
+    
+    .summary-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .summary-card-header {
+      background: #f4f4f4;
+      border-bottom: 1px solid #d2d6de;
+      padding: 10px 15px;
+      font-weight: 600;
+      border-radius: 3px 3px 0 0;
+    }
+    
+    .summary-card-header.primary { background: #3c8dbc; color: #fff; }
+    .summary-card-header.info { background: #00c0ef; color: #fff; }
+    .summary-card-header.success { background: #00a65a; color: #fff; }
+    .summary-card-header.warning { background: #f39c12; color: #fff; }
+    .summary-card-header.secondary { background: #6c757d; color: #fff; }
+    
+    .summary-card-body {
+      padding: 15px;
+    }
+    
+    .stat-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      margin: 2px;
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .stat-badge.primary { background: #3c8dbc; color: #fff; border-color: #3c8dbc; }
+    .stat-badge.info { background: #00c0ef; color: #fff; border-color: #00c0ef; }
+    .stat-badge.success { background: #00a65a; color: #fff; border-color: #00a65a; }
+    .stat-badge.warning { background: #f39c12; color: #fff; border-color: #f39c12; }
+    .stat-badge.secondary { background: #6c757d; color: #fff; border-color: #6c757d; }
+    
+    /* Sample info card */
+    .sample-info-card {
+      background: #fff;
+      border: 1px solid #d2d6de;
+      border-radius: 3px;
+      margin-top: 10px;
+    }
+    
+    .sample-info-header {
+      background: #3c8dbc;
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 3px 3px 0 0;
+      font-weight: 600;
+    }
+    
+    .sample-info-table {
+      margin: 0;
+    }
+    
+    .sample-info-table th {
+      background: #f9f9f9;
+      border-top: none;
+      font-weight: 600;
+      width: 40%;
+      padding: 8px 15px;
+    }
+    
+    .sample-info-table td {
+      border-top: 1px solid #f4f4f4;
+      padding: 8px 15px;
+      width: 60%;
+    }
+    
+    .alert-custom {
+      padding: 15px;
+      margin-bottom: 20px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+    }
+    
+    .alert-info {
+      color: #31708f;
+      background-color: #d9edf7;
+      border-color: #bce8f1;
+    }
+    
+    /* Responsive grid */
+    .summary-grid {
+      display: flex;
+      flex-wrap: wrap;
+      margin: -7.5px;
+    }
+    
+    .summary-col {
+      flex: 0 0 33.333333%;
+      max-width: 33.333333%;
+      padding: 7.5px;
+    }
+    
+    @media (max-width: 768px) {
+      .summary-col {
+        flex: 0 0 50%;
+        max-width: 50%;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .summary-col {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+    }
+  "))
     ), 
     
     tabItems(
@@ -880,140 +1005,266 @@ server <- function(input, output, session) {
   })
   
   ###############################################################
-  ##### FUTURE: Handle missing values in Dynamic summary ########
+  ##### ENHANCED DYNAMIC SUMMARY WITH MISSING DATA HANDLING ####
   ###############################################################
   
+  # Helper function to safely calculate statistics with NA handling
+  safe_stats <- function(x, type = "basic") {
+    x <- x[!is.na(x)]
+    if (length(x) == 0) return("No data")
+    
+    switch(type,
+           "basic" = paste0("n=", length(x)),
+           "range" = paste0(min(x), " - ", max(x)),
+           "mean_sd" = paste0("Mean: ", round(mean(x), 1), " ± ", round(sd(x), 1)),
+           "count" = length(x)
+    )
+  }
   
-  # Dynamic summary content 
+  # Helper function to create summary cards
+  create_summary_card <- function(title, icon, content, color = "primary") {
+    paste0('
+  <div class="summary-col">
+    <div class="summary-card">
+      <div class="summary-card-header ', color, '">
+        <i class="', icon, '"></i> ', title, '
+      </div>
+      <div class="summary-card-body">
+        ', content, '
+      </div>
+    </div>
+  </div>
+  ')
+  }
+  
+  # Updated sample info display for shinydashboard
+  output$selected_sample_info <- renderUI({
+    req(filtered_data())
+    
+    if (!filtered_data()$filtered) {
+      return(HTML(paste0(
+        '<div class="alert-custom alert-info">',
+        '<i class="fas fa-info-circle"></i> ',
+        '<strong>All Samples View:</strong> Showing data for all ', filtered_data()$sample_count, ' samples. ',
+        'Select a specific sample above to view detailed information.',
+        '</div>'
+      )))
+    }
+    
+    sample_data <- filtered_data()$sample_metadata
+    
+    # Create info table rows
+    info_rows <- c()
+    
+    # Define fields with icons
+    fields <- list(
+      "Sample_ID" = list(label = "Sample ID", icon = "fas fa-barcode"),
+      "Collection_Date" = list(label = "Collection Date", icon = "fas fa-calendar-alt"), 
+      "Institution" = list(label = "Institution", icon = "fas fa-hospital"),
+      "Department" = list(label = "Department", icon = "fas fa-building"),
+      "Gender" = list(label = "Gender", icon = "fas fa-venus-mars"),
+      "Age" = list(label = "Age", icon = "fas fa-birthday-cake"),
+      "Body_Mass_Index" = list(label = "BMI Category", icon = "fas fa-weight"),
+      "Ongoing_conditions" = list(label = "Ongoing Conditions", icon = "fas fa-stethoscope"),
+      "Allergies" = list(label = "Allergies", icon = "fas fa-exclamation-triangle"),
+      "Dietary_Information" = list(label = "Diet", icon = "fas fa-utensils"),
+      "Exercise_frequency" = list(label = "Exercise Frequency", icon = "fas fa-dumbbell"),
+      "Smoking_status" = list(label = "Smoking Status", icon = "fas fa-smoking-ban"),
+      "Alcohol_consumption" = list(label = "Alcohol Consumption", icon = "fas fa-wine-glass")
+    )
+    
+    for(field in names(fields)) {
+      if(field %in% colnames(sample_data)) {
+        value <- sample_data[[field]]
+        if(!is.na(value) && value != "") {
+          info_rows <- c(info_rows, paste0(
+            "<tr>",
+            "<th class='sample-info-table'><i class='", fields[[field]]$icon, "'></i> ", 
+            fields[[field]]$label, "</th>",
+            "<td class='sample-info-table'>", value, "</td>",
+            "</tr>"
+          ))
+        }
+      }
+    }
+    
+    HTML(paste0(
+      '<div class="sample-info-card">',
+      '<div class="sample-info-header">',
+      '<i class="fas fa-user"></i> Sample Details',
+      '</div>',
+      '<table class="table sample-info-table">',
+      paste(info_rows, collapse = ""),
+      '</table>',
+      '</div>'
+    ))
+  })
+  
+  # Updated dynamic summary for shinydashboard
   output$data_summary_dynamic <- renderUI({
     req(data_store$sample_metadata, data_store$run_metadata, data_store$taxonomy_data)
     
-    # General Overview 
+    # === GENERAL OVERVIEW ===
     total_samples <- nrow(data_store$sample_metadata)
     total_runs <- nrow(data_store$run_metadata)
-    total_species <- length(unique(data_store$taxonomy_data$Species))
-    sample_date_range <- paste(min(as.Date(data_store$sample_metadata$Collection_Date)), "to", 
-                               max(as.Date(data_store$sample_metadata$Collection_Date)))
-    seq_date_range <- paste(min(as.Date(data_store$run_metadata$Sequencing_Date)), "to", 
-                            max(as.Date(data_store$run_metadata$Sequencing_Date)))
+    total_species <- length(unique(data_store$taxonomy_data$Species[!is.na(data_store$taxonomy_data$Species)]))
     
-    # Sequencing Summary
-    platform_counts <- table(data_store$run_metadata$Sequencing_Platform)
-    platforms <- paste(names(platform_counts), paste0("(", platform_counts, ")"), collapse = ", ")
-    seq_types <- paste(unique(data_store$run_metadata$Sequencing_Type), collapse = ", ")
-    lib_kits <- paste(unique(data_store$run_metadata$Library_preparation_kit), collapse = ", ")
-    read_lengths <- paste(unique(data_store$run_metadata$Expected_read_length), collapse = ", ")
-    depth_targets <- paste(unique(data_store$run_metadata$Sequencing_depth_target), collapse = ", ")
+    # Handle date ranges safely
+    sample_dates <- as.Date(data_store$sample_metadata$Collection_Date, format = "%d/%m/%Y")
+    sample_dates <- sample_dates[!is.na(sample_dates)]
+    sample_date_range <- if(length(sample_dates) > 0) {
+      paste(min(sample_dates), "to", max(sample_dates))
+    } else "No valid dates"
     
-    # Demographics 
-    gender_counts <- table(data_store$sample_metadata$Gender)
-    gender_dist <- paste(names(gender_counts), paste0("(", gender_counts, ")"), collapse = ", ")
-    age_range <- paste(min(data_store$sample_metadata$Age), "-", max(data_store$sample_metadata$Age), 
-                       "(mean:", round(mean(data_store$sample_metadata$Age), 1), ")")
-    bmi_stats <- paste("mean:", round(mean(data_store$sample_metadata$BMI), 1),
-                       "± SD:", round(sd(data_store$sample_metadata$BMI), 1))
+    seq_dates <- as.Date(data_store$run_metadata$Sequencing_Date, format = "%d/%m/%Y")
+    seq_dates <- seq_dates[!is.na(seq_dates)]
+    seq_date_range <- if(length(seq_dates) > 0) {
+      paste(min(seq_dates), "to", max(seq_dates))
+    } else "No valid dates"
     
-    condition_counts <- sort(table(data_store$sample_metadata$Ongoing_conditions), decreasing = TRUE)
-    top_conditions <- paste(names(condition_counts)[1:min(3, length(condition_counts))],
-                            paste0("(", condition_counts[1:min(3, length(condition_counts))], ")"), 
-                            collapse = ", ")
+    overview_content <- paste0(
+      '<div style="line-height: 1.6;">',
+      '<div><span class="stat-badge primary"><i class="fas fa-vial"></i> Samples: ', total_samples, '</span></div>',
+      '<div><span class="stat-badge info"><i class="fas fa-play"></i> Runs: ', total_runs, '</span></div>',
+      '<div><span class="stat-badge success"><i class="fas fa-microscope"></i> Species: ', total_species, '</span></div>',
+      '<hr style="margin: 10px 0;">',
+      '<div style="font-size: 12px; color: #666;">',
+      '<div><i class="fas fa-calendar"></i> Collection: ', sample_date_range, '</div>',
+      '<div><i class="fas fa-dna"></i> Sequencing: ', seq_date_range, '</div>',
+      '</div>',
+      '</div>'
+    )
     
-    # Health & Lifestyle 
-    neuro_counts <- table(data_store$sample_metadata$Neurological_Disorders)
-    neuro_disorders <- paste(names(neuro_counts), paste0("(", neuro_counts, ")"), collapse = ", ")
+    # === SEQUENCING SUMMARY ===
+    platform_counts <- table(data_store$run_metadata$Sequencing_Platform[!is.na(data_store$run_metadata$Sequencing_Platform)])
+    platforms <- if(length(platform_counts) > 0) {
+      paste0('<div style="margin-bottom: 10px;">',
+             paste(paste0('<span class="stat-badge secondary">', 
+                          names(platform_counts), ' (', platform_counts, ')</span>'), 
+                   collapse = '<br>'),
+             '</div>')
+    } else '<span style="color: #999;">No data</span>'
     
-    allergy_counts <- table(data_store$sample_metadata$Allergies)
-    allergies <- paste(names(allergy_counts), paste0("(", allergy_counts, ")"), collapse = ", ")
+    seq_types <- unique(data_store$run_metadata$Sequencing_Type[!is.na(data_store$run_metadata$Sequencing_Type)])
+    seq_types_str <- if(length(seq_types) > 0) {
+      paste0('<div>',
+             paste(paste0('<span class="stat-badge info">', seq_types, '</span>'), 
+                   collapse = '<br>'),
+             '</div>')
+    } else '<span style="color: #999;">No data</span>'
     
-    smoking_counts <- table(data_store$sample_metadata$Smoking)
-    smoking <- paste(names(smoking_counts), paste0("(", smoking_counts, ")"), collapse = ", ")
-    # 
-    alcohol_counts <- table(data_store$sample_metadata$Alcohol_Consumption)
-    alcohol <- paste(names(alcohol_counts), paste0("(", alcohol_counts, ")"), collapse = ", ")
+    sequencing_content <- paste0(
+      '<div><strong>Platforms:</strong></div>', platforms,
+      '<div><strong>Types:</strong></div>', seq_types_str
+    )
     
-    exercise_counts <- table(data_store$sample_metadata$Exercise_frequency)
-    exercise <- paste(names(exercise_counts), paste0("(", exercise_counts, ")"), collapse = ", ")
+    # === DEMOGRAPHICS ===
+    gender_counts <- table(data_store$sample_metadata$Gender[!is.na(data_store$sample_metadata$Gender)])
+    gender_dist <- if(length(gender_counts) > 0) {
+      paste0('<div>',
+             paste(paste0('<span class="stat-badge">', 
+                          names(gender_counts), ' (', gender_counts, ')</span>'), 
+                   collapse = ' '),
+             '</div>')
+    } else '<span style="color: #999;">No data</span>'
     
-    # Taxonomy Overview
-    # Calculate mean abundance for each species across all samples
-    species_abundance <- aggregate(Abundance ~ Species, data = data_store$taxonomy_data, mean)
-    species_abundance <- species_abundance[order(species_abundance$Abundance, decreasing = TRUE), ]
-    top_species <- paste(species_abundance$Species[1:min(5, nrow(species_abundance))], collapse = ", ")
+    ages <- data_store$sample_metadata$Age[!is.na(data_store$sample_metadata$Age)]
+    age_stats <- if(length(ages) > 0) {
+      paste0('<span class="stat-badge primary">', min(ages), '-', max(ages), ' years</span>',
+             '<br><small style="color: #666;">Mean: ', round(mean(ages), 1), ' years</small>')
+    } else '<span style="color: #999;">No data</span>'
     
-    # Count samples where each species is present
-    species_presence <- table(data_store$taxonomy_data$Species[data_store$taxonomy_data$Abundance > 0])
-    common_species <- sum(species_presence > (total_samples * 0.5))
+    demographics_content <- paste0(
+      '<div style="margin-bottom: 10px;"><strong>Gender:</strong><br>', gender_dist, '</div>',
+      '<div><strong>Age Range:</strong><br>', age_stats, '</div>'
+    )
     
-    # Calculate species richness per sample
-    species_richness <- aggregate(Species ~ Sample_ID, 
-                                  data = data_store$taxonomy_data[data_store$taxonomy_data$Abundance > 0, ], 
-                                  function(x) length(unique(x)))
-    mean_richness <- round(mean(species_richness$Species), 1)
+    # === TOP CONDITIONS ===
+    conditions <- data_store$sample_metadata$Ongoing_conditions[!is.na(data_store$sample_metadata$Ongoing_conditions)]
+    condition_counts <- sort(table(conditions), decreasing = TRUE)
+    top_conditions <- if(length(condition_counts) > 0) {
+      top_3 <- head(condition_counts, 3)
+      paste0('<div>',
+             paste(paste0('<div style="margin-bottom: 5px;"><span class="stat-badge warning">', 
+                          names(top_3), '</span> <small style="color: #666;">(', top_3, ')</small></div>'), 
+                   collapse = ''),
+             '</div>')
+    } else '<span style="color: #999;">No data available</span>'
     
-    # Return an HTML structure
+    # === TAXONOMY HIGHLIGHTS ===
+    species_data <- data_store$taxonomy_data[!is.na(data_store$taxonomy_data$Species) & 
+                                               !is.na(data_store$taxonomy_data$Abundance), ]
+    
+    if(nrow(species_data) > 0) {
+      species_abundance <- aggregate(Abundance ~ Species, data = species_data, mean)
+      species_abundance <- species_abundance[order(species_abundance$Abundance, decreasing = TRUE), ]
+      top_species <- if(nrow(species_abundance) > 0) {
+        head(species_abundance$Species, 3)
+      } else character(0)
+      
+      species_richness <- aggregate(Species ~ Sample_ID, 
+                                    data = species_data[species_data$Abundance > 0, ], 
+                                    function(x) length(unique(x)))
+      mean_richness <- if(nrow(species_richness) > 0) {
+        round(mean(species_richness$Species), 1)
+      } else 0
+    } else {
+      top_species <- character(0)
+      mean_richness <- 0
+    }
+    
+    top_species_content <- if(length(top_species) > 0) {
+      paste0('<div>',
+             paste(paste0('<div style="margin-bottom: 3px;"><span class="stat-badge success">', top_species, '</span></div>'), 
+                   collapse = ''),
+             '</div>')
+    } else '<span style="color: #999;">No data</span>'
+    
+    taxonomy_content <- paste0(
+      '<div style="margin-bottom: 10px;"><strong>Top Species:</strong><br>', top_species_content, '</div>',
+      '<div><strong>Avg Richness:</strong><br>',
+      '<span class="stat-badge primary">', mean_richness, ' species/sample</span></div>'
+    )
+    
+    # Create the complete dashboard
     HTML(paste0('
-      <div style="padding: 15px;">
-        <h4>📊 <strong>General Overview</strong></h4>
-        <ul>
-          <li><strong>Total Samples:</strong> ', total_samples, '</li>
-          <li><strong>Total Runs:</strong> ', total_runs, '</li>
-          <li><strong>Total Unique Species:</strong> ', total_species, '</li>
-          <li><strong>Sample Collection Date Range:</strong> ', sample_date_range, '</li>
-          <li><strong>Sequencing Date Range:</strong> ', seq_date_range, '</li>
-        </ul>
-        
-        <h4>🧬 <strong>Sequencing Summary</strong></h4>
-        <ul>
-          <li><strong>Platforms used:</strong> ', platforms, '</li>
-          <li><strong>Types:</strong> ', seq_types, '</li>
-          <li><strong>Library Kits:</strong> ', lib_kits, '</li>
-          <li><strong>Read lengths:</strong> ', read_lengths, '</li>
-          <li><strong>Depth targets:</strong> ', depth_targets, '</li>
-        </ul>
-        
-        <h4>👥 <strong>Participant Demographics</strong></h4>
-        <ul>
-          <li><strong>Gender:</strong> ', gender_dist, '</li>
-          <li><strong>Age range:</strong> ', age_range, '</li>
-          <li><strong>BMI:</strong> ', bmi_stats, '</li>
-          <li><strong>Ongoing conditions (top 3):</strong> ', top_conditions, '</li>
-        </ul>
-        
-        <h4>🧠 <strong>Health & Lifestyle</strong></h4>
-        <ul>
-          <li><strong>Neurological Disorders:</strong> ', neuro_disorders, '</li>
-          <li><strong>Allergies:</strong> ', allergies, '</li>
-          <li><strong>Smoking:</strong> ', smoking, '</li>
-          <li><strong>Alcohol Consumption:</strong> ', alcohol, '</li>
-          <li><strong>Exercise Frequency:</strong> ', exercise, '</li>
-        </ul>
-        
-        <h4>🦠 <strong>Taxonomy Overview</strong></h4>
-        <ul>
-          <li><strong>Most Abundant Species:</strong> ', top_species, '</li>
-          <li><strong>Sparsity:</strong> species detected in >50% of samples: ', common_species, '</li>
-          <li><strong>Mean Species Richness per Sample:</strong> ', mean_richness, '</li>
-        </ul>
-      </div>
-    '))
+  <div class="summary-grid">
+    ', create_summary_card("📊 Overview", "fas fa-chart-bar", overview_content, "primary"), '
+    ', create_summary_card("🧬 Sequencing", "fas fa-dna", sequencing_content, "info"), '
+    ', create_summary_card("👥 Demographics", "fas fa-users", demographics_content, "success"), '
+    ', create_summary_card("🏥 Top Conditions", "fas fa-heartbeat", top_conditions, "warning"), '
+    ', create_summary_card("🦠 Taxonomy", "fas fa-microscope", taxonomy_content, "secondary"), '
+  </div>
+  '))
   })
   
-  ############################################################## 
+  ##############################################################
+  ##### ENHANCED DATA TABLES WITH ADVANCED FILTERING #########
+  ##############################################################
   
-  ## Filter by 1 sample 
-  # Update sample selection dropdown 
+  # Enhanced sample selection with more information
   observe({
     req(data_store$sample_metadata)
-    sample_choices <- data_store$sample_metadata$Sample_ID
-    names(sample_choices) <- paste0(data_store$sample_metadata$Sample_ID, 
-                                    " (", data_store$sample_metadata$Collection_Date, ")")
+    
+    # Create more informative choices
+    sample_info <- data_store$sample_metadata
+    sample_choices <- sample_info$Sample_ID
+    
+    # Create labels with additional context
+    choice_labels <- paste0(
+      sample_info$Sample_ID, 
+      " | ", ifelse(is.na(sample_info$Collection_Date), "No date", sample_info$Collection_Date),
+      " | ", ifelse(is.na(sample_info$Gender), "Unknown", sample_info$Gender),
+      " | Age: ", ifelse(is.na(sample_info$Age), "Unknown", sample_info$Age)
+    )
+    names(sample_choices) <- choice_labels
     
     updateSelectizeInput(session, "selected_sample_id", 
                          choices = c("All Samples" = "", sample_choices), 
                          selected = "")
   })
   
-  # Create reactive for filtered data 
+  # Enhanced filtering with search capabilities
   filtered_data <- reactive({
     req(data_store$sample_metadata, data_store$taxonomy_data)
     
@@ -1023,63 +1274,137 @@ server <- function(input, output, session) {
       return(list(
         sample_metadata = data_store$sample_metadata, 
         taxonomy_data = data_store$taxonomy_data, 
-        filtered = FALSE
+        filtered = FALSE,
+        sample_count = nrow(data_store$sample_metadata)
       ))
     } else {
-      # Filter the metadata to just selected sample
-      filtered_sample_metadata <- data_store$sample_metadata 
-      if ("Sample_ID" %in% colnames(filtered_sample_metadata)) {
-        filtered_sample_metadata <- filtered_sample_metadata[filtered_sample_metadata$Sample_ID == selected_sample, ]
-      } else if ("SampleID" %in% colnames(filtered_sample_metadata)) {
-        filtered_sample_metadata <- filtered_sample_metadata[filtered_sample_metadata$SampleID == selected_sample, ]
-      }
+      # Flexible column name handling
+      sample_col <- if("Sample_ID" %in% colnames(data_store$sample_metadata)) "Sample_ID" else "SampleID"
+      tax_col <- if("Sample_ID" %in% colnames(data_store$taxonomy_data)) "Sample_ID" else "SampleID"
       
-      # Filter taxonomy data to just selected sample
-      filtered_taxonomy_data <- data_store$taxonomy_data 
-      if ("Sample_ID" %in% colnames(filtered_taxonomy_data)) {
-        filtered_taxonomy_data <- filtered_taxonomy_data[filtered_taxonomy_data$Sample_ID == selected_sample, ]
-      } else if ("SampleID" %in% colnames(filtered_taxonomy_data)) {
-        filtered_taxonomy_data <- filtered_taxonomy_data[filtered_taxonomy_data$SampleID == selected]
-      }
-
+      # Filter metadata
+      filtered_sample_metadata <- data_store$sample_metadata[
+        data_store$sample_metadata[[sample_col]] == selected_sample, 
+      ]
+      
+      # Filter taxonomy data
+      filtered_taxonomy_data <- data_store$taxonomy_data[
+        data_store$taxonomy_data[[tax_col]] == selected_sample, 
+      ]
+      
       return(list(
         sample_metadata = filtered_sample_metadata,
         taxonomy_data = filtered_taxonomy_data, 
-        filtered = TRUE
+        filtered = TRUE,
+        sample_count = 1
       ))
     }
   })
   
-  # Render information about the selected sample
+  # Enhanced sample information display
   output$selected_sample_info <- renderUI({
     req(filtered_data())
     
     if (!filtered_data()$filtered) {
-      return(HTML("<p><i>No specific sample selected. Showing data for all samples.</i></p>"))
+      return(HTML(paste0(
+        '<div class="alert alert-info">',
+        '<i class="fas fa-info-circle"></i> ',
+        'Showing data for all ', filtered_data()$sample_count, ' samples. ',
+        'Select a specific sample above to view detailed information.',
+        '</div>'
+      )))
     }
+    
     sample_data <- filtered_data()$sample_metadata
     
-    # Extract relevant information 
+    # Create a more comprehensive info table
+    info_rows <- c()
+    
+    # Define fields to display with their labels
+    fields <- list(
+      "Sample_ID" = "Sample ID",
+      "Collection_Date" = "Collection Date", 
+      "Institution" = "Institution",
+      "Department" = "Department",
+      "Gender" = "Gender",
+      "Age" = "Age",
+      "Body_Mass_Index" = "BMI Category",
+      "Ongoing_conditions" = "Ongoing Conditions",
+      "Allergies" = "Allergies",
+      "Dietary_Information" = "Diet",
+      "Exercise_frequency" = "Exercise Frequency",
+      "Smoking_status" = "Smoking Status",
+      "Alcohol_consumption" = "Alcohol Consumption"
+    )
+    
+    for(field in names(fields)) {
+      if(field %in% colnames(sample_data)) {
+        value <- sample_data[[field]]
+        if(!is.na(value) && value != "") {
+          info_rows <- c(info_rows, paste0(
+            "<tr><th>", fields[[field]], "</th><td>", value, "</td></tr>"
+          ))
+        }
+      }
+    }
+    
     HTML(paste0(
-      "<h4>Selected Sample Information</h4>",
-      "<table class='table table-condensed table-bordered'>",
-      "<tr><th>Sample ID</th><td>", sample_data$Sample_ID, "</td></tr>",
-      "<tr><th>Collection Date</th><td>", sample_data$Collection_Date, "</td></tr>",
-      "<tr><th>Gender</th><td>", sample_data$Gender, "</td></tr>",
-      "<tr><th>Age</th><td>", sample_data$Age, "</td></tr>",
-      "<tr><th>BMI</th><td>", sample_data$BMI, "</td></tr>",
-      "<tr><th>Ongoing Conditions</th><td>", sample_data$Ongoing_conditions, "</td></tr>",
-      "<tr><th>Collection Storage</th><td>", sample_data$Collection_Storage_Temperature, "</td></tr>",
-      "</table>"
+      '<div class="card">',
+      '<div class="card-header bg-primary text-white">',
+      '<h5 class="mb-0"><i class="fas fa-user"></i> Sample Details</h5>',
+      '</div>',
+      '<div class="card-body">',
+      '<table class="table table-sm table-hover">',
+      paste(info_rows, collapse = ""),
+      '</table>',
+      '</div>',
+      '</div>'
     ))
   })
   
-
-  # Render metadata table previews with filtering 
+  # Enhanced data table rendering with better options
+  create_enhanced_datatable <- function(data, title = "Data") {
+    if(is.null(data) || nrow(data) == 0) {
+      return(datatable(
+        data.frame(Message = "No data available"),
+        options = list(
+          dom = 't',
+          ordering = FALSE,
+          searching = FALSE
+        )
+      ))
+    }
+    
+    datatable(
+      data,
+      options = list(
+        pageLength = 15,
+        scrollX = TRUE,
+        scrollY = "400px",
+        scrollCollapse = TRUE,
+        fixedHeader = TRUE,
+        searchHighlight = TRUE,
+        stateSave = TRUE,
+        dom = 'Bfrtip',
+        buttons = c('copy', 'csv', 'excel', 'colvis'),
+        columnDefs = list(
+          list(className = 'dt-center', targets = '_all')
+        )
+      ),
+      extensions = c('Buttons', 'FixedHeader'),
+      class = 'table-striped table-hover compact',
+      caption = htmltools::tags$caption(
+        style = "caption-side: top; text-align: center; font-weight: bold;",
+        title
+      )
+    ) %>%
+      formatStyle(columns = colnames(data), fontSize = '12px')
+  }
+  
+  # Enhanced sample metadata table
   output$sample_metadata_preview <- renderDataTable({
     req(data_store$sample_metadata)
     
-    # Get filter condition
     filter_value <- input$sample_metadata_filter 
     selected_sample <- input$selected_sample_id
     
@@ -1087,131 +1412,100 @@ server <- function(input, output, session) {
     sample_data <- data_store$sample_metadata
     
     # Apply sample filter if selected 
-    if (selected_sample != "" && !is.null(selected_sample)) {
-      sample_data <- sample_data %>% filter(Sample_ID == selected_sample)
+    if (!is.null(selected_sample) && selected_sample != "") {
+      sample_col <- if("Sample_ID" %in% colnames(sample_data)) "Sample_ID" else "SampleID"
+      sample_data <- sample_data[sample_data[[sample_col]] == selected_sample, ]
     }
     
-    # Filter data based on condition selection 
+    # Apply data source filter
     if (!is.null(filter_value)) {
-      if (filter_value == "Control") {
-        req(data_store$control_sample_metadata)
-        return(datatable(data_store$control_sample_metadata, 
-                         options = list(pageLength = 10, scrollX = TRUE)))
-      } else if (filter_value == "Sample"){
-        return(datatable(data_store$sample_metadata, 
-                         options = list(pageLength = 10, scrollX = TRUE)))
-      } else { # All
-        # Combine both datasets if control data exists 
-        if (!is.null(data_store$control_sample_metadata)) {
-          # Add a column to indicate the source 
-          sample_data <- data_store$sample_metadata
-          sample_data$Data_Source <- "Sample"
-          
-          control_data <- data_store$control_sample_metadata
-          control_data$Data_Source <- "Control"
-          
-          # Combine the datasets (assume they have compatible columns)
-          combined_data <- rbind(sample_data, control_data)
-          return(datatable(combined_data, options = list(pageLength = 10, scrollX = TRUE)))
-        } else {
-          return(datatable(data_store$sample_metadata, 
-                           options = list(pageLength = 10, scrollX = TRUE)))
-        }
+      if (filter_value == "Control" && !is.null(data_store$control_sample_metadata)) {
+        sample_data <- data_store$control_sample_metadata
+        sample_data$Data_Source <- "Control"
+      } else if (filter_value == "All" && !is.null(data_store$control_sample_metadata)) {
+        # Combine datasets
+        main_data <- data_store$sample_metadata
+        main_data$Data_Source <- "Sample"
+        
+        control_data <- data_store$control_sample_metadata
+        control_data$Data_Source <- "Control"
+        
+        # Ensure compatible columns
+        common_cols <- intersect(colnames(main_data), colnames(control_data))
+        sample_data <- rbind(main_data[common_cols], control_data[common_cols])
+      } else {
+        sample_data$Data_Source <- "Sample"
       }
-    } else {
-      # Default display (all data)
-      return(datatable(data_store$sample_metadata, 
-                       options = list(pageLength = 10, scrollX = TRUE)))
     }
+    
+    create_enhanced_datatable(sample_data, "Sample Metadata")
   })
   
+  # Enhanced run metadata table  
   output$run_metadata_preview <- renderDataTable({
     req(data_store$run_metadata)
     
-    # Get filter condition 
     filter_value <- input$run_metadata_filter
     
-    # Filter data based on condition selection
+    run_data <- data_store$run_metadata
+    
     if (!is.null(filter_value)) {
-      if (filter_value == "Control") {
-        req(data_store$control_run_metadata) 
-        return(datatable(data_store$control_run_metadata, 
-                         options = list(pageLength = 10, scrollX = TRUE)))
-      } else if (filter_value == "Sample") {
-        return(datatable(data_store$run_metadata, 
-                          options = list(pageLength = 10, scrollX = TRUE)))
+      if (filter_value == "Control" && !is.null(data_store$control_run_metadata)) {
+        run_data <- data_store$control_run_metadata
+        run_data$Data_Source <- "Control"
+      } else if (filter_value == "All" && !is.null(data_store$control_run_metadata)) {
+        main_data <- data_store$run_metadata
+        main_data$Data_Source <- "Sample"
+        
+        control_data <- data_store$control_run_metadata  
+        control_data$Data_Source <- "Control"
+        
+        common_cols <- intersect(colnames(main_data), colnames(control_data))
+        run_data <- rbind(main_data[common_cols], control_data[common_cols])
       } else {
-        # Combine both datasets 
-        if (!is.null(data_store$control_run_metadata)) {
-          # Add a column to indicate source 
-          sample_data <- data_store$run_metadata
-          sample_data$Data_Source <- "Sample"
-          
-          control_data <- data_store$control_run_metadata
-          control_data$Data_Source <- "Control"
-          
-          # Combine datasets (assume they have compatible columns)
-          combined_data <- rbind(sample_data, control_data)
-          return(datatable(combined_data, options = list(pageLength = 10, scrollX = TRUE)))
-        } else {
-          return(datatable(data_store$run_metadata, 
-                           options = list(pageLength = 10, scrollX = TRUE)))
-        }
-      } 
-    } else {
-      return( datatable(data_store$run_metadata, 
-              options = list(pageLength = 10, scrollX = TRUE)))
+        run_data$Data_Source <- "Sample"
+      }
     }
+    
+    create_enhanced_datatable(run_data, "Run Metadata")
   })
   
+  # Enhanced taxonomy data table
   output$taxonomy_data_preview <- renderDataTable({
     req(data_store$taxonomy_data)
     
-    # Get filter condition 
     filter_value <- input$taxonomy_data_filter
     selected_sample <- input$selected_sample_id
     
-    # Start with base data 
     taxonomy_data <- data_store$taxonomy_data 
     
     # Apply sample filter if selected
-    if (selected_sample != "" && !is.null(selected_sample)) {
-      taxonomy_data <- taxonomy_data %>% filter(Sample_ID == selected_sample)
+    if (!is.null(selected_sample) && selected_sample != "") {
+      tax_col <- if("Sample_ID" %in% colnames(taxonomy_data)) "Sample_ID" else "SampleID"
+      taxonomy_data <- taxonomy_data[taxonomy_data[[tax_col]] == selected_sample, ]
     }
     
-    # Filter data based on selection
+    # Apply data source filter
     if (!is.null(filter_value)) {
-      if (filter_value == "Control") {
-        req(data_store$control_taxonomy_data)
-        return(datatable(data_store$control_taxonomy_data, 
-                         options = list(pageLength = 10, scrollX = TRUE)))
-      } else if (filter_value == "Sample") {
-        return(datatable(data_store$taxonomy_data, 
-                         options = list(pageLength = 10, scrollX = TRUE)))
+      if (filter_value == "Control" && !is.null(data_store$control_taxonomy_data)) {
+        taxonomy_data <- data_store$control_taxonomy_data
+        taxonomy_data$Data_Source <- "Control"
+      } else if (filter_value == "All" && !is.null(data_store$control_taxonomy_data)) {
+        main_data <- data_store$taxonomy_data
+        main_data$Data_Source <- "Sample"
+        
+        control_data <- data_store$control_taxonomy_data
+        control_data$Data_Source <- "Control"
+        
+        common_cols <- intersect(colnames(main_data), colnames(control_data))
+        taxonomy_data <- rbind(main_data[common_cols], control_data[common_cols])
       } else {
-        # Combine both datasets
-        if (!is.null(data_store$control_taxonomy_data)) {
-          # Add a column to indicate the source
-          sample_data <- data_store$taxonomy_data
-          sample_data$Data_Source <- "Sample"
-          
-          control_data <- data_store$control_taxonomy_data
-          control_data$Data_Source <- "Control"
-          
-          # Combine the datasets (assuming they have compatible columns)
-          combined_data <- rbind(sample_data, control_data)
-          return(datatable(combined_data, options = list(pageLength = 10, scrollX = TRUE)))
-        } else {
-          return(datatable(data_store$taxonomy_data, 
-                           options = list(pageLength = 10, scrollX = TRUE)))
-        }
+        taxonomy_data$Data_Source <- "Sample"
       }
-    } else {
-      return(datatable(data_store$taxonomy_data, 
-              options = list(pageLength = 10, scrollX = TRUE)))
     }
+    
+    create_enhanced_datatable(taxonomy_data, "Taxonomy Data")
   })
-  
   
   
  
