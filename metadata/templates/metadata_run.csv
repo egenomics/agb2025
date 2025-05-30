@@ -1,2 +1,1 @@
 RunID,Run_accession,Sequencing_Date,Sequencing_Platform,Sequencing_Type,Expected_read_length,Sequencing_depth_target,Library_preparation_kit,Technician_name,Notes_Runs
-RHM01_01,ERR1328370,17/05/2025,miseq,16S rRNA,2x250 bp,10-20 million reads/sample,TruSeq Nano,jingqi,template1
