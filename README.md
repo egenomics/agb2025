@@ -94,7 +94,7 @@ HdMBioinfo-MicrobiotaPipeline/
 
 ### 2 · Download the Samples
 
-Before running the pipeline (main.nf), you need to download sample data for development. The provided script will create a local folder called `raw_data` and download 15 sample datasets into it.
+Before running the pipeline (main.nf), you need to download sample data for development. The provided script will create a local folder called `raw_data` and download 15 sample datasets into it. If you don't remove the `raw_data` folder, you will only need to do that once.
 
 To download the samples:
 

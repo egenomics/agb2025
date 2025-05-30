@@ -23,14 +23,22 @@ tail -n +2 "$CSV_PATH" | cut -d, -f2 | while read -r run_id; do
       # Use the last digit and prepend '00'
       subdir="00${run_id: -1}"
     else
-      # Fallback (or skip if unexpected length)
       echo "Skipping run ID $run_id due to unsupported length."
       continue
     fi
 
-    echo "Downloading FASTQ files for ${run_id}..."
+    echo "Processing FASTQ files for ${run_id}..."
 
-    wget -P raw_data "https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${subdir}/${run_id}/${run_id}_1.fastq.gz"
-    wget -P raw_data "https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${subdir}/${run_id}/${run_id}_2.fastq.gz"
+    for read in 1 2; do
+      outfile="raw_data/${run_id}_${read}.fastq.gz"
+      url="https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${subdir}/${run_id}/${run_id}_${read}.fastq.gz"
+
+      if [[ -f "$outfile" ]]; then
+        echo "File $outfile already exists. Skipping download."
+      else
+        echo "Downloading: $url"
+        wget -P raw_data "$url"
+      fi
+    done
   fi
 done
