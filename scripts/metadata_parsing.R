@@ -20,12 +20,12 @@ library(janitor)
 print("Reading metadata files...")
 
 # Read sample metadata
-metadata_sample <- read_csv("../metadata/metadata_sample.csv", 
+metadata_sample <- read_csv("metadata_sample.csv", 
                             locale = locale(encoding = "UTF-8"),
                             show_col_types = FALSE)
 
 # Read run metadata  
-metadata_run <- read_csv("../metadata/metadata_run.csv",
+metadata_run <- read_csv("metadata_run.csv",
                          locale = locale(encoding = "UTF-8"),
                          show_col_types = FALSE)
 
@@ -33,21 +33,21 @@ print(paste("Sample metadata rows:", nrow(metadata_sample)))
 print(paste("Run metadata rows:", nrow(metadata_run)))
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2) Merge the two datasets based on RunID -----------------------------------
+# 2) Merge the two datasets based on SampleID -----------------------------------
 # ─────────────────────────────────────────────────────────────────────────────
-print("Merging datasets by RunID...")
+print("Merging datasets by Sample_ID...")
 
-# Check if RunID exists in both datasets
-if (!"RunID" %in% colnames(metadata_sample)) {
-  stop("RunID column not found in metadata_sample.csv")
+# Check if SampleID exists in both datasets
+if (!"Sample_ID" %in% colnames(metadata_sample)) {
+  stop("Sample_ID column not found in metadata_sample.csv")
 }
-if (!"RunID" %in% colnames(metadata_run)) {
-  stop("RunID column not found in metadata_run.csv")
+if (!"Sample_ID" %in% colnames(metadata_run)) {
+  stop("Sample_ID column not found in metadata_run.csv")
 }
 
 # Perform left join to keep all samples and add run information
 metadata <- metadata_sample %>%
-  left_join(metadata_run, by = "RunID", suffix = c("", "_run"))
+  left_join(metadata_run, by = "Sample_ID", suffix = c("", "_run"))
 
 print(paste("Merged metadata rows:", nrow(metadata)))
 
@@ -65,259 +65,380 @@ clean_names_safe <- function(names_vec) {
 colnames(metadata) <- clean_names_safe(colnames(metadata))
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4) Fill empty cells with "N/A" and clean text fields ----------------------
+# 4) Helper functions for consistent formatting -------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Function to clean text with proper title case and underscores
+clean_text <- function(x) {
+  x <- str_trim(as.character(x))
+  x <- ifelse(is.na(x) | x == "" | x == "NA", "N/A", x)
+  # Don't process if already N/A
+  x <- ifelse(x == "N/A", x, 
+              x %>%
+                str_replace_all("\\s+", "_") %>%
+                str_to_title())
+  return(x)
+}
+
+# Function to handle numeric BMI conversion to categories
+convert_bmi <- function(bmi_value) {
+  # Try to convert to numeric first
+  bmi_num <- suppressWarnings(as.numeric(as.character(bmi_value)))
+  
+  if (is.na(bmi_num)) {
+    return("N/A")
+  } else if (bmi_num < 18.5) {
+    return("Underweight<18.5")
+  } else if (bmi_num >= 18.5 & bmi_num <= 24.9) {
+    return("Normal_Weight_18.5-24.9")
+  } else if (bmi_num >= 25 & bmi_num <= 29.9) {
+    return("Overweight_25-29.9")
+  } else if (bmi_num >= 30) {
+    return("Obese_30<")
+  } else {
+    return("N/A")
+  }
+}
+
+convert_alcohol_frequency <- function(freq_vector) {
+  sapply(freq_vector, function(freq) {
+    if (is.na(freq) || freq == "N/A" || freq == "") {
+      return("N/A")
+    }
+    
+    # Remove quotes and whitespace
+    freq <- trimws(gsub('"', '', as.character(freq)))
+    
+    # Handle range patterns (e.g., "3-5", "7-10")
+    if (grepl('-', freq)) {
+      # Extract numbers from range
+      numbers <- as.numeric(unlist(regmatches(freq, gregexpr('\\d+', freq))))
+      
+      if (length(numbers) == 2) {
+        start <- numbers[1]
+        end <- numbers[2] 
+        mean_val <- mean(c(start, end))
+        
+        # If mean > 7, classify as daily
+        if (mean_val > 7) {
+          return("Daily")
+        } else {
+          # Round to nearest integer to avoid decimals
+          return(paste0(round(mean_val), "_per_week"))
+        }
+      }
+    }
+    # Handle "< X" patterns
+    else if (grepl('<', freq)) {
+      # Extract the number after <
+      number <- as.numeric(gsub('[^0-9.]', '', freq))
+      if (!is.na(number)) {
+        # Use 1 instead of 0.5 for "< X" patterns, or round up
+        val <- max(1, ceiling(number / 2))
+        return(paste0(val, "_per_week"))
+      }
+    }
+    # Handle single numbers
+    else {
+      number <- as.numeric(freq)
+      if (!is.na(number)) {
+        if (number > 7) {
+          return("Daily")
+        } else {
+          return(paste0(number, "_per_week"))
+        }
+      }
+    }
+    
+    return("N/A")
+  }, USE.NAMES = FALSE)
+}
+# ─────────────────────────────────────────────────────────────────────────────
+# 5) Fill empty cells with "N/A" and apply field-specific formatting ---------
 # ─────────────────────────────────────────────────────────────────────────────
 print("Cleaning and formatting data...")
 
 metadata <- metadata %>%
-  mutate(across(
-    .cols = where(is.character),
-    .fns  = ~ if_else(is.na(.x) | str_trim(.x) == "", "N/A", .x)
-  ))
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 4.2) Trim and replace spaces in text fields --------------------------------
-# ─────────────────────────────────────────────────────────────────────────────
-metadata <- metadata %>%
-  mutate(across(
-    .cols = where(is.character),
-    .fns  = ~ str_trim(.x) %>% str_replace_all("\\s+", "_")
-  ))
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 4.3) Apply Title Case to selected columns ----------------------------------
-# ─────────────────────────────────────────────────────────────────────────────
-title_cols <- c("Institution", "Department", "Analyst_Processor_Name", 
-                "Notes_Samples", "Technician_name", "Notes_Runs")
-
-metadata <- metadata %>%
-  mutate(across(
-    .cols = any_of(title_cols),
-    .fns  = ~ if_else(.x == "N/A", .x, 
-                      .x %>%
-                        str_replace_all("_", " ") %>%
-                        str_to_title() %>%
-                        str_replace_all("\\s+", "_"))
-  ))
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 5) Field-specific formatting ------------------------------------------------
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-clean_text <- function(x) {
-  x <- str_trim(x)
-  x <- ifelse(is.na(x) | x == "", "N/A", x)
-  x <- str_replace_all(x, " +", "_")
-  str_to_title(x)
-}
-
-
-metadata <- metadata %>%
-  mutate(across(everything(), ~ ifelse(is.na(.) | . == "", "N/A", .))) %>%
+  # First, replace all empty/NA values with "N/A"
+  mutate(across(everything(), ~ ifelse(is.na(.) | . == "" | . == "NA", "N/A", as.character(.)))) %>%
   mutate(
+    # Sample_ID - keep as is (should already be in correct format)
     Sample_ID = str_trim(Sample_ID),
     
+    # Institution - First letter uppercase with underscores
     Institution = clean_text(Institution),
-    Department = clean_text(Department),
-    Collection_Date = dmy(Collection_Date) %>% format("%d/%m/%Y"),
     
+    # Department - First letter uppercase with underscores  
+    Department = clean_text(Department),
+    
+    # Collection_Date - Format as DD/MM/YYYY
+    Collection_Date = ifelse(Collection_Date == "N/A", "N/A",
+                             format(dmy(Collection_Date), "%d/%m/%Y")),
+    
+    # Collection_Storage_Temperature - Specific parameters
     Collection_Storage_Temperature = case_when(
+      Collection_Storage_Temperature == "N/A" ~ "N/A",
       str_detect(Collection_Storage_Temperature, "-?80") ~ "-80",
       str_detect(Collection_Storage_Temperature, "-?20") ~ "-20",
-      Collection_Storage_Temperature == "4" ~ "4",
-      str_to_lower(Collection_Storage_Temperature) %in% c("room temperature", "room_temperature") ~ "Room_Temperature",
+      str_detect(Collection_Storage_Temperature, "^4$") ~ "4",
+      str_detect(str_to_lower(Collection_Storage_Temperature), "room") ~ "Room_Temperature",
       TRUE ~ "N/A"
     ),
     
+    # Analyst_Processor_Name - First letter uppercase with underscores
     Analyst_Processor_Name = clean_text(Analyst_Processor_Name),
     
+    # Gender - Specific parameters
     Gender = case_when(
-      str_to_lower(Gender) == "female" ~ "Female",
-      str_to_lower(Gender) == "male" ~ "Male",
+      Gender == "N/A" ~ "Not_specified",
+      str_to_lower(Gender) %in% c("f", "female") ~ "Female",
+      str_to_lower(Gender) %in% c("m", "male") ~ "Male",
       TRUE ~ "Not_specified"
     ),
     
+    # Age - Numbers only
     Age = suppressWarnings(as.integer(Age)),
-    Age = if_else(is.na(Age), "N/A", as.character(Age)),
+    Age = ifelse(is.na(Age), "N/A", as.character(Age)),
     
+    # Ongoing_conditions - Specific parameters
     Ongoing_conditions = case_when(
+      Ongoing_conditions == "N/A" ~ "N/A",
       str_detect(str_to_lower(Ongoing_conditions), "acid") ~ "Acid_reflux",
-      str_detect(str_to_lower(Ongoing_conditions), "h[.]? pylori|gastritis") ~ "Helicobacter_pylori_associated_gastritis",
-      str_detect(str_to_lower(Ongoing_conditions), "ibs") ~ "Irritable_bowel_syndrome(IBS)",
-      str_detect(str_to_lower(Ongoing_conditions), "type[ _]?1") ~ "Diabetes(Type 1)",
-      str_detect(str_to_lower(Ongoing_conditions), "diabetes") ~ "Diabetes(Mellitus)",
+      str_detect(str_to_lower(Ongoing_conditions), "h[.]?\\s*pylori|gastritis") ~ "Helicobacter_pylori–associated_gastritis",
+      str_detect(str_to_lower(Ongoing_conditions), "ibs") ~ "Irritable_bowel_syndrome_(IBS)",
+      str_detect(str_to_lower(Ongoing_conditions), "type\\s*1") ~ "Diabetes(Type_1)",
+      str_detect(str_to_lower(Ongoing_conditions), "diabetes") ~ "Diabetes_(Mellitus)",
       str_detect(str_to_lower(Ongoing_conditions), "metabolic") ~ "Metabolic_syndromes",
-      str_detect(str_to_lower(Ongoing_conditions), "nafld") ~ "Non_alcoholic_fatty_liver_disease(NAFLD)",
-      str_detect(str_to_lower(Ongoing_conditions), "fld|fatty") ~ "Fatty_liver_disease(FLD)",
-      str_detect(str_to_lower(Ongoing_conditions), "ibd") ~ "Inflammatory_Bowel_Disease(IBD)",
-      str_detect(str_to_lower(Ongoing_conditions), "lupus|sle") ~ "Lupus(SLE)",
+      str_detect(str_to_lower(Ongoing_conditions), "nafld") ~ "Non-alcoholic_fatty_liver_disease_(NAFLD)",
+      str_detect(str_to_lower(Ongoing_conditions), "fld|fatty") ~ "Fatty_liver_disease_(FLD)",
+      str_detect(str_to_lower(Ongoing_conditions), "ibd") ~ "Inflammatory_Bowel_Disease_(IBD)",
+      str_detect(str_to_lower(Ongoing_conditions), "lupus|sle") ~ "Lupus_(SLE)",
       str_detect(str_to_lower(Ongoing_conditions), "crohn") ~ "Crohn's_disease",
       str_detect(str_to_lower(Ongoing_conditions), "rheumatoid") ~ "Rheumatoid_arthritis",
       str_detect(str_to_lower(Ongoing_conditions), "ache") ~ "Stomach_ache",
-      TRUE ~ Ongoing_conditions
+      TRUE ~ "N/A"
     ),
     
+    # Appendix_removed - Yes/No parameters
     Appendix_removed = case_when(
+      Appendix_removed == "N/A" ~ "N/A",
       str_to_lower(Appendix_removed) == "yes" ~ "Yes",
       str_to_lower(Appendix_removed) == "no" ~ "No",
       TRUE ~ "N/A"
     ),
     
+    # UPDATED: Frequency_of_alcohol_consumption - Process BEFORE using in Alcohol_consumption
+    Frequency_of_alcohol_consumption = case_when(
+      Frequency_of_alcohol_consumption == "N/A" ~ "N/A",
+      # First check for text-based entries
+      str_detect(str_to_lower(Frequency_of_alcohol_consumption), "daily") ~ "Daily",
+      str_detect(str_to_lower(Frequency_of_alcohol_consumption), "3[-–]5|3_5.*week") ~ "4_per_week",
+      str_detect(str_to_lower(Frequency_of_alcohol_consumption), "1[-–]2|1_2.*week") ~ "2_per_week", 
+      str_detect(str_to_lower(Frequency_of_alcohol_consumption), "1[-–]3|1_3.*month") ~ "1_per_week",
+      # Then handle numeric values using the conversion function
+      TRUE ~ convert_alcohol_frequency(Frequency_of_alcohol_consumption)
+    ),
+    
+    # UPDATED: Alcohol_consumption - Now uses processed frequency data
+    Alcohol_consumption = case_when(
+      Frequency_of_alcohol_consumption == "N/A" ~ "N/A",
+      Frequency_of_alcohol_consumption %in% c("Daily", "0_per_week") ~ case_when(
+        Frequency_of_alcohol_consumption == "Daily" ~ "Yes",
+        Frequency_of_alcohol_consumption == "0_per_week" ~ "No",
+        TRUE ~ "N/A"
+      ),
+      str_detect(Frequency_of_alcohol_consumption, "_per_week$") ~ "Yes",
+      TRUE ~ "N/A"
+    ),
+    
+    # UPDATED: Alcohol_consumption - Now uses processed frequency data
+    Alcohol_consumption = case_when(
+      Frequency_of_alcohol_consumption == "N/A" ~ "N/A",
+      Frequency_of_alcohol_consumption %in% c("Daily", "0_per_week") ~ case_when(
+        Frequency_of_alcohol_consumption == "Daily" ~ "Yes",
+        Frequency_of_alcohol_consumption == "0_per_week" ~ "No",
+        TRUE ~ "N/A"
+      ),
+      str_detect(Frequency_of_alcohol_consumption, "_per_week$") ~ "Yes",
+      TRUE ~ "N/A"
+    ),
+    
+    # Allergies - Extract multiple allergy categories
+    Allergies = str_to_lower(Allergies),
     Allergies = case_when(
-      str_detect(Allergies, "peanut") ~ "Peanuts",
-      str_detect(Allergies, "shellfish") ~ "Shellfish",
-      str_detect(Allergies, "tree") ~ "Tree_nuts",
-      str_detect(Allergies, "egg") ~ "Eggs",
-      str_detect(Allergies, "milk") ~ "Milk",
-      str_detect(Allergies, "free") ~ "Allergy free",
-      str_detect(Allergies, "unspecified") ~ "Unspecified",
-      TRUE ~ "N/A"
+      is.na(Allergies) | Allergies %in% c("na", "n/a", "none", "allergy free", "") ~ "Allergy_free",
+      TRUE ~ map_chr(Allergies, function(x) {
+        # Define allergy patterns and their corresponding labels
+        allergy_patterns <- c(
+          "Peanuts" = "peanut",
+          "Shellfish" = "shellfish", 
+          "Tree_nuts" = "tree.*nut|nut.*tree",
+          "Eggs" = "\\begg\\b",
+          "Milk" = "\\bmilk\\b|dairy",
+          "Cats" = "\\bcat\\b|feline|cat dander",
+          "Dogs" = "\\bdog\\b|canine",
+          "Penicillin" = "penicillin|penecillian|pencillin|penicillian",
+          "Amoxicillin" = "amoxicillin",
+          "Zithromax" = "zithromax",
+          "Ceclor" = "ceclor",
+          "Accutane" = "accutane",
+          "Sulfa_drugs" = "sulf|sulfa",
+          "Latex" = "latex",
+          "Benzoyl_peroxide" = "benzoyl\\s*peroxide",
+          "Dust" = "dust",
+          "Seasonal_allergies" = "pollen|seasonal|summer.*allerg|allerg.*summer",
+          "Mold" = "\\bmold\\b|mould",
+          "Asthma" = "asthma"
+        )
+        
+        # Find matching allergies
+        detected <- names(allergy_patterns)[map_lgl(allergy_patterns, ~ str_detect(x, .x))]
+        
+        # Return result
+        if (length(detected) > 0) {
+          paste(detected, collapse = ", ")
+        } else {
+          "Unspecified"
+        }
+      })
     ),
     
+    # Dietary_Information - Specific parameters
     Dietary_Information = case_when(
-      str_detect(Dietary_Information, "vegetarian.*seafood") ~ "Vegetarian_but_eat_seafood",
-      str_detect(Dietary_Information, "vegetarian") ~ "Vegetarian",
-      str_detect(Dietary_Information, "vegan") ~ "Vegan",
-      str_detect(Dietary_Information, "gluten") ~ "Gluten_free",
-      str_detect(Dietary_Information, "keto") ~ "Keto",
-      str_detect(Dietary_Information, "halal") ~ "Halal",
-      str_detect(Dietary_Information, "omnivore") ~ "Omnivore",
+      Dietary_Information == "N/A" ~ "N/A",
+      str_detect(str_to_lower(Dietary_Information), "vegetarian.*seafood") ~ "Vegetarian_but_eat_seafood",
+      str_detect(str_to_lower(Dietary_Information), "vegetarian") ~ "Vegetarian",
+      str_detect(str_to_lower(Dietary_Information), "vegan") ~ "Vegan",
+      str_detect(str_to_lower(Dietary_Information), "gluten") ~ "Gluten_free",
+      str_detect(str_to_lower(Dietary_Information), "keto") ~ "Keto",
+      str_detect(str_to_lower(Dietary_Information), "halal") ~ "Halal",
+      str_detect(str_to_lower(Dietary_Information), "kosher") ~ "Kosher",
+      str_detect(str_to_lower(Dietary_Information), "paleo") ~ "Paleo",
+      str_detect(str_to_lower(Dietary_Information), "omnivore") ~ "Omnivore",
       TRUE ~ "N/A"
     ),
     
+    # Bowel_movement_quality - Specific parameters
     Bowel_movement_quality = case_when(
-      str_detect(Bowel_movement_quality, "constipat") ~ "Constipated",
-      str_detect(Bowel_movement_quality, "normal") ~ "Normal",
-      str_detect(Bowel_movement_quality, "diarrh") ~ "Diarrhea",
+      Bowel_movement_quality == "N/A" ~ "N/A",
+      str_detect(str_to_lower(Bowel_movement_quality), "constipat") ~ "Constipated",
+      str_detect(str_to_lower(Bowel_movement_quality), "normal") ~ "Normal",
+      str_detect(str_to_lower(Bowel_movement_quality), "diarrh") ~ "Diarrhea",
       TRUE ~ "N/A"
     ),
     
+    # Antibiotic_intake - Specific parameters
     Antibiotic_intake = case_when(
-      str_detect(Antibiotic_intake, "week") ~ "Week",
-      str_detect(Antibiotic_intake, "month") ~ "Month",
-      str_detect(Antibiotic_intake, "6") ~ "6 months",
-      str_detect(Antibiotic_intake, "year") & str_detect(Antibiotic_intake, "past") ~ "Past_year",
-      str_detect(Antibiotic_intake, "year") ~ "Year",
+      Antibiotic_intake == "N/A" ~ "N/A",
+      str_detect(str_to_lower(Antibiotic_intake), "week") ~ "Week",
+      str_detect(str_to_lower(Antibiotic_intake), "month") & str_detect(str_to_lower(Antibiotic_intake), "6") ~ "6_months",
+      str_detect(str_to_lower(Antibiotic_intake), "month") ~ "Month",
+      str_detect(str_to_lower(Antibiotic_intake), "past.*year") ~ "Past_year",
+      str_detect(str_to_lower(Antibiotic_intake), "year") ~ "Year",
       TRUE ~ "N/A"
     ),
     
+    # Medications - Specific parameters
     Medications = case_when(
-      str_detect(Medications, "diabet") ~ "Antidiabetics",
-      str_detect(Medications, "probiot") ~ "Probiotics",
-      str_detect(Medications, "prebiot") ~ "Prebiotics",
-      str_detect(Medications, "laxative") ~ "Laxatives",
-      str_detect(Medications, "mimetic") ~ "Antimimetic",
-      str_detect(Medications, "ppi|pump") ~ "PPIs(proton_pump_inhibitors)",
-      str_detect(Medications, "immuno") ~ "Immunosupressors",
-      str_detect(Medications, "antidepress|antipsych|anxio") ~ "Antidepressors/Antipsicotics/Anxiolytics",
-      str_detect(Medications, "contracep") ~ "Contraceptives",
+      Medications == "N/A" ~ "N/A",
+      str_detect(str_to_lower(Medications), "antidiabet|diabet") ~ "Antidiabetics",
+      str_detect(str_to_lower(Medications), "probiot") ~ "Probiotics",
+      str_detect(str_to_lower(Medications), "prebiot") ~ "Prebiotics",
+      str_detect(str_to_lower(Medications), "laxative") ~ "Laxatives",
+      str_detect(str_to_lower(Medications), "antiemetic|mimetic") ~ "Antiemetic",
+      str_detect(str_to_lower(Medications), "ppi|pump") ~ "PPIs_(proton-pump_inhibitors)",
+      str_detect(str_to_lower(Medications), "immuno") ~ "Immunosupressors",
+      str_detect(str_to_lower(Medications), "antidepress|antipsych|anxio") ~ "Antidepressors/Antipsicotics/Anxiolytics",
+      str_detect(str_to_lower(Medications), "contracep") ~ "Contraceptives",
+      str_detect(str_to_lower(Medications), "retinoid") ~ "Retinoids",
+      str_detect(str_to_lower(Medications), "antihist") ~ "Antihistamines",
+      str_detect(str_to_lower(Medications), "nsaid") ~ "NSAIDs",
       TRUE ~ "N/A"
     ),
     
+    # Cancer - Yes/No parameters
     Cancer = case_when(
+      Cancer == "N/A" ~ "N/A",
       str_to_lower(Cancer) == "yes" ~ "Yes",
       str_to_lower(Cancer) == "no" ~ "No",
       TRUE ~ "N/A"
     ),
     
-    Body_Mass_Index = case_when(
-      str_detect(Body_Mass_Index, "under") ~ "Underweight<18.5",
-      str_detect(Body_Mass_Index, "normal") ~ "Normal_Weight_18.5-24.9",
-      str_detect(Body_Mass_Index, "over") ~ "Overweight_25-29.9",
-      str_detect(Body_Mass_Index, "obese") ~ "Obese_30<",
-      TRUE ~ "N/A"
-    ),
+    # Body_Mass_Index - Convert numeric to categories
+    Body_Mass_Index = sapply(Body_Mass_Index, convert_bmi),
     
+    # Exercise_frequency - Specific parameters
     Exercise_frequency = case_when(
-      str_detect(Exercise_frequency, "daily") ~ "Daily",
-      str_detect(Exercise_frequency, "1-2") ~ "1-2_times_per_week",
-      str_detect(Exercise_frequency, "3-5") ~ "3-5 times_per_week",
-      str_detect(Exercise_frequency, "rare") ~ "Rarely",
-      str_detect(Exercise_frequency, "never") ~ "Never",
+      Exercise_frequency == "N/A" ~ "N/A",
+      str_detect(str_to_lower(Exercise_frequency), "never") ~ "Never",
+      str_detect(str_to_lower(Exercise_frequency), "rare") ~ "Rarely",
+      str_detect(str_to_lower(Exercise_frequency), "daily") ~ "Daily",
+      str_detect(str_to_lower(Exercise_frequency), "1-2|1_2") ~ "1-2_times_per_week",
+      str_detect(str_to_lower(Exercise_frequency), "3-5|3_5") ~ "3-5_times_per_week",
       TRUE ~ "N/A"
     ),
     
+    # Smoking_status - Specific parameters
     Smoking_status = case_when(
-      str_detect(Smoking_status, "non") ~ "Non-smoker",
-      str_detect(Smoking_status, "smok") ~ "Smoker",
+      Smoking_status == "N/A" ~ "N/A",
+      str_detect(str_to_lower(Smoking_status), "non") ~ "Non-smoker",
+      str_detect(str_to_lower(Smoking_status), "smok") ~ "Smoker",
       TRUE ~ "N/A"
     ),
     
+    # Daily_cigarettes - Specific parameters
     Daily_cigarettes = case_when(
-      str_detect(Daily_cigarettes, "1[-–]5") ~ "1-5",
-      str_detect(Daily_cigarettes, "6[-–]10") ~ "6-10",
-      str_detect(Daily_cigarettes, "11[-–]15") ~ "11-15",
-      str_detect(Daily_cigarettes, "16[-–]20") ~ "16-20",
+      Daily_cigarettes == "N/A" ~ "N/A",
+      str_detect(Daily_cigarettes, "1[-–]5|1_5") ~ "1-5",
+      str_detect(Daily_cigarettes, "6[-–]10|6_10") ~ "6-10",
+      str_detect(Daily_cigarettes, "11[-–]15|11_15") ~ "11-15",
+      str_detect(Daily_cigarettes, "16[-–]20|16_20") ~ "16-20",
       str_detect(Daily_cigarettes, "20\\+|\\+20") ~ "+20",
       TRUE ~ "N/A"
     ),
     
-    Alcohol_consumption = case_when(
-      str_to_lower(Alcohol_consumption) == "yes" ~ "Yes",
-      str_to_lower(Alcohol_consumption) == "no" ~ "No",
-      TRUE ~ "N/A"
-    ),
-    
-    Frequency_of_alcohol_consumption = case_when(
-      str_detect(Frequency_of_alcohol_consumption, "(?i)daily") ~ "Daily",
-      str_detect(Frequency_of_alcohol_consumption, "(?i)3[-–]5") ~ "3-5_per_week",
-      str_detect(Frequency_of_alcohol_consumption, "(?i)1[-–]2") ~ "1-2_per_week",
-      str_detect(Frequency_of_alcohol_consumption, "(?i)1[-–]3") ~ "1-3_per_month",
-      TRUE ~ "N/A"
-    ),
-    
-    Sequencing_Platform = case_when(
-      str_detect(Sequencing_Platform, "(?i)miseq") ~ "MiSeq",
-      str_detect(Sequencing_Platform, "(?i)nextseq") ~ "NextSeq",
-      str_detect(Sequencing_Platform, "(?i)grindion") ~ "GrindION",
-      str_detect(Sequencing_Platform, "(?i)minion") ~ "MinION",
-      str_detect(Sequencing_Platform, "(?i)ion.*genestudio") ~ "Ion_GeneStudio_S5",
-      TRUE ~ "N/A"
-    ),
-    
-    Sequencing_Type = case_when(
-      str_detect(Sequencing_Type, "(?i)16s") ~ "16S_rRNA",
-      str_detect(Sequencing_Type, "(?i)wgs") ~ "WGS",
-      str_detect(Sequencing_Type, "(?i)shotgun") ~ "Shotgun_metagenomic",
-      str_detect(Sequencing_Type, "(?i)rna") ~ "RNA-Seq",
-      str_detect(Sequencing_Type, "(?i)long") ~ "Long-read",
-      str_detect(Sequencing_Type, "(?i)metatrans") ~ "Metatranscriptomics",
-      TRUE ~ "N/A"
-    ),
-    
-    Sequencing_depth_target = case_when(
-      str_detect(Sequencing_depth_target, "(?i)<1") ~ "<1_million_reads/sample",
-      str_detect(Sequencing_depth_target, "(?i)1.*5") ~ "1-5_million_reads/sample",
-      str_detect(Sequencing_depth_target, "(?i)5.*10") ~ "5-10_million_reads/sample",
-      str_detect(Sequencing_depth_target, "(?i)10.*20") ~ "10-20_million_reads/sample",
-      str_detect(Sequencing_depth_target, "(?i)20.*50") ~ "20-50_million_reads/sample",
-      str_detect(Sequencing_depth_target, "(?i)50") ~ "50_million_reads/sample",
-      TRUE ~ "N/A"
-    ),
-    
-    Library_preparation_kit = case_when(
-      str_detect(Library_preparation_kit, "(?i)nextera.*xt") ~ "Nextera_XT",
-      str_detect(Library_preparation_kit, "(?i)nextera.*flex") ~ "Nextera_DNA_Flex",
-      str_detect(Library_preparation_kit, "(?i)truseq") ~ "TruSeq_Nano",
-      str_detect(Library_preparation_kit, "(?i)nebnext") ~ "NEBNext_Ultra_II",
-      str_detect(Library_preparation_kit, "(?i)swift") ~ "Swift_Biosciences_16S",
-      str_detect(Library_preparation_kit, "(?i)qia") ~ "QIAseq",
-      TRUE ~ "N/A"
-    ),
-    
-    Technician_name = str_to_title(str_replace_all(Technician_name, "_", " ")) %>%
-      str_replace_all("\\s+", "_"),
-    
-    Notes_Runs = str_to_title(str_replace_all(Notes_Runs, "_", " ")) %>%
-      str_replace_all("\\s+", "_")
+    # Notes_Samples - First letter uppercase with underscores
+    Notes_Samples = clean_text(Notes_Samples)
   )
-                 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6) Write out the cleaned CSV ------------------------------------------------
+# 6) Handle run-specific columns if they exist -------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Check if run-specific columns exist and format them
+if ("Sequencing_Platform" %in% colnames(metadata)) {
+  metadata <- metadata %>%
+    mutate(
+      Sequencing_Platform = case_when(
+        Sequencing_Platform == "N/A" ~ "N/A",
+        str_detect(str_to_lower(Sequencing_Platform), "miseq") ~ "MiSeq",
+        str_detect(str_to_lower(Sequencing_Platform), "nextseq") ~ "NextSeq",
+        str_detect(str_to_lower(Sequencing_Platform), "grindion") ~ "GrindION",
+        str_detect(str_to_lower(Sequencing_Platform), "minion") ~ "MinION",
+        str_detect(str_to_lower(Sequencing_Platform), "ion.*genestudio") ~ "Ion_GeneStudio_S5",
+        TRUE ~ "N/A"
+      ),
+      
+      Sequencing_Type = case_when(
+        Sequencing_Type == "N/A" ~ "N/A",
+        str_detect(str_to_lower(Sequencing_Type), "16s") ~ "16S_rRNA",
+        str_detect(str_to_lower(Sequencing_Type), "wgs") ~ "WGS",
+        str_detect(str_to_lower(Sequencing_Type), "shotgun") ~ "Shotgun_metagenomic",
+        str_detect(str_to_lower(Sequencing_Type), "rna") ~ "RNA-Seq",
+        str_detect(str_to_lower(Sequencing_Type), "long") ~ "Long-read",
+        str_detect(str_to_lower(Sequencing_Type), "metatrans") ~ "Metatranscriptomics",
+        TRUE ~ "N/A"
+      ),
+      
+      Technician_name = clean_text(Technician_name),
+      Notes_Runs = clean_text(Notes_Runs)
+    )
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7) Write out the cleaned CSV ------------------------------------------------
 # ─────────────────────────────────────────────────────────────────────────────
 print("Writing cleaned metadata...")
-write_csv(metadata, "../metadata/template_metadata_merged/metadata_cleaned.csv", na = "")
+write_csv(metadata, "metadata_cleaned.csv", na = "")
 
 print("✓ Successfully created metadata_cleaned.csv")
 print(paste("Final dataset contains", nrow(metadata), "rows and", ncol(metadata), "columns"))
@@ -329,3 +450,11 @@ print(paste("Run metadata entries:", nrow(metadata_run)))
 print(paste("Merged entries:", nrow(metadata)))
 print("\nColumn names in final dataset:")
 print(colnames(metadata))
+
+# Display sample of key formatted columns
+print("\n=== SAMPLE OF FORMATTED DATA ===")
+sample_cols <- c("Sample_ID", "Gender", "Age", "Body_Mass_Index", "Dietary_Information", "Allergies")
+available_cols <- intersect(sample_cols, colnames(metadata))
+if (length(available_cols) > 0) {
+  print(head(metadata[, available_cols, drop = FALSE], 10))
+}
