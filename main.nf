@@ -10,7 +10,7 @@ workflow {
     println("Output directory: ${params.outdir}")
 
     // Channel with paired-end fastq files
-    Channel.fromFilePairs("raw_data/*_{1,2}.fastq.gz", size: 2)
+    Channel.fromFilePairs("runs/${params.run_id}/raw_data/*_{1,2}.fastq.gz", size: 2)
         .ifEmpty { error("No paired FASTQ files found in raw_data/") }
         .map { sample_id, reads ->
             def meta = [
@@ -21,8 +21,8 @@ workflow {
         }
         .set { raw_reads }
 
-    // Debug: view the channel contents
-    raw_reads.view { meta, reads -> "Sample: ${meta.id}, Files: ${reads}" }
+    // Debug: view the channel contents (commented)
+    // raw_reads.view { meta, reads -> "Sample: ${meta.id}, Files: ${reads}" }
 
     // Run FastQC on raw reads
     FASTQC_RAW(raw_reads)
