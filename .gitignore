@@ -11,3 +11,5 @@ refs/kraken2/
 settings.json
 outputs/
 raw_data/
+test_data/
+healthy_controls/

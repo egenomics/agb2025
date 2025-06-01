@@ -1,56 +1,93 @@
 #!/bin/bash
 
-# Path to the CSV file relative to where the script is run
-CSV_PATH="group4/Dataset/dev.csv"
+# Usage message
+usage() {
+  cat <<EOF
+# Usage:
+#   ./download_samples.sh [--dev|--test|--healthy-controls]
+#
+#   --dev              => CSV_PATH="group4/Dataset/dev.csv" and output folder "raw_data"
+#   --test             => CSV_PATH="group4/Dataset/test.csv" and output folder "test_data"
+#   --healthy-controls => CSV_PATH="group4/Healthy_Controls/final_healthy_controls.csv" and output folder "healthy_controls"
+EOF
+}
 
-# Create run_id to make new directory inside runs/
-DATE=$(date +%d%m%y)
-LAST_RUN=$(ls -1d runs/R*${DATE} 2>/dev/null | sed "s/runs\/R\([0-9]\{2\}\)${DATE}/\1/" | sort -n | tail -1)
+CSV_PATH=""
+OUTPUT_DIR=""
+COL_NUM=2  # Default column for dev/test
 
-# If no runs that day, start with 01, otherwise increment by 1
-if [[ -z "$LAST_RUN" ]]; then
-    NEXT_RUN="01"
-else
-    NEXT_RUN=$(printf "%02d" $((10#$LAST_RUN + 1)))
+# Parse command-line flags
+if [ $# -eq 0 ]; then
+  usage
+  exit 1
 fi
 
-# Create the output directory
-RUN_DIR="runs/R${NEXT_RUN}${DATE}/raw_data"
-mkdir -p "$RUN_DIR"
-echo "Created: $RUN_DIR"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dev)
+      CSV_PATH="group4/Dataset/dev.csv"
+      OUTPUT_DIR="raw_data"
+      COL_NUM=2
+      shift
+      ;;
+    --test)
+      CSV_PATH="group4/Dataset/test.csv"
+      OUTPUT_DIR="test_data"
+      COL_NUM=2
+      shift
+      ;;
+    --healthy-controls)
+      CSV_PATH="group4/Healthy_Controls/final_healthy_controls.csv"
+      OUTPUT_DIR="healthy_controls"
+      COL_NUM=6
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      usage
+      exit 1
+      ;;
+  esac
+done
 
-# Extract run_accession column and download FASTQ files
-tail -n +2 "$CSV_PATH" | cut -d, -f2 | while read -r sample_id; do
-  # Clean the sample_id by stripping quotes and whitespace
-  sample_id=$(echo "$sample_id" | tr -d '"' | xargs)
+# Ensure a CSV path was provided
+if [[ -z "$CSV_PATH" ]]; then
+  usage
+  exit 1
+fi
 
-  if [[ -n "$sample_id" ]]; then
-    prefix=${sample_id:0:6}
-    length=${#sample_id}
+# Create the output directory if needed
+mkdir -p "$OUTPUT_DIR"
 
-    # Decide folder name depending on sample_id length
+# For healthy_controls (column 6) and dev/test (column 2).
+# Skip the header line with tail -n +2
+tail -n +2 "$CSV_PATH" | cut -d, -f"$COL_NUM" | while read -r run_id; do
+  # Clean the run_id by stripping quotes and whitespace
+  run_id=$(echo "$run_id" | tr -d '"' | xargs)
+
+  if [[ -n "$run_id" ]]; then
+    prefix=${run_id:0:6}
+    length=${#run_id}
+
+    # Decide folder name depending on run_id length
     if [[ $length -eq 11 ]]; then
-      # Use the last two digits and prepend a '0'
-      subdir="0${sample_id: -2}"
+      subdir="0${run_id: -2}"
     elif [[ $length -eq 10 ]]; then
-      # Use the last digit and prepend '00'
-      subdir="00${sample_id: -1}"
+      subdir="00${run_id: -1}"
     else
-      echo "Skipping sample ID $sample_id due to unsupported length."
+      echo "Skipping run ID $run_id due to unsupported length."
       continue
     fi
 
-    echo "Processing FASTQ files for ${sample_id}..."
-
     for read in 1 2; do
-      outfile="${sample_id}_${read}.fastq.gz"
-      url="https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${subdir}/${sample_id}/${sample_id}_${read}.fastq.gz"
+      outfile="${OUTPUT_DIR}/${run_id}_${read}.fastq.gz"
+      url="https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${subdir}/${run_id}/${run_id}_${read}.fastq.gz"
 
       if [[ -f "$outfile" ]]; then
         echo "File $outfile already exists. Skipping download."
       else
         echo "Downloading: $url"
-        wget -P $RUN_DIR "$url"
+        wget -P "$OUTPUT_DIR" "$url"
       fi
     done
   fi
