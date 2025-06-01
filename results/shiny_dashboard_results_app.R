@@ -2467,6 +2467,157 @@ server <- function(input, output, session) {
     )
   })
   
+  ###### SAVE PLOTS FOR THE REPORT ######
+  observeEvent({
+    data_store$sample_metadata
+    data_store$taxonomy_data
+    data_store$control_sample_metadata
+    data_store$control_taxonomy_data
+  }, {
+    req(input$alpha_metric, input$alpha_color_palette)
+    
+    ####### Save Alpha Diversity Plot #######
+    try({
+      sample_meta <- data_store$sample_metadata
+      control_meta <- data_store$control_sample_metadata
+      
+      sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
+      control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
+      
+      sample_wide <- sample_tax %>%
+        select(Sample_ID, Species, Abundance) %>%
+        pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+      
+      sample_div <- sample_wide %>%
+        column_to_rownames("Sample_ID") %>%
+        as.matrix() %>%
+        {
+          tibble(
+            Sample_ID = rownames(.),
+            Observed = rowSums(. > 0),
+            Shannon = vegan::diversity(., index = "shannon"),
+            Simpson = vegan::diversity(., index = "simpson")
+          )
+        }
+      
+      control_wide <- control_tax %>%
+        select(Sample_ID, Species, Abundance) %>%
+        pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+      
+      control_div <- control_wide %>%
+        column_to_rownames("Sample_ID") %>%
+        as.matrix() %>%
+        {
+          tibble(
+            Sample_ID = rownames(.),
+            Observed = rowSums(. > 0),
+            Shannon = vegan::diversity(., index = "shannon"),
+            Simpson = vegan::diversity(., index = "simpson"),
+            GroupLabel = "Control"
+          )
+        }
+      
+      diversity_df <- bind_rows(
+        sample_div %>%
+          left_join(sample_meta, by = "Sample_ID") %>%
+          mutate(GroupLabel = if (input$subdivide_samples) .[[input$condition_column]] else "Sample"),
+        control_div
+      )
+      
+      metric_col <- switch(input$alpha_metric,
+                           "Observed OTUs" = "Observed",
+                           "Shannon" = "Shannon",
+                           "Simpson" = "Simpson")
+      
+      p_alpha <- ggplot(diversity_df, aes(x = GroupLabel, y = .data[[metric_col]], fill = GroupLabel)) +
+        geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+        geom_jitter(shape = 21, alpha = 0.6, color = "black", width = 0.2) +
+        labs(title = paste(input$alpha_metric, "Diversity across Groups"),
+             x = "Group", y = paste(input$alpha_metric, "Index")) +
+        theme_minimal() +
+        theme(
+          legend.position = "right",
+          plot.title = element_text(size = 14, hjust = 0.5),
+          axis.title = element_text(size = 12),
+          axis.text = element_text(size = 10),
+          legend.text = element_text(size = 10),
+          legend.title = element_text(size = 11)
+        ) +
+        scale_fill_brewer(palette = input$alpha_color_palette)
+      
+      ggsave("alpha_diversity_plot.png", plot = p_alpha, width = 10, height = 6, dpi = 300, bg = "white")
+      message("✅ Alpha plot saved.")
+    }, silent = TRUE)
+    
+    ####### Save Beta Diversity Plot #######
+    try({
+      all_tax <- bind_rows(
+        data_store$taxonomy_data,
+        data_store$control_taxonomy_data
+      ) %>%
+        select(Sample_ID, Species, Abundance) %>%
+        pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
+        column_to_rownames("Sample_ID")
+      
+      dist_method <- switch(input$distance_metric,
+                            "Bray-Curtis" = "bray",
+                            "Euclidean" = "euclidean",
+                            "Jaccard" = "jaccard",
+                            "Canberra" = "canberra",
+                            "Manhattan" = "manhattan",
+                            "Kulczynski" = "kulczynski",
+                            "Chord" = "chord")
+      
+      ord <- ape::pcoa(vegan::vegdist(all_tax, method = dist_method))
+      coords <- ord$vectors[, 1:2]
+      ord_df <- as.data.frame(coords)
+      colnames(ord_df) <- c("Axis1", "Axis2")
+      ord_df$Sample_ID <- rownames(coords)
+      
+      all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
+      ord_df <- left_join(ord_df, all_meta, by = "Sample_ID")
+      
+      ord_df$GroupLabel <- if (input$subdivide_samples) {
+        ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
+               "Control", ord_df[[input$condition_column]])
+      } else {
+        ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
+      }
+      
+      p_beta <- ggplot(ord_df, aes(x = Axis1, y = Axis2, color = GroupLabel)) +
+        geom_point(size = 3, alpha = 0.8)
+      
+      # Add ellipses if enabled
+      if (isTRUE(input$show_group_ellipses)) {
+        p_beta <- p_beta +
+          stat_ellipse(aes(group = GroupLabel),
+                       type = "norm", linetype = "dashed",
+                       alpha = 0.6, size = 1, show.legend = FALSE)
+      }
+      
+      # Final styling
+      p_beta <- p_beta +
+        labs(title = paste0("PCoA on ", input$distance_metric, " Distance"),
+             x = "Axis 1", y = "Axis 2") +
+        theme_minimal() +
+        theme(
+          legend.position = "right",
+          plot.title = element_text(size = 14, hjust = 0.5),
+          axis.title = element_text(size = 12),
+          axis.text = element_text(size = 10),
+          legend.text = element_text(size = 10),
+          legend.title = element_text(size = 11)
+        )
+      
+      
+      ggsave("beta_diversity_plot.png", plot = p_beta, width = 10, height = 6, dpi = 300, bg = "white")
+      message("✅ Beta plot saved.")
+    }, silent = TRUE)
+    
+  }, ignoreInit = TRUE)
+  
+  
+  
 }
 
 
