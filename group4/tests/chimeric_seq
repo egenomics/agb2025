@@ -1,0 +1,20 @@
+nextflow_pipeline {
+  name "Chimera Detection Test"
+  script "main.nf"
+
+  test("Should detect and remove chimeric reads") {
+    when {
+      params {
+        reads = "../../mock_data/chimeric_seq.fastq.gz"
+      }
+      profile = "docker"
+    }
+
+    then {
+      assert workflow.success
+      assert file("results/filtered_rep_seqs.qza").exists()
+      assert file("results/logs/pipeline.log").text.contains("chimeras removed") ||
+             file("results/logs/pipeline.log").text.contains("uchime")
+    }
+  }
+}

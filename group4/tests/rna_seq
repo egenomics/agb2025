@@ -1,0 +1,18 @@
+nextflow_pipeline {
+  name "RNA Sequence Test"
+  script "main.nf"
+
+  test("Should detect RNA input instead of DNA") {
+    when {
+      params {
+        reads = "../../mock_data/rna_seq.fastq.gz"
+      }
+      profile = "docker"
+    }
+
+    then {
+      assert !workflow.success
+      assert file("results/logs/pipeline.log").text.contains("U detected")
+    }
+  }
+}

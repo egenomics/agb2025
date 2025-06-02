@@ -1,0 +1,19 @@
+nextflow_pipeline {
+  name "Malformed Header Test"
+  script "main.nf"
+
+  test("Should reject reads with malformed headers") {
+    when {
+      params {
+        reads = "../../mock_data/malformed_header.fastq.gz"
+      }
+      profile = "docker"
+    }
+
+    then {
+      assert !workflow.success
+      assert file("results/logs/pipeline.log").text.contains("invalid header") ||
+             file("results/logs/pipeline.log").text.contains("missing '@'")
+    }
+  }
+}

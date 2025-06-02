@@ -1,0 +1,19 @@
+nextflow_pipeline {
+  name "Uncompressed File Test"
+  script "main.nf"
+
+  test("Should fail on uncompressed file with .gz extension") {
+    when {
+      params {
+        reads = "../../mock_data/not_compressed.fastq.gz"
+      }
+      profile = "docker"
+    }
+
+    then {
+      assert !workflow.success
+      assert file("results/logs/pipeline.log").text.contains("gzip") ||
+             file("results/logs/pipeline.log").text.contains("not compressed")
+    }
+  }
+}

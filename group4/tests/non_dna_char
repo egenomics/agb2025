@@ -1,0 +1,19 @@
+nextflow_pipeline {
+  name "Non-DNA Characters Test"
+  script "main.nf"
+
+  test("Should fail on invalid characters in sequence") {
+    when {
+      params {
+        reads = "../../mock_data/incorrect_char_seq.fastq.gz"
+      }
+      profile = "docker"
+    }
+
+    then {
+      assert !workflow.success
+      assert file("results/logs/pipeline.log").text.contains("invalid character") ||
+             file("results/logs/pipeline.log").text.contains("not a valid DNA base")
+    }
+  }
+}

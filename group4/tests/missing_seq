@@ -1,0 +1,18 @@
+nextflow_pipeline {
+  name "Missing Sequence Line Test"
+  script "main.nf"
+
+  test("Should fail due to missing sequence lines") {
+    when {
+      params {
+        reads = "../../mock_data/missing_sequence.fastq.gz"
+      }
+      profile = "docker"
+    }
+
+    then {
+      assert !workflow.success
+      assert file("results/logs/pipeline.log").text.contains("sequence line missing")
+    }
+  }
+}

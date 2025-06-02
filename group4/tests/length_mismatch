@@ -1,0 +1,18 @@
+nextflow_pipeline {
+  name "Mismatch Length Test"
+  script "main.nf"
+
+  test("Should detect mismatch in sequence and quality length") {
+    when {
+      params {
+        reads = "../../mock_data/slight_mismatch.fastq.gz"
+      }
+      profile = "docker"
+    }
+
+    then {
+      assert !workflow.success
+      assert file("results/logs/pipeline.log").text.contains("length mismatch")
+    }
+  }
+}
