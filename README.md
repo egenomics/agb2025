@@ -59,16 +59,16 @@ HdMBioinfo-MicrobiotaPipeline/
 │   ├── run2
 │   └── run3
 │
-├── output
-│   ├── run1
-│   │    ├── taxonomy
-│   │    ├── phylogeny
-│   │    ├── imported_reads
-│   │    ├── denoised_dada2
-│   │    └── ...
-│   ├── run2
-│   └── run3
-│
+├── outputs/
+│   └── run_<run_id>/
+│       ├── raw_data/                     # Raw fastq input files (paired-end)
+│       ├── processed_data/
+│       │   └── data_filtered/            # Filtered and trimmed fastq's
+│       ├── qc_reports/
+│       │   ├── fastqc/                   # Individual fastqc reports
+│       │   └── multiqc_report.html       # Combined multiqc report
+│       ├── metadata_sample_merged.csv    # QC-integrated metadata
+│       └── logs/                         # Execution logs (optional)
 ├── results/
 │   └── Run2025_01/
 │       ├── README.md
@@ -99,20 +99,40 @@ Before running the pipeline (main.nf), you need to download sample data for deve
 To download the samples:
 
 ```bash
-# make the download script executable
-chmod +x download_samples.sh
+# make the setup script executable
+chmod +x create_run_and_download_samples.sh
 
-# run the script to download the sample files
-./download_samples.sh
+# run it once to prepare a run folder with raw FASTQ files
+./create_run_and_download_samples.sh
+
 ```
+This script is only needed to simulate a real sequencing run during development.
+It creates a folder like outputs/run_<run_id>/raw_data/ and fills it with test FASTQ files.
+You don’t need to run it again unless you're creating a new dev run folder.
 
-After running this, the sample FASTQ files will be available directly inside the `raw_data` folder. This folder will not pushed to GitHub.
-
-### 3 · Run the pipeline
 ```bash
-# minimal
-nextflow run main.nf -profile docker
+### 3 · Run the pipeline
+
+# run the pipeline using the previously created run folder
+nextflow run main.nf --run_id <run_id> -profile docker
 
 # resume an interrupted run (skips completed tasks)
 nextflow run main.nf -profile docker -resume
+
+## scripts overview
+- `create_run.sh` – prepares a run folder with raw fastq files.
+- `download_samples.sh` – used to pull dev/test sample files.
+- `merge_multiqc_metadata.sh` – merges multiqc summary with `metadata_sample.csv`.
 ```
+## Documentation
+
+This repository is complemented by a shared github wiki with module-specific documentation:
+https://github.com/egenomics/agb2025/wiki/Group-2-A
+
+---
+
+### Notes
+
+- Filtered fastq's and `outputs/` directories are not pushed to github due to size limits.
+- kraken2 is under development and lives in a separate branch (`kraken_integration`).
+- multiqc summary merging into metadata is done via csv tools and logged in `outputs/run_<run_id>/`.
