@@ -15,72 +15,59 @@ In this wiki page you will find the information about the pipeline context, the 
 ```text
 HdMBioinfo-MicrobiotaPipeline/
 │
-├── bin/                         # Helper scripts and small executables
-│   ├── trim_reads.sh
-│   ├── assign_taxonomy.py
-│   └── generate_qc_report.R
+├── main.nf                        # Entry point of the pipeline     
+├── nextflow.config 
 │
-├── conf/                        # Configuration files
-│   ├── base.config              # Default config
-│   ├── hospital.config          # Custom config for Hospital del Mar environment
-│   └── docker.config            # Containerized setup (if needed)
-│
-├── docs/                        # Documentation and metadata templates
-│   ├── metadata_template.yaml
-│   ├── versioning_policy.md
-│   └── pipeline_overview.png
-│
-├── workflows/                   # Main Nextflow scripts
-│   └── main.nf                  # Entry point of the pipeline
+├── scripts/                         # Helper scripts and small executables
+│   ├── api_csv.py
+│   ├── metadata_parsing.R
+│   ├── Reorder.R
+│   └── process_metadata.py
 │
 ├── modules/                     # DSL2-style modules for each pipeline step
-│   ├── preprocessing/
-│   │   └── trim_reads.nf
-│   ├── taxonomy/
-│   │   └── assign_taxonomy.nf
-│   ├── classification/
-│   │   └── classify_health_status.nf
-│   └── qc/
-│       └── fastqc.nf
+│   ├── nf-core
+│   │   ├── fastqc/
+│   │   ├── trimmomatic/
+│   │   └── kraken2/kraken2
 │
-├── raw_data
-│   ├── run1
-│   │    ├── sample1.fastq.gz
-│   │    ├── sample2.fastq.gz
-│   │    ├── sample3.fastq.gz
-│   │    ├── metadata_technical.csv
-│   │    └── metadata_samples.csv
-│   ├── run2
-│   └── run3
-│
-├── metadata                      # Merged technical and sample metadata
-│   ├── run1
-│   │    └── metadata_run1.csv
-│   ├── run2
-│   └── run3
-│
-├── outputs/
-│   └── run_<run_id>/
-│       ├── raw_data/                     # Raw fastq input files (paired-end)
-│       ├── processed_data/
-│       │   └── data_filtered/            # Filtered and trimmed fastq's
-│       ├── qc_reports/
-│       │   ├── fastqc/                   # Individual fastqc reports
-│       │   └── multiqc_report.html       # Combined multiqc report
-│       ├── metadata_sample_merged.csv    # QC-integrated metadata
-│       └── logs/                         # Execution logs (optional)
-├── results/
-│   └── Run2025_01/
-│       ├── README.md
-│       ├── pipeline.log
-│       └── final_report.html
+├── conf/   ??                     # Configuration files
+│   
+├── runs/
+│   ├── R[01-99][DDMMYY] (i.e. R01030525)
+│   │   ├── raw_data
+│   │   │    ├── S[A-Z][A-Z][1-9][DDMMYY][R1-R2].fastq.gz 
+│   │   │    └── i.e. SAF1030525R1.fastq.gz
+│   │   ├── metadata
+│   │   │    ├── metadata_cleaned.csv
+│   │   │    ├── metadata_sample.csv
+│   │   │    └── metadata_run.csv
+│   │   ├── qc_reports
+│   │   │    ├── raw/
+│   │   │    │    ├── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_fastqc.html
+│   │   │    │    └── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_fastqc.zip
+│   │   │    └── trimmed/
+│   │   │    │    ├── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_trimmed_fastqc.html
+│   │   │    │    └── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_trimmed_fastqc.zip
+│   │   ├── trimmed_reads
+│   │   │    ├── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_trimmed.fastq.gz
+│   │   │    └── i.e. SAF1030525R1.paired.trim_[1-2].fastq.gz
+│   │   ├── qiime_output
+│   │   │    ├── artifacts
+│   │   │    │    ├── 01_imported_reads
+│   │   │    │    ├── 02_denoised_dada2
+│   │   │    │    ├── 03_summaries
+│   │   │    │    ├── 04_taxonomy
+│   │   │    │    └── 05_phylogeny
+│   │   │    └── relevant_results
+│   │   ├── results
+│   │   │    ├── pipeline.log ?
+│   │   │    ├── multiqc_report.html
+│   │   │    └── shiny_dashboard_results_app.R
 │
 ├── .gitignore
-├── nextflow.config             # Main config file
 ├── LICENSE
 ├── README.md
-├── CHANGELOG.md
-└── environment.yml             # Conda env (if not using containers)
+└── CHANGELOG.md
 ```
 
 ## Quick start (Docker edition)
