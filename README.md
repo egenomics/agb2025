@@ -29,6 +29,11 @@ HdMBioinfo-MicrobiotaPipeline/
 │   │   ├── fastqc/
 │   │   ├── trimmomatic/
 │   │   └── kraken2/kraken2
+│   ├── local
+│   │   ├── build_tree.nf
+│   │   ├── classify_taxonomy.nf
+│   │   ├── ...
+│   │   └── summarize_table.nf
 │
 ├── conf/   ??                     # Configuration files
 │   
