@@ -92,22 +92,24 @@ HdMBioinfo-MicrobiotaPipeline/
 | **Docker ≥ 24**    | `brew install --cask docker`<br/>Launch *Docker Desktop*                     | `sudo apt install docker.io`                                              | Ensure the Docker daemon is running and your user has access. |
 | **Nextflow ≥ 23.10** | `brew install nextflow`                                                    | `curl -s https://get.nextflow.io \| bash && sudo mv nextflow /usr/local/bin/` | No extra software needed – the pipeline pulls everything in containers. |
 
+It is also necessary to create locally a folder called databases/ and add the SILVA classifier used by group 2b.
+
 ### 2 · Download the Samples
 
-Before running the pipeline (main.nf), you need to download sample data for development. The provided script will create a local folder called `raw_data` and download 15 sample datasets into it. If you don't remove the `raw_data` folder, you will only need to do that once.
+Before running the pipeline (main.nf), you need to download sample data for development. The provided script will create a local folder called `runs/run_id/` following the run naming convention. This folder will already contain 15 paired fastqs in raw_data/ and a metadata.tsv in metadata/. If you don't remove the folder, you will only need to do that once.
 
 To download the samples:
 
 ```bash
-# make the setup script executable
-chmod +x create_run_and_download_samples.sh
+# make the download script executable
+chmod +x create_run.sh
 
-# run it once to prepare a run folder with raw FASTQ files
-./create_run_and_download_samples.sh
-
+# run the script to download the sample files
+./create_run.sh
 ```
+
 This script is only needed to simulate a real sequencing run during development.
-It creates a folder like outputs/run_<run_id>/raw_data/ and fills it with test FASTQ files.
+It creates a folder like outputs/run_<run_id>/ and fills it with test FASTQ files in raw_data/ and metadata in metadata/.
 You don’t need to run it again unless you're creating a new dev run folder.
 
 ```bash
@@ -115,13 +117,14 @@ You don’t need to run it again unless you're creating a new dev run folder.
 
 # run the pipeline using the previously created run folder
 nextflow run main.nf --run_id <run_id> -profile docker
+# i.e. nextflow run main.nf --run_id R01310525 -profile docker
 
 # resume an interrupted run (skips completed tasks)
-nextflow run main.nf -profile docker -resume
+nextflow run main.nf --run_id <run_id> -profile docker -resume
 
 ## scripts overview
-- `create_run.sh` – prepares a run folder with raw fastq files.
-- `download_samples.sh` – used to pull dev/test sample files.
+- `create_run.sh` – prepares a run folder with raw fastq files and metadata.
+- `download_samples.sh` – used to pull dev/test sample files in a raw_data/ folder.
 - `merge_multiqc_metadata.sh` – merges multiqc summary with `metadata_sample.csv`.
 ```
 ## Documentation
