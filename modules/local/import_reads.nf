@@ -1,6 +1,6 @@
 process IMPORT_READS {
     label 'qiime2'
-    publishDir "${params.outdir}/artifacts/01_imported_reads", mode: 'copy'
+    publishDir "${params.outdir}/qiime_output/artifacts/01_imported_reads", mode: 'copy'
     
     input:
     path(trimmed_files)  // TODOS los archivos trimmeados

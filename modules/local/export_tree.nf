@@ -1,6 +1,6 @@
 process EXPORT_TREE {
     label 'qiime2'
-    publishDir "${params.outdir}/relevant_results", mode: 'copy'
+    publishDir "${params.outdir}/qiime_output/relevant_results", mode: 'copy'
 
     input:
     path(rooted_tree_qza)
