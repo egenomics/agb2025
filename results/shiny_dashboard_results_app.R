@@ -1851,6 +1851,308 @@ server <- function(input, output, session) {
     }
   )
   
+  ## HEATMAP 
+  # Heatmap color schemes for ComplexHeatmap
+  heatmap_colors <- list(
+    "Viridis" = viridis::viridis(100),
+    "Magma" = viridis::magma(100),
+    "Plasma" = viridis::plasma(100),
+    "Inferno" = viridis::inferno(100),
+    "Blues" = RColorBrewer::brewer.pal(9, "Blues"),
+    "RdBu" = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+  )
+  
+  # Prepare data matrix for heatmap 
+  heatmap_matrix_data <- reactive({
+    req(taxonomy_with_groups())
+    
+    # Get taxonomy data with groups
+    plot_data <- taxonomy_with_groups()
+    
+    # Aggregate data by Sample_ID and TaxonomicGroup
+    agg_data <- aggregate(RelativeAbundance ~ Sample_ID + TaxonomicGroup, 
+                          data = plot_data, FUN = mean)
+    
+    # Convert to wide format (matrix)
+    heatmap_matrix <- dcast(agg_data, TaxonomicGroup ~ Sample_ID, 
+                            value.var = "RelativeAbundance", fill = 0)
+    
+    # Set row names and remove the TaxonomicGroup column
+    rownames(heatmap_matrix) <- heatmap_matrix$TaxonomicGroup
+    heatmap_matrix <- heatmap_matrix[, -1, drop = FALSE]
+    
+    # Convert to matrix
+    heatmap_matrix <- as.matrix(heatmap_matrix)
+    
+    # Filter out taxa with very low abundance across all samples
+    # Keep only taxa that have at least the minimum abundance threshold in at least one sample
+    keep_taxa <- rowSums(heatmap_matrix >= input$abundance_threshold) > 0
+    heatmap_matrix <- heatmap_matrix[keep_taxa, , drop = FALSE]
+    
+    # Limit to top taxa if there are too many (for better visualization)
+    if (nrow(heatmap_matrix) > 50) {
+      # Calculate row means and keep top 50 most abundant taxa
+      row_means <- rowMeans(heatmap_matrix, na.rm = TRUE)
+      top_taxa <- names(sort(row_means, decreasing = TRUE))[1:50]
+      heatmap_matrix <- heatmap_matrix[top_taxa, , drop = FALSE]
+    }
+    
+    # Log transform the data for better visualization (add pseudocount to avoid log(0))
+    heatmap_matrix <- log10(heatmap_matrix + 0.01)
+    
+    return(heatmap_matrix)
+  })
+  
+  # Prepare column annotations for heatmap
+  heatmap_annotations <- reactive({
+    req(heatmap_matrix_data(), merged_metadata())
+    
+    # Get the matrix data
+    matrix_data <- heatmap_matrix_data()
+    sample_ids <- colnames(matrix_data)
+    
+    # Get metadata for these samples
+    metadata <- merged_metadata()
+    sample_metadata <- metadata[metadata$Sample_ID %in% sample_ids, ]
+    
+    # Ensure the order matches the matrix columns
+    sample_metadata <- sample_metadata[match(sample_ids, sample_metadata$Sample_ID), ]
+    
+    # Create annotation data frame
+    annotation_df <- data.frame(
+      Sample_ID = sample_metadata$Sample_ID,
+      Group = sample_metadata$Group,
+      stringsAsFactors = FALSE
+    )
+    
+    # Add metadata grouping if selected
+    if (input$metadata_group != "None" && input$metadata_group %in% colnames(sample_metadata)) {
+      annotation_df[[input$metadata_group]] <- sample_metadata[[input$metadata_group]]
+    }
+    
+    # Set row names to match matrix columns
+    rownames(annotation_df) <- annotation_df$Sample_ID
+    annotation_df <- annotation_df[, -1, drop = FALSE]  # Remove Sample_ID column
+    
+    return(annotation_df)
+  })
+  
+  # Generate the heatmap plot
+  output$heatmap_plot <- renderPlot({
+    req(heatmap_matrix_data(), heatmap_annotations())
+    
+    # Get data
+    matrix_data <- heatmap_matrix_data()
+    annotations <- heatmap_annotations()
+    
+    # Get selected color scheme
+    color_scheme <- input$heatmap_color
+    if (color_scheme %in% names(heatmap_colors)) {
+      heatmap_col <- heatmap_colors[[color_scheme]]
+    } else {
+      heatmap_col <- heatmap_colors[["Viridis"]]
+    }
+    
+    # Create color function
+    if (color_scheme == "RdBu") {
+      # For RdBu, center around 0 (since we're using log-transformed data)
+      col_fun <- colorRamp2(c(min(matrix_data, na.rm = TRUE), 
+                              mean(range(matrix_data, na.rm = TRUE)), 
+                              max(matrix_data, na.rm = TRUE)), 
+                            c("blue", "white", "red"))
+    } else {
+      col_fun <- colorRamp2(seq(min(matrix_data, na.rm = TRUE), 
+                                max(matrix_data, na.rm = TRUE), 
+                                length.out = length(heatmap_col)), 
+                            heatmap_col)
+    }
+    
+    # Create column annotation colors
+    annotation_colors <- list()
+    
+    # Group colors
+    if ("Group" %in% colnames(annotations)) {
+      group_levels <- unique(annotations$Group)
+      annotation_colors$Group <- setNames(c("#E31A1C", "#1F78B4")[1:length(group_levels)], 
+                                          group_levels)
+    }
+    
+    # Metadata group colors (if applicable)
+    if (input$metadata_group != "None" && input$metadata_group %in% colnames(annotations)) {
+      metadata_levels <- unique(annotations[[input$metadata_group]])
+      if (is.numeric(metadata_levels)) {
+        # For numeric metadata, use a continuous color scale
+        annotation_colors[[input$metadata_group]] <- colorRamp2(
+          range(metadata_levels, na.rm = TRUE),
+          c("lightblue", "darkblue")
+        )
+      } else {
+        # For categorical metadata, use discrete colors
+        n_levels <- length(metadata_levels)
+        if (n_levels <= 8) {
+          colors <- RColorBrewer::brewer.pal(max(3, n_levels), "Set2")[1:n_levels]
+        } else {
+          colors <- rainbow(n_levels)
+        }
+        annotation_colors[[input$metadata_group]] <- setNames(colors, metadata_levels)
+      }
+    }
+    
+    # Create column annotation
+    col_annotation <- HeatmapAnnotation(
+      df = annotations,
+      col = annotation_colors,
+      annotation_name_gp = gpar(fontsize = 10),
+      annotation_legend_param = list(
+        Group = list(title = "Group", title_gp = gpar(fontsize = 10)),
+        labels_gp = gpar(fontsize = 8)
+      )
+    )
+    
+    # Create the heatmap
+    ht <- Heatmap(
+      matrix_data,
+      name = "Log10(Abundance + 0.01)",
+      col = col_fun,
+      
+      # Row parameters
+      row_title = paste(input$tax_level, "Taxa"),
+      row_title_gp = gpar(fontsize = 12, fontface = "bold"),
+      row_names_gp = gpar(fontsize = 8),
+      row_names_max_width = unit(4, "cm"),
+      show_row_dend = TRUE,
+      row_dend_width = unit(2, "cm"),
+      
+      # Column parameters
+      column_title = "Samples",
+      column_title_gp = gpar(fontsize = 12, fontface = "bold"),
+      column_names_gp = gpar(fontsize = 6),
+      column_names_rot = 90,
+      show_column_dend = TRUE,
+      column_dend_height = unit(2, "cm"),
+      
+      # Clustering
+      clustering_distance_rows = "euclidean",
+      clustering_method_rows = "complete",
+      clustering_distance_columns = "euclidean",
+      clustering_method_columns = "complete",
+      
+      # Annotations
+      top_annotation = col_annotation,
+      
+      # Legend
+      heatmap_legend_param = list(
+        title = "Relative\nAbundance\n(Log10)",
+        title_gp = gpar(fontsize = 10),
+        labels_gp = gpar(fontsize = 8),
+        legend_direction = "vertical",
+        legend_width = unit(4, "cm")
+      ),
+      
+      # Additional parameters
+      border = TRUE,
+      rect_gp = gpar(col = "white", lwd = 0.5)
+    )
+    
+    # Draw the heatmap
+    draw(ht, 
+         heatmap_legend_side = "right",
+         annotation_legend_side = "right",
+         merge_legend = TRUE)
+    
+  }, height = 600, width = 1000)
+  
+  # Download handler for the heatmap
+  output$download_heatmap <- downloadHandler(
+    filename = function() {
+      paste("taxonomy_heatmap_", input$tax_level, "_", 
+            format(Sys.time(), "%Y%m%d_%H%M%S"), ".png", sep = "")
+    },
+    content = function(file) {
+      # Get data (same as in the render function)
+      matrix_data <- heatmap_matrix_data()
+      annotations <- heatmap_annotations()
+      
+      # Get selected color scheme
+      color_scheme <- input$heatmap_color
+      if (color_scheme %in% names(heatmap_colors)) {
+        heatmap_col <- heatmap_colors[[color_scheme]]
+      } else {
+        heatmap_col <- heatmap_colors[["Viridis"]]
+      }
+      
+      # Create color function
+      if (color_scheme == "RdBu") {
+        col_fun <- colorRamp2(c(min(matrix_data, na.rm = TRUE), 
+                                mean(range(matrix_data, na.rm = TRUE)), 
+                                max(matrix_data, na.rm = TRUE)), 
+                              c("blue", "white", "red"))
+      } else {
+        col_fun <- colorRamp2(seq(min(matrix_data, na.rm = TRUE), 
+                                  max(matrix_data, na.rm = TRUE), 
+                                  length.out = length(heatmap_col)), 
+                              heatmap_col)
+      }
+      
+      # Create annotation colors (same logic as above)
+      annotation_colors <- list()
+      
+      if ("Group" %in% colnames(annotations)) {
+        group_levels <- unique(annotations$Group)
+        annotation_colors$Group <- setNames(c("#E31A1C", "#1F78B4")[1:length(group_levels)], 
+                                            group_levels)
+      }
+      
+      if (input$metadata_group != "None" && input$metadata_group %in% colnames(annotations)) {
+        metadata_levels <- unique(annotations[[input$metadata_group]])
+        if (is.numeric(metadata_levels)) {
+          annotation_colors[[input$metadata_group]] <- colorRamp2(
+            range(metadata_levels, na.rm = TRUE),
+            c("lightblue", "darkblue")
+          )
+        } else {
+          n_levels <- length(metadata_levels)
+          if (n_levels <= 8) {
+            colors <- RColorBrewer::brewer.pal(max(3, n_levels), "Set2")[1:n_levels]
+          } else {
+            colors <- rainbow(n_levels)
+          }
+          annotation_colors[[input$metadata_group]] <- setNames(colors, metadata_levels)
+        }
+      }
+      
+      # Create column annotation
+      col_annotation <- HeatmapAnnotation(
+        df = annotations,
+        col = annotation_colors,
+        annotation_name_gp = gpar(fontsize = 10)
+      )
+      
+      # Create the heatmap
+      ht <- Heatmap(
+        matrix_data,
+        name = "Log10(Abundance + 0.01)",
+        col = col_fun,
+        row_title = paste(input$tax_level, "Taxa"),
+        row_title_gp = gpar(fontsize = 12, fontface = "bold"),
+        row_names_gp = gpar(fontsize = 8),
+        column_title = "Samples",
+        column_title_gp = gpar(fontsize = 12, fontface = "bold"),
+        column_names_gp = gpar(fontsize = 6),
+        column_names_rot = 90,
+        top_annotation = col_annotation,
+        show_row_dend = TRUE,
+        show_column_dend = TRUE,
+        border = TRUE
+      )
+      
+      # Save the heatmap
+      png(file, width = 12, height = 10, units = "in", res = 300)
+      draw(ht, heatmap_legend_side = "right", annotation_legend_side = "right")
+      dev.off()
+    }
+  )
+  
   ###### DIVERSITY ANALYSIS TAB ######
   rv <- reactiveValues(latest_ggplot = NULL)
   
