@@ -79,12 +79,13 @@ HdMBioinfo-MicrobiotaPipeline/
 
 ### 1 · Prerequisites
 
-| Tool               | macOS (Homebrew)                                                            | Ubuntu / Debian                                                           | Notes                                                         |
-|--------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------|
-| **Docker ≥ 24**    | `brew install --cask docker`<br/>Launch *Docker Desktop*                     | `sudo apt install docker.io`                                              | Ensure the Docker daemon is running and your user has access. |
-| **Nextflow ≥ 23.10** | `brew install nextflow`                                                    | `curl -s https://get.nextflow.io \| bash && sudo mv nextflow /usr/local/bin/` | No extra software needed – the pipeline pulls everything in containers. |
+### 1 · Prerequisites
 
-It is also necessary to create locally a folder called databases/ and add the SILVA classifier used by group 2b.
+| Tool                   | macOS (Homebrew)                                                            | Ubuntu / Debian                                                           | Notes                                                         |
+|------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------|
+| **Docker ≥ 24**        | `brew install --cask docker`<br/>Launch *Docker Desktop*                     | `sudo apt install docker.io`                                              | Ensure the Docker daemon is running and your user has access. |
+| **Nextflow ≥ 23.10**   | `brew install nextflow`                                                     | `curl -s https://get.nextflow.io \| bash && sudo mv nextflow /usr/local/bin/` | The pipeline pulls everything in containers.                |
+| **Memory Requirement** |                                                                             |                                                                           | At least 8 GB of available system memory is required for Kraken2. |
 
 ### 2 · Create run and download the samples
 

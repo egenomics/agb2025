@@ -5,6 +5,7 @@ nextflow.enable.dsl = 2
 include { FASTQC as FASTQC_RAW  } from './modules/nf-core/fastqc/main.nf'
 include { FASTQC as FASTQC_TRIM } from './modules/nf-core/fastqc/main.nf'
 include { TRIMMOMATIC           } from './modules/nf-core/trimmomatic/main.nf'
+include { KRAKEN2_KRAKEN2 as KRAKEN } from './modules/nf-core/kraken2/kraken2/main.nf'
 
 // QIIME2 modules
 include { IMPORT_READS          } from './modules/local/import_reads.nf'
@@ -23,12 +24,16 @@ include { CREATE_RESULTS_SUMMARY } from './modules/local/create_results_summary.
 
 workflow {
     println("Output directory: ${params.outdir}")
+
     // Check some files exist
     if ( !file(params.metadata).exists() ) {
         error "Metadata file not found: ${params.metadata}"
     }
     if ( !file(params.classifier_db).exists() ) {
         error "Classifier database not found: ${params.classifier_db}"
+    }
+    if ( !file(params.kraken2_db).exists() ) {
+        error "Kraken2 database not found: ${params.kraken2_db}"
     }
 
     // Channel with paired-end fastq files
@@ -64,12 +69,22 @@ workflow {
         }
     )
 
+    KRAKEN(
+        TRIMMOMATIC.out.trimmed_reads
+            .map { meta, reads ->
+                tuple(meta, reads)
+            },
+            file(params.kraken2_db),
+            false,
+            true
+    )
+
     TRIMMOMATIC.out.trimmed_reads
-    .map { it[1] } 
+    .map { it[1] }
     .flatten()
     .collect()
     .set { all_trimmed_files }
-    
+
 
     // 2. QIIME
     // 2.1. Import reads
@@ -111,7 +126,7 @@ workflow {
     EXPORT_TREE( BUILD_TREE.out.rooted_tree )
 
     // 2.10. Create Final Results Summary
-    CREATE_RESULTS_SUMMARY( 
+    CREATE_RESULTS_SUMMARY(
         EXPORT_FEATURE_TABLE.out.feature_table_tsv,
         EXPORT_REP_SEQS.out.rep_seqs_fasta,
         EXPORT_TAXONOMY.out.taxonomy_tsv,
