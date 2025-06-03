@@ -117,8 +117,13 @@ chmod +x download_krakendb.sh
 ./download_krakendb.sh
 ```
 
+### 4 · Download the classifier
 
-### 4 · Run the pipeline
+For running qiime2 and obtaining the feature table, the classifier has to be downloaded, for that you can use the following link:
+
+https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza 
+
+### 5 · Run the pipeline
 
 #### Run the pipeline using the previously created run folder
 After executing `./create_run.sh`, a `runs/<run_id>/` folder will be created. Copy the `run_id` and use it to run the pipeline.
