@@ -20,32 +20,32 @@ include { EXPORT_TREE           } from './modules/local/export_tree.nf'
 include { EXPORT_REP_SEQS       } from './modules/local/export_rep_seqs.nf'
 include { CREATE_RESULTS_SUMMARY } from './modules/local/create_results_summary.nf'
 
-// Check some files exist
-if ( !file(params.metadata).exists() ) {
-    error "Metadata file not found: ${params.metadata}"
-}
-if ( !file(params.classifier_db).exists() ) {
-    error "Metadata file not found: ${params.metadata}"
-}
-
-// Channel with paired-end fastq files
-Channel.fromFilePairs("runs/${params.run_id}/raw_data/*_{1,2}.fastq.gz", size: 2)
-    .ifEmpty { error("No paired FASTQ files found in raw_data/") }
-    .map { sample_id, reads ->
-        def meta = [
-            id: sample_id,
-            single_end: false,
-        ]
-        return tuple(meta, reads)
-    }
-        .set { raw_reads }
-    // Channel with metadata
-    ch_metadata = Channel.fromPath(params.metadata, checkIfExists: true)
-    // Channel with classifier
-    ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
 
 workflow {
     println("Output directory: ${params.outdir}")
+    // Check some files exist
+    if ( !file(params.metadata).exists() ) {
+        error "Metadata file not found: ${params.metadata}"
+    }
+    if ( !file(params.classifier_db).exists() ) {
+        error "Classifier database not found: ${params.classifier_db}"
+    }
+
+    // Channel with paired-end fastq files
+    Channel.fromFilePairs("runs/${params.run_id}/raw_data/*_{1,2}.fastq.gz", size: 2)
+        .ifEmpty { error("No paired FASTQ files found in raw_data/") }
+        .map { sample_id, reads ->
+            def meta = [
+                id: sample_id,
+                single_end: false,
+            ]
+            return tuple(meta, reads)
+        }
+            .set { raw_reads }
+        // Channel with metadata
+        ch_metadata = Channel.fromPath(params.metadata, checkIfExists: true)
+        // Channel with classifier
+        ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
 
 
     // 1. Pre-processing
@@ -65,10 +65,10 @@ workflow {
     )
 
     TRIMMOMATIC.out.trimmed_reads
-        .map { meta, reads -> reads } 
-        .flatten()                    
-        .collect()                   
-        .set { all_trimmed_files }
+    .map { it[1] } 
+    .flatten()
+    .collect()
+    .set { all_trimmed_files }
     
 
     // 2. QIIME
