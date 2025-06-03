@@ -32,6 +32,36 @@ def mergeChannels(List channels) {
     return merged
 }
 
+process CHECK_OR_DOWNLOAD_DB {
+    tag 'kraken_db'
+    container 'docker.io/library/python:3.11-slim'
+    publishDir "refs/kraken2", mode: 'copy'
+    cache 'lenient'
+
+    output:
+    path "k2_minusb_20250402", emit: db_dir
+
+    script:
+    """
+    set -euo pipefail
+    DB_DIR='k2_minusb_20250402'
+    if [ ! -d "\$DB_DIR" ]; then
+        echo "[INFO] Kraken2 DB not found – downloading …"
+        export HOME=/tmp
+        mkdir -p \$HOME/.local/bin
+        export PATH=\$HOME/.local/bin:\$PATH
+        pip install --quiet --no-cache-dir --user gdown
+        gdown --id 1C4aisqMEmUiIv-jNBzxTkKX1AqFKgYen -O kraken_db.tar.gz
+        mkdir -p "\$DB_DIR"
+        tar -xzf kraken_db.tar.gz -C "\$DB_DIR"
+        rm kraken_db.tar.gz
+        echo "[INFO] Kraken2 DB download complete."
+    else
+        echo "[INFO] Kraken2 DB already present – nothing to do."
+    fi
+    """
+}
+
 //
 // ── 4. The main workflow ───────────────────────────────────────────────────────
 //
@@ -39,12 +69,12 @@ workflow {
     //
     // a) Check/download Kraken2 DB
     //
-    def kraken2_db = file('k2_Human_20230629')
+    def kraken2_db = file('k2_minusb_20250402')
 
     println("Timestamp: ${params.timestamp ?: 'N/A'}")
     println("Output directory: ${params.outdir ?: 'N/A'}")
 
-    if ( ! file('k2_Human_20230629').exists() ) {
+    if ( ! file('k2_minusb_20250402').exists() ) {
         println("[INFO] Kraken2 DB not found in refs/kraken2 → downloading")
         CHECK_OR_DOWNLOAD_DB()
     }
