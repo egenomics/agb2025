@@ -23,36 +23,14 @@ file("dummy_summary.txt").text           = ""
 //
 // ── 3. A process to check/download the Kraken2 DB if it’s not already present ──
 //
-process CHECK_OR_DOWNLOAD_DB {
-    tag 'kraken_db'
-    container 'docker.io/library/python:3.11-slim'
-    publishDir "refs/kraken2", mode: 'copy'
-    cache 'lenient'
 
-    output:
-    path "k2_minusb_20250402", emit: db_dir
-
-    script:
-    """
-    set -euo pipefail
-    DB_DIR='k2_minusb_20250402'
-    if [ ! -d "\$DB_DIR" ]; then
-        echo "[INFO] Kraken2 DB not found – downloading …"
-        export HOME=/tmp
-        mkdir -p \$HOME/.local/bin
-        export PATH=\$HOME/.local/bin:\$PATH
-        pip install --quiet --no-cache-dir --user gdown
-        gdown --id 1C4aisqMEmUiIv-jNBzxTkKX1AqFKgYen -O kraken_db.tar.gz
-        mkdir -p "\$DB_DIR"
-        tar -xzf kraken_db.tar.gz -C "\$DB_DIR"
-        rm kraken_db.tar.gz
-        echo "[INFO] Kraken2 DB download complete."
-    else
-        echo "[INFO] Kraken2 DB already present – nothing to do."
-    fi
-    """
+def mergeChannels(List channels) {
+    def merged = channels[0]
+    for (int i=1; i<channels.size(); i++) {
+        merged = merged.merge(channels[i])
+    }
+    return merged
 }
-
 
 //
 // ── 4. The main workflow ───────────────────────────────────────────────────────
@@ -61,12 +39,12 @@ workflow {
     //
     // a) Check/download Kraken2 DB
     //
-    def kraken2_db = file('refs/kraken2/k2_minusb_20250402')
+    def kraken2_db = file('k2_Human_20230629')
 
     println("Timestamp: ${params.timestamp ?: 'N/A'}")
     println("Output directory: ${params.outdir ?: 'N/A'}")
 
-    if ( ! file('refs/kraken2/k2_minusb_20250402').exists() ) {
+    if ( ! file('k2_Human_20230629').exists() ) {
         println("[INFO] Kraken2 DB not found in refs/kraken2 → downloading")
         CHECK_OR_DOWNLOAD_DB()
     }
@@ -79,7 +57,7 @@ workflow {
     //
     Channel
         .fromFilePairs("raw_data/*_{1,2}.fastq.gz", size: 2)
-        .ifEmpty { error("No paired FASTQ files found in raw_data/") }
+        .ifEmpty { error(file("raw_data/*")) }
         .map { sample_id, reads ->
             def meta = [ id: sample_id, single_end: false ]
             return tuple(meta, reads)
@@ -147,27 +125,21 @@ workflow {
     //    - ch_trimmomatic_logs     → each emits (meta, trimmomatic_log.txt)
     //    - ch_kraken_reports       → each emits (meta, kraken_report.tsv)
     //
-    Channel
-        .merge(
-            ch_fastqc_raw_reports.map   { meta, path -> path },
-            ch_fastqc_trim_reports.map  { meta, path -> path },
-            ch_trimmomatic_logs.map     { meta, path -> path },
-            ch_kraken_reports.map       { meta, path -> path }
-        )
-        .set { ch_multiqc_files }
+
+    def channelsToMerge = [
+        ch_fastqc_raw_reports.map { meta, path -> path },
+        ch_fastqc_trim_reports.map { meta, path -> path },
+        ch_trimmomatic_logs.map { meta, path -> path },
+        ch_kraken_reports.map { meta, path -> path }
+    ]
+
+    mergeChannels(channelsToMerge).set { ch_multiqc_files }
 
 
     //
     // h) MERGE all “versions.yml” files into one channel (MultiQC can read multiple version files)
     //
-    Channel
-        .merge(
-            ch_fastqc_raw_versions.map    { meta, path -> path },
-            ch_trimmomatic_versions.map   { meta, path -> path },
-            ch_fastqc_trim_versions.map   { meta, path -> path },
-            ch_kraken_versions.map        { meta, path -> path }
-        )
-        .set { ch_software_versions }
+    mergeChannels(channelsToMerge).set { ch_software_versions }
 
 
     //
