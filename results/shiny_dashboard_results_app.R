@@ -695,16 +695,16 @@ ui <- dashboardPage(
                 # Control Panel
                 column(width = 3,
                        box(
-                         title = "Tree File Upload",
+                         title = "Tree Configuration",
                          status = "primary",
                          solidHeader = TRUE,
                          width = 12,
                          
-                         # File upload for .nwk file
-                         fileInput("phylo_file", "Upload Phylogenetic Tree (.nwk format):",
-                                   accept = c(".nwk", ".newick", ".tree", ".tre")),
+                         # Button to reload tree if needed
+                         actionButton("reload_phylo", "Reload Tree", 
+                                      class = "btn-warning btn-sm"),
                          
-                         # File upload for abundance/metadata to overlay
+                         # File upload for abundance/metadata to overlay (keep this)
                          fileInput("abundance_file", "Upload Abundance Data (optional):",
                                    accept = c(".csv", ".tsv", ".txt")),
                          
@@ -723,7 +723,7 @@ ui <- dashboardPage(
                                      choices = c("Default" = "default",
                                                  "Viridis" = "viridis",
                                                  "Set1" = "Set1",
-                                                 "Set2" = "Set2", 
+                                                 "Set2" = "Set2",
                                                  "Paired" = "Paired",
                                                  "Dark2" = "Dark2",
                                                  "Spectral" = "Spectral"),
@@ -745,11 +745,11 @@ ui <- dashboardPage(
                          
                          hr(),
                          
-                         # Download button
-                         downloadButton("download_phylo_plot", "Download Tree Plot", 
+                         # Download buttons
+                         downloadButton("download_phylo_plot", "Download Tree Plot",
                                         class = "btn-sm btn-success"),
                          br(), br(),
-                         downloadButton("download_phylo_data", "Download Tree Data", 
+                         downloadButton("download_phylo_data", "Download Tree Data",
                                         class = "btn-sm btn-info")
                        ),
                        
@@ -787,27 +787,26 @@ ui <- dashboardPage(
                                         conditionalPanel(
                                           condition = "!output.tree_loaded",
                                           div(style = "padding: 50px; text-align: center;",
-                                              h4("Please upload a .nwk file to display the phylogenetic tree",
-                                                 style = "color: #666;"))
+                                              uiOutput("tree_status_message")
+                                          )
                                         )
                                     )
                            ),
                            
                            # Interactive tree (if using ggtree)
-                           tabPanel("Interactive Tree",
-                                    div(style = "height: 700px; overflow: auto;",
-                                        conditionalPanel(
-                                          condition = "output.tree_loaded",
-                                          plotOutput("interactive_phylo_plot", height = "650px", width = "100%")
-                                        ),
-                                        conditionalPanel(
-                                          condition = "!output.tree_loaded",
-                                          div(style = "padding: 50px; text-align: center;",
-                                              h4("Upload a tree file to see interactive visualization",
-                                                 style = "color: #666;"))
-                                        )
-                                    )
-                           ),
+                           tabPanel("Plotly Interactive",
+                                              div(style = "height: 700px; overflow: auto;",
+                                                  conditionalPanel(
+                                                    condition = "output.tree_loaded",
+                                                    plotlyOutput("plotly_phylo_plot", height = "650px", width = "100%")
+                                                  ),
+                                                  conditionalPanel(
+                                                    condition = "!output.tree_loaded",
+                                                    div(style = "padding: 50px; text-align: center;",
+                                                        h4("Tree file not available", style = "color: #666;"))
+                                                  )
+                                              )
+                                    ),
                            
                            # Tree with abundance heatmap (if abundance data provided)
                            tabPanel("Tree + Abundance",
@@ -825,7 +824,7 @@ ui <- dashboardPage(
                                         conditionalPanel(
                                           condition = "!output.tree_loaded",
                                           div(style = "padding: 50px; text-align: center;",
-                                              h4("Upload tree and abundance files",
+                                              h4("Tree file not found. Check file path.",
                                                  style = "color: #666;"))
                                         )
                                     )
@@ -844,7 +843,7 @@ ui <- dashboardPage(
                                         conditionalPanel(
                                           condition = "!output.tree_loaded",
                                           div(style = "padding: 50px; text-align: center;",
-                                              h4("Upload a tree file to see tree data",
+                                              h4("Tree file not available",
                                                  style = "color: #666;"))
                                         )
                                     )
@@ -853,7 +852,7 @@ ui <- dashboardPage(
                        )
                 )
               )
-      ),
+      ),   
       
       # TAB 5: Lifestyle Tab 
       tabItem(tabName = "multifactor",
@@ -2935,157 +2934,95 @@ server <- function(input, output, session) {
   # ==============================================================================
   # PHYLOGENETIC TREE TAB - SERVER SECTION
   # ==============================================================================
+
+  # Define the tree file path
+  PHYLO_TREE_PATH <- "../group2_B/results/qiime_output/relevant_results/phylogenetic_tree.nwk"
   
-  # Reactive values to store tree data
-  phylo_data <- reactiveValues(
+  # Reactive value to store tree data
+  phylo_tree_data <- reactiveValues(
     tree = NULL,
-    abundance = NULL,
-    tree_loaded = FALSE,
-    abundance_loaded = FALSE
+    loaded = FALSE,
+    file_exists = FALSE,
+    error_msg = NULL
   )
   
-  # Load phylogenetic tree from .nwk file
-  observeEvent(input$phylo_file, {
-    req(input$phylo_file)
-    
+  # Function to load tree automatically
+  load_phylo_tree <- function() {
     tryCatch({
-      # Read the .nwk file
-      tree_path <- input$phylo_file$datapath
-      tree <- read.tree(tree_path)
-      
-      # Root tree if requested
-      if (input$root_tree && !is.rooted(tree)) {
-        tree <- midpoint.root(tree)
-      }
-      
-      # Store in reactive values
-      phylo_data$tree <- tree
-      phylo_data$tree_loaded <- TRUE
-      
-      showNotification("Phylogenetic tree loaded successfully!", type = "success")
-      
-    }, error = function(e) {
-      showNotification(paste("Error loading tree:", e$message), type = "error")
-      phylo_data$tree <- NULL
-      phylo_data$tree_loaded <- FALSE
-    })
-  })
-  
-  # Load abundance data
-  observeEvent(input$abundance_file, {
-    req(input$abundance_file)
-    
-    tryCatch({
-      # Determine file type and read accordingly
-      file_ext <- tools::file_ext(input$abundance_file$name)
-      
-      if (file_ext %in% c("csv")) {
-        abundance_data <- read.csv(input$abundance_file$datapath, row.names = 1)
-      } else if (file_ext %in% c("tsv", "txt")) {
-        abundance_data <- read.table(input$abundance_file$datapath, 
-                                     header = TRUE, sep = "\t", row.names = 1)
+      if (file.exists(PHYLO_TREE_PATH)) {
+        # Load tree using ape package
+        tree <- ape::read.tree(PHYLO_TREE_PATH)
+        
+        phylo_tree_data$tree <- tree
+        phylo_tree_data$loaded <- TRUE
+        phylo_tree_data$file_exists <- TRUE
+        phylo_tree_data$error_msg <- NULL
+        
       } else {
-        stop("Unsupported file format. Please use CSV or TSV.")
+        phylo_tree_data$tree <- NULL
+        phylo_tree_data$loaded <- FALSE
+        phylo_tree_data$file_exists <- FALSE
+        phylo_tree_data$error_msg <- paste("File not found:", PHYLO_TREE_PATH)
       }
-      
-      phylo_data$abundance <- abundance_data
-      phylo_data$abundance_loaded <- TRUE
-      
-      showNotification("Abundance data loaded successfully!", type = "success")
-      
     }, error = function(e) {
-      showNotification(paste("Error loading abundance data:", e$message), type = "error")
-      phylo_data$abundance <- NULL
-      phylo_data$abundance_loaded <- FALSE
+      phylo_tree_data$tree <- NULL
+      phylo_tree_data$loaded <- FALSE
+      phylo_tree_data$file_exists <- file.exists(PHYLO_TREE_PATH)
+      phylo_tree_data$error_msg <- paste("Error loading tree:", e$message)
     })
+  }
+  
+  # Load tree when app starts
+  observeEvent(TRUE, {
+    load_phylo_tree()
+  }, once = TRUE)
+  
+  # Reload button functionality
+  observeEvent(input$reload_phylo, {
+    load_phylo_tree()
   })
   
-  # Output to track if tree is loaded (for conditional panels)
+  # Tree status message
+  output$tree_status_message <- renderUI({
+    if (phylo_tree_data$file_exists && phylo_tree_data$loaded) {
+      h4("Tree loaded successfully!", style = "color: #28a745;")
+    } else if (phylo_tree_data$file_exists && !phylo_tree_data$loaded) {
+      div(
+        h4("Error loading tree file", style = "color: #dc3545;"),
+        p(phylo_tree_data$error_msg, style = "color: #666;")
+      )
+    } else {
+      div(
+        h4("Tree file not found", style = "color: #dc3545;"),
+        p(paste("Expected path:", PHYLO_TREE_PATH), style = "color: #666;"),
+        p("Please check if the file exists and the path is correct.", style = "color: #666;")
+      )
+    }
+  })
+  
+  # Tree loaded status (for conditional panels)
   output$tree_loaded <- reactive({
-    phylo_data$tree_loaded
+    phylo_tree_data$loaded
   })
   outputOptions(output, "tree_loaded", suspendWhenHidden = FALSE)
   
-  # Output to track if abundance is loaded
-  output$abundance_loaded <- reactive({
-    phylo_data$abundance_loaded
-  })
-  outputOptions(output, "abundance_loaded", suspendWhenHidden = FALSE)
-  
   # Main phylogenetic tree plot
   output$main_phylo_plot <- renderPlot({
-    req(phylo_data$tree)
+    req(phylo_tree_data$loaded, phylo_tree_data$tree)
     
-    tree <- phylo_data$tree
+    tree <- phylo_tree_data$tree
     
-    # Set up colors
-    n_tips <- length(tree$tip.label)
-    
-    if (input$tree_color_palette == "default") {
-      tip_colors <- "black"
-    } else if (input$tree_color_palette == "viridis") {
-      tip_colors <- viridis::viridis(n_tips)
-    } else {
-      max_colors <- brewer.pal.info[input$tree_color_palette, "maxcolors"]
-      if (n_tips <= max_colors) {
-        tip_colors <- brewer.pal(max(3, n_tips), input$tree_color_palette)[1:n_tips]
-      } else {
-        tip_colors <- colorRampPalette(brewer.pal(max_colors, input$tree_color_palette))(n_tips)
-      }
+    # Root tree if requested
+    if (input$root_tree) {
+      tree <- ape::root(tree, outgroup = NULL, resolve.root = TRUE)
     }
     
-    # Plot based on layout
-    if (input$tree_layout == "rectangular") {
-      plot(tree, type = "phylogram",
-           show.tip.label = input$show_tip_labels,
-           show.node.label = input$show_node_labels,
-           cex = input$tree_text_size,
-           edge.width = input$tree_line_size,
-           tip.color = tip_colors,
-           main = "Phylogenetic Tree")
-      
-    } else if (input$tree_layout == "circular") {
-      plot(tree, type = "fan",
-           show.tip.label = input$show_tip_labels,
-           show.node.label = input$show_node_labels,
-           cex = input$tree_text_size,
-           edge.width = input$tree_line_size,
-           tip.color = tip_colors,
-           main = "Phylogenetic Tree (Circular)")
-      
-    } else if (input$tree_layout == "fan") {
-      plot(tree, type = "radial",
-           show.tip.label = input$show_tip_labels,
-           show.node.label = input$show_node_labels,
-           cex = input$tree_text_size,
-           edge.width = input$tree_line_size,
-           tip.color = tip_colors,
-           main = "Phylogenetic Tree (Fan)")
-      
-    } else if (input$tree_layout == "unrooted") {
-      plot(tree, type = "unrooted",
-           show.tip.label = input$show_tip_labels,
-           show.node.label = input$show_node_labels,
-           cex = input$tree_text_size,
-           edge.width = input$tree_line_size,
-           tip.color = tip_colors,
-           main = "Phylogenetic Tree (Unrooted)")
-    }
+    # Basic plot using ggtree
+    library(ggtree)
+    library(ggplot2)
     
-    # Add branch lengths as labels if requested
-    if (input$show_branch_length && !is.null(tree$edge.length)) {
-      edgelabels(round(tree$edge.length, 3), cex = 0.6, bg = "white")
-    }
-  })
-  
-  # Interactive phylogenetic tree using ggtree
-  output$interactive_phylo_plot <- renderPlot({
-    req(phylo_data$tree)
-    
-    tree <- phylo_data$tree
-    
-    # Create ggtree plot
-    p <- ggtree(tree, layout = input$tree_layout, size = input$tree_line_size)
+    p <- ggtree(tree, layout = input$tree_layout, 
+                size = input$tree_line_size)
     
     # Add tip labels if requested
     if (input$show_tip_labels) {
@@ -3098,177 +3035,144 @@ server <- function(input, output, session) {
     }
     
     # Add branch lengths if requested
-    if (input$show_branch_length && !is.null(tree$edge.length)) {
-      p <- p + geom_edgelab(aes(label = round(branch.length, 3)), 
-                            size = input$tree_text_size * 2)
+    if (input$show_branch_length) {
+      p <- p + geom_edgelab(size = input$tree_text_size * 2)
     }
     
-    # Apply color scheme
+    # Apply color palette
     if (input$tree_color_palette != "default") {
-      if (input$tree_color_palette == "viridis") {
-        p <- p + scale_color_viridis_d()
-      } else {
-        p <- p + scale_color_brewer(palette = input$tree_color_palette)
-      }
+      p <- p + scale_color_brewer(palette = input$tree_color_palette)
     }
     
-    p + theme_tree2() + ggtitle("Interactive Phylogenetic Tree")
+    p + theme_tree()
   })
   
-  # Tree with abundance heatmap
-  output$phylo_abundance_heatmap <- renderPlot({
-    req(phylo_data$tree, phylo_data$abundance)
+  # Interactive tree plot
+  output$plotly_phylo_plot <- renderPlotly({
+    req(phylo_tree_data$loaded, phylo_tree_data$tree)
     
-    tree <- phylo_data$tree
-    abundance <- phylo_data$abundance
+    tree <- phylo_tree_data$tree
     
-    # Match tree tips with abundance data
-    common_taxa <- intersect(tree$tip.label, rownames(abundance))
-    
-    if (length(common_taxa) == 0) {
-      plot(1, 1, type = "n", axes = FALSE, xlab = "", ylab = "")
-      text(1, 1, "No matching taxa between tree and abundance data", cex = 1.2, col = "red")
-      return()
+    if (input$root_tree) {
+      tree <- ape::root(tree, outgroup = NULL, resolve.root = TRUE)
     }
     
-    # Subset data
-    tree_subset <- keep.tip(tree, common_taxa)
-    abundance_subset <- abundance[common_taxa, , drop = FALSE]
+    # Create base plot with explicit text mapping for plotly
+    p <- ggtree(tree, layout = "rectangular", size = 0.8) +
+      geom_tiplab(aes(text = paste("Species:", label)), 
+                  size = input$tree_text_size * 4,
+                  hjust = -0.1) +  # Adjust horizontal position
+      theme_tree() +
+      theme(plot.margin = margin(20, 100, 20, 20))  # Add right margin for labels
     
-    # Create ggtree plot with heatmap
-    p <- ggtree(tree_subset) + 
-      geom_tiplab(size = input$tree_text_size * 3)
+    # Add node points for better visualization
+    p <- p + geom_nodepoint(color = "steelblue", alpha = 0.7, size = 1.5)
     
-    # Add heatmap
-    gheatmap(p, abundance_subset, 
-             offset = 0.1, 
-             width = 0.5,
-             colnames_angle = 45,
-             colnames_offset_y = 0.1) +
-      scale_fill_viridis_c(name = "Abundance") +
-      ggtitle("Phylogenetic Tree with Abundance Heatmap")
+    # Add node labels if requested
+    if (input$show_node_labels && !is.null(tree$node.label)) {
+      p <- p + geom_nodelab(aes(text = paste("Support:", label)), 
+                            size = input$tree_text_size * 3, 
+                            color = "red", nudge_x = 0.002)
+    }
+    
+    # Convert to plotly with proper tooltip configuration
+    gg_plotly <- ggplotly(p, tooltip = "text") %>%
+      layout(
+        title = list(
+          font = list(size = 16)
+        ),
+        showlegend = FALSE,
+        margin = list(l = 50, r = 150, t = 80, b = 50),  # Extra right margin
+        xaxis = list(
+          showgrid = FALSE,
+          zeroline = FALSE,
+          showticklabels = FALSE
+        ),
+        yaxis = list(
+          showgrid = FALSE,
+          zeroline = FALSE,
+          showticklabels = FALSE
+        )
+      ) %>%
+      config(
+        displayModeBar = TRUE,
+        displaylogo = FALSE,
+        modeBarButtonsToAdd = list("pan2d", "zoomIn2d", "zoomOut2d", "resetScale2d"),
+        modeBarButtonsToRemove = list("autoScale2d", "toggleSpikelines"),
+        scrollZoom = TRUE,
+        doubleClick = "reset"
+      )
+    
+    gg_plotly
   })
   
-  # Tree information
+  # Tree information output
   output$phylo_tree_info <- renderUI({
-    if (!phylo_data$tree_loaded) {
-      return(HTML("<p>No tree loaded</p>"))
+    if (phylo_tree_data$loaded && !is.null(phylo_tree_data$tree)) {
+      tree <- phylo_tree_data$tree
+      
+      tagList(
+        p(strong("Tree Statistics:")),
+        p(paste("Number of tips:", ape::Ntip(tree))),
+        p(paste("Number of nodes:", ape::Nnode(tree))),
+        p(paste("Tree length:", round(sum(tree$edge.length, na.rm = TRUE), 4))),
+        p(paste("Is rooted:", ape::is.rooted(tree))),
+        p(paste("Is binary:", ape::is.binary(tree))),
+        if (!is.null(tree$tip.label)) 
+          p(paste("Tips range:", min(nchar(tree$tip.label)), "-", max(nchar(tree$tip.label)), "characters"))
+      )
+    } else {
+      p("No tree data available", style = "color: #666;")
     }
-    
-    tree <- phylo_data$tree
-    
-    info_html <- paste0(
-      "<table class='table table-condensed'>",
-      "<tr><td><strong>Number of Tips:</strong></td><td>", length(tree$tip.label), "</td></tr>",
-      "<tr><td><strong>Number of Nodes:</strong></td><td>", tree$Nnode, "</td></tr>",
-      "<tr><td><strong>Is Rooted:</strong></td><td>", is.rooted(tree), "</td></tr>",
-      "<tr><td><strong>Has Branch Lengths:</strong></td><td>", !is.null(tree$edge.length), "</td></tr>",
-      "<tr><td><strong>Tree Length:</strong></td><td>", 
-      ifelse(!is.null(tree$edge.length), round(sum(tree$edge.length), 4), "N/A"), "</td></tr>",
-      "</table>"
-    )
-    
-    HTML(info_html)
   })
   
-  # Tree summary
+  # Tree summary for the data tab
   output$tree_summary <- renderText({
-    req(phylo_data$tree)
-    
-    tree <- phylo_data$tree
-    
-    summary_text <- paste(
-      "PHYLOGENETIC TREE SUMMARY",
-      "=" * 40,
-      paste("Number of tips:", length(tree$tip.label)),
-      paste("Number of internal nodes:", tree$Nnode),
-      paste("Is rooted:", is.rooted(tree)),
-      paste("Has branch lengths:", !is.null(tree$edge.length)),
-      "",
-      "TREE STATISTICS:",
-      ifelse(!is.null(tree$edge.length),
-             paste("Total tree length:", round(sum(tree$edge.length), 4)),
-             "No branch lengths available"),
-      ifelse(!is.null(tree$edge.length),
-             paste("Average branch length:", round(mean(tree$edge.length), 4)),
-             ""),
-      "",
-      sep = "\n"
-    )
-    
-    summary_text
+    if (phylo_tree_data$loaded && !is.null(phylo_tree_data$tree)) {
+      capture.output(print(phylo_tree_data$tree))
+    } else {
+      "No tree data available"
+    }
   })
   
   # Tree tips table
   output$tree_tips_table <- renderDataTable({
-    req(phylo_data$tree)
-    
-    tree <- phylo_data$tree
-    
-    tips_df <- data.frame(
-      Tip_Number = 1:length(tree$tip.label),
-      Tip_Label = tree$tip.label,
-      stringsAsFactors = FALSE
-    )
-    
-    # Add abundance info if available
-    if (phylo_data$abundance_loaded) {
-      abundance <- phylo_data$abundance
-      tips_df$In_Abundance_Data <- tips_df$Tip_Label %in% rownames(abundance)
-      
-      if (ncol(abundance) > 0) {
-        # Add first few abundance columns as preview
-        preview_cols <- min(3, ncol(abundance))
-        for (i in 1:preview_cols) {
-          col_name <- paste0("Abundance_", colnames(abundance)[i])
-          tips_df[[col_name]] <- abundance[match(tips_df$Tip_Label, rownames(abundance)), i]
-        }
+    if (phylo_tree_data$loaded && !is.null(phylo_tree_data$tree)) {
+      tree <- phylo_tree_data$tree
+      if (!is.null(tree$tip.label)) {
+        data.frame(
+          Tip_Number = 1:length(tree$tip.label),
+          Tip_Label = tree$tip.label,
+          stringsAsFactors = FALSE
+        )
+      } else {
+        data.frame(Message = "No tip labels available")
       }
+    } else {
+      data.frame(Message = "No tree data loaded")
     }
-    
-    datatable(tips_df,
-              options = list(
-                scrollX = TRUE,
-                pageLength = 15,
-                searching = TRUE
-              ))
-  })
+  }, options = list(pageLength = 15, scrollY = "400px"))
   
   # Download handlers
   output$download_phylo_plot <- downloadHandler(
     filename = function() {
-      paste0("phylogenetic_tree_", input$tree_layout, "_", Sys.Date(), ".png")
+      paste("phylogenetic_tree_", Sys.Date(), ".png", sep = "")
     },
     content = function(file) {
-      png(file, width = 1200, height = 800, res = 150)
-      
-      tree <- phylo_data$tree
-      
-      if (input$tree_layout == "rectangular") {
-        plot(tree, type = "phylogram",
-             show.tip.label = input$show_tip_labels,
-             show.node.label = input$show_node_labels,
-             cex = input$tree_text_size,
-             edge.width = input$tree_line_size)
-      } else if (input$tree_layout == "circular") {
-        plot(tree, type = "fan",
-             show.tip.label = input$show_tip_labels,
-             show.node.label = input$show_node_labels,
-             cex = input$tree_text_size,
-             edge.width = input$tree_line_size)
+      if (phylo_tree_data$loaded) {
+        ggsave(file, plot = last_plot(), width = 12, height = 8, dpi = 300)
       }
-      
-      dev.off()
     }
   )
   
   output$download_phylo_data <- downloadHandler(
     filename = function() {
-      paste0("phylogenetic_tree_data_", Sys.Date(), ".txt")
+      paste("phylogenetic_tree_data_", Sys.Date(), ".txt", sep = "")
     },
     content = function(file) {
-      req(phylo_data$tree)
-      write.tree(phylo_data$tree, file)
+      if (phylo_tree_data$loaded && !is.null(phylo_tree_data$tree)) {
+        ape::write.tree(phylo_tree_data$tree, file)
+      }
     }
   )
   
