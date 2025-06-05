@@ -20,17 +20,32 @@ library(janitor)
 print("Reading metadata files...")
 
 # Read sample metadata
-metadata_sample <- read_csv("metadata_sample.csv", 
+metadata_sample_raw <- read_csv("metadata/run_development_dataset/non_curated/metadata_sample.csv", 
                             locale = locale(encoding = "UTF-8"),
                             show_col_types = FALSE)
 
 # Read run metadata  
-metadata_run <- read_csv("metadata_run.csv",
+metadata_run_raw <- read_csv("metadata/run_development_dataset/non_curated/metadata_run.csv",
                          locale = locale(encoding = "UTF-8"),
                          show_col_types = FALSE)
 
-print(paste("Sample metadata rows:", nrow(metadata_sample)))
-print(paste("Run metadata rows:", nrow(metadata_run)))
+print(paste("Sample metadata rows:", nrow(metadata_sample_raw)))
+print(paste("Run metadata rows:", nrow(metadata_run_raw)))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1.5) Remove Duplicated entries ----------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+
+print("Deleting unconsistent records...")
+
+
+metadata_sample <- metadata_sample_raw %>%
+  group_by(Sample_ID) %>%
+  filter(!(n() > 1 & (n_distinct(Age) > 1 | n_distinct(Gender) > 1))) %>%
+  ungroup()
+
+metadata_run <- metadata_run_raw %>%
+  filter(Sample_ID %in% metadata_sample$Sample_ID)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2) Merge the two datasets based on SampleID -----------------------------------
@@ -63,6 +78,7 @@ clean_names_safe <- function(names_vec) {
 }
 
 colnames(metadata) <- clean_names_safe(colnames(metadata))
+names(metadata)[names(metadata) == "Ongoing_conditions_"] <- "Ongoing_conditions"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4) Helper functions for consistent formatting -------------------------------
@@ -94,7 +110,7 @@ convert_bmi <- function(bmi_value) {
   } else if (bmi_num >= 25 & bmi_num <= 29.9) {
     return("Overweight_25-29.9")
   } else if (bmi_num >= 30) {
-    return("Obese_30<")
+    return("Obese_>30")
   } else {
     return("N/A")
   }
@@ -120,7 +136,7 @@ convert_alcohol_frequency <- function(freq_vector) {
         mean_val <- mean(c(start, end))
         
         # If mean > 7, classify as daily
-        if (mean_val > 7) {
+        if (mean_val >= 7) {
           return("Daily")
         } else {
           # Round to nearest integer to avoid decimals
@@ -142,7 +158,7 @@ convert_alcohol_frequency <- function(freq_vector) {
     else {
       number <- as.numeric(freq)
       if (!is.na(number)) {
-        if (number > 7) {
+        if (number >= 7) {
           return("Daily")
         } else {
           return(paste0(number, "_per_week"))
@@ -160,7 +176,7 @@ print("Cleaning and formatting data...")
 
 metadata <- metadata %>%
   # First, replace all empty/NA values with "N/A"
-  mutate(across(everything(), ~ ifelse(is.na(.) | . == "" | . == "NA", "N/A", as.character(.)))) %>%
+  mutate(across(-Collection_Date, ~ ifelse(is.na(.) | . == "" | . == "NA", "N/A", as.character(.)))) %>%
   mutate(
     # Sample_ID - keep as is (should already be in correct format)
     Sample_ID = str_trim(Sample_ID),
@@ -171,9 +187,7 @@ metadata <- metadata %>%
     # Department - First letter uppercase with underscores  
     Department = clean_text(Department),
     
-    # Collection_Date - Format as DD/MM/YYYY
-    Collection_Date = ifelse(Collection_Date == "N/A", "N/A",
-                             format(dmy(Collection_Date), "%d/%m/%Y")),
+    # Collection_Date can be processed but is giving errors so we omit
     
     # Collection_Storage_Temperature - Specific parameters
     Collection_Storage_Temperature = case_when(
@@ -314,7 +328,7 @@ metadata <- metadata %>%
       str_detect(str_to_lower(Dietary_Information), "halal") ~ "Halal",
       str_detect(str_to_lower(Dietary_Information), "kosher") ~ "Kosher",
       str_detect(str_to_lower(Dietary_Information), "paleo") ~ "Paleo",
-      str_detect(str_to_lower(Dietary_Information), "omnivore") ~ "Omnivore",
+      str_detect(str_to_lower(Dietary_Information), "omnivore|avoid.*") ~ "Omnivore",
       TRUE ~ "N/A"
     ),
     
@@ -434,8 +448,10 @@ if ("Sequencing_Platform" %in% colnames(metadata)) {
     )
 }
 
+
+
 # ─────────────────────────────────────────────────────────────────────────────
-# 7) Write out the cleaned CSV ------------------------------------------------
+# 8) Write out the cleaned CSV ------------------------------------------------
 # ─────────────────────────────────────────────────────────────────────────────
 print("Writing cleaned metadata...")
 write_csv(metadata, "metadata_cleaned.csv", na = "")
@@ -454,7 +470,10 @@ print(colnames(metadata))
 # Display sample of key formatted columns
 print("\n=== SAMPLE OF FORMATTED DATA ===")
 sample_cols <- c("Sample_ID", "Gender", "Age", "Body_Mass_Index", "Dietary_Information", "Allergies")
-available_cols <- intersect(sample_cols, colnames(metadata))
+available_cols <- intersect(sample_cols, colnames(metadata_clean))
 if (length(available_cols) > 0) {
-  print(head(metadata[, available_cols, drop = FALSE], 10))
+  print(head(metadata_clean[, available_cols, drop = FALSE], 10))
 }
+
+
+
