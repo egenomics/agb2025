@@ -19,6 +19,8 @@ include { EXPORT_FEATURE_TABLE  } from './modules/local/export_feature_table.nf'
 include { EXPORT_TAXONOMY       } from './modules/local/export_taxonomy.nf'
 include { EXPORT_TREE           } from './modules/local/export_tree.nf'
 include { EXPORT_REP_SEQS       } from './modules/local/export_rep_seqs.nf'
+include { RAREFACTION_THRESHOLD } from './modules/local/rarefaction_threshold.nf'
+include { ALPHA_DIVERSITY } from './modules/local/alpha_diversity.nf'
 include { CREATE_RESULTS_SUMMARY } from './modules/local/create_results_summary.nf'
 
 
@@ -125,13 +127,51 @@ workflow {
     // 2.9. Export Phylogenetic Tree to Newick format
     EXPORT_TREE( BUILD_TREE.out.rooted_tree )
 
-    // 2.10. Create Final Results Summary
+    // 2.10. Calculate rarefaction threshold and run alpha diversity
+    if (params.auto_rarefaction) {
+        // Run RAREFACTION_THRESHOLD process
+        RAREFACTION_THRESHOLD(ch_denoised_table, ch_metadata)
+            .set { threshold_outputs }  // Capture outputs in a channel
+        
+        // Debugging: View threshold file path
+        threshold_outputs.map { it.threshold_file }.view { println "Threshold file path: ${it}" }
+        
+        // Use calculated threshold for alpha diversity
+        ALPHA_DIVERSITY(
+            ch_denoised_table,
+            BUILD_TREE.out.rooted_tree,
+            ch_metadata,
+            threshold_outputs.map { it.threshold_file }  // Extract threshold_file from outputs
+        )
+        
+        // Display threshold summary
+        threshold_outputs.map { it.summary }.view { 
+            "\n=== RAREFACTION THRESHOLD CALCULATED ===\n${it.text}\n========================================\n" 
+        }
+        
+        ch_rarefaction_summary = threshold_outputs.map { it.summary }
+        
+    } 
+    // else {
+    //     // Use manual threshold if auto_rarefaction is disabled
+    //     ALPHA_DIVERSITY(
+    //         ch_denoised_table,
+    //         BUILD_TREE.out.rooted_tree,
+    //         ch_metadata,
+    //         params.sampling_depth
+    //     )
+        
+    //     ch_rarefaction_summary = Channel.empty()
+    // }
+
+    // 2.11. Create Final Results Summary
     CREATE_RESULTS_SUMMARY(
         EXPORT_FEATURE_TABLE.out.feature_table_tsv,
         EXPORT_REP_SEQS.out.rep_seqs_fasta,
         EXPORT_TAXONOMY.out.taxonomy_tsv,
         EXPORT_TREE.out.tree_newick,
-        ch_metadata
+        ch_metadata,
+        // ch_rarefaction_summary.ifEmpty(file("NO_FILE"))
     )
 
     // println("Workflow completed at: ${new Date()}")
