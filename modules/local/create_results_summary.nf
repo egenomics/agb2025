@@ -8,6 +8,7 @@ process CREATE_RESULTS_SUMMARY {
     path(taxonomy_tsv)
     path(tree_newick)
     path(metadata_file)
+    // path(rarefaction_summary)
 
     output:
     path("analysis_summary.txt")
@@ -20,7 +21,12 @@ process CREATE_RESULTS_SUMMARY {
     echo "========================" >> analysis_summary.txt
     echo "Date: \$(date)" >> analysis_summary.txt
     echo "Denoiser used: ${params.denoiser}" >> analysis_summary.txt
-    echo "Sampling depth: ${params.sampling_depth}" >> analysis_summary.txt
+    echo "Auto rarefaction: ${params.auto_rarefaction}" >> analysis_summary.txt
+    if [ "${params.auto_rarefaction}" = "true" ]; then
+        echo "Rarefaction method: ${params.rarefaction_method}" >> analysis_summary.txt
+    else
+        echo "Manual sampling depth: ${params.sampling_depth}" >> analysis_summary.txt
+    fi    
     echo "" >> analysis_summary.txt
     
     # Count samples and features
@@ -32,6 +38,14 @@ process CREATE_RESULTS_SUMMARY {
     echo "Number of features (ASVs/OTUs): \$n_features" >> analysis_summary.txt
     echo "Number of representative sequences: \$n_seqs" >> analysis_summary.txt
     echo "" >> analysis_summary.txt
+
+    # Add rarefaction summary if available
+    if [ "${rarefaction_summary}" != "NO_FILE" ] && [ -f "${rarefaction_summary}" ]; then
+        echo "Rarefaction Analysis:" >> analysis_summary.txt
+        echo "--------------------" >> analysis_summary.txt
+        cat ${rarefaction_summary} >> analysis_summary.txt
+        echo "" >> analysis_summary.txt
+    fi
     
     echo "Output files:" >> analysis_summary.txt
     echo "- feature_table.tsv: Feature abundance table" >> analysis_summary.txt
@@ -39,9 +53,11 @@ process CREATE_RESULTS_SUMMARY {
     echo "- taxonomy.tsv: Taxonomic classifications" >> analysis_summary.txt
     echo "- phylogenetic_tree.nwk: Phylogenetic tree in Newick format" >> analysis_summary.txt
     echo "- feature_table_with_taxonomy.tsv: Combined feature table with taxonomy" >> analysis_summary.txt
-    
+    echo "" >> analysis_summary.txt
+
     # Create combined feature table with taxonomy using Python
     python3 << 'EOF'
+import sys
 import pandas as pd
 
 # Load feature table
