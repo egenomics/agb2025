@@ -29,6 +29,10 @@ HdMBioinfo-MicrobiotaPipeline/
 │       ├── trimmomatic/
 │       └── kraken2/kraken2
 │
+├── databases/
+│   ├── silva-138-99-nb-classifier.qza
+│   └── k2_Human_20230629.tar.gz                
+│
 ├── conf/                          # Configuration files (??)
 │
 ├── controls/
