@@ -8,7 +8,7 @@ process CREATE_RESULTS_SUMMARY {
     path(taxonomy_tsv)
     path(tree_newick)
     path(metadata_file)
-    // path(rarefaction_summary)
+    path(rarefaction_summary)
 
     output:
     path("analysis_summary.txt")

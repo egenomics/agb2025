@@ -1,4 +1,5 @@
 process ALPHA_DIVERSITY {
+    label 'qiime2'
     publishDir "${params.outdir}/artifacts/06_alpha_diversity", mode: 'copy'
     
     input:

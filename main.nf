@@ -127,42 +127,31 @@ workflow {
     // 2.9. Export Phylogenetic Tree to Newick format
     EXPORT_TREE( BUILD_TREE.out.rooted_tree )
 
-    // 2.10. Calculate rarefaction threshold and run alpha diversity
+    // 2.10. Calculate rarefaction threshold first
+    def threshold_channel
     if (params.auto_rarefaction) {
-        // Run RAREFACTION_THRESHOLD process
         RAREFACTION_THRESHOLD(ch_denoised_table, ch_metadata)
-            .set { threshold_outputs }  // Capture outputs in a channel
-        
-        // Debugging: View threshold file path
-        threshold_outputs.map { it.threshold_file }.view { println "Threshold file path: ${it}" }
-        
-        // Use calculated threshold for alpha diversity
-        ALPHA_DIVERSITY(
-            ch_denoised_table,
-            BUILD_TREE.out.rooted_tree,
-            ch_metadata,
-            threshold_outputs.map { it.threshold_file }  // Extract threshold_file from outputs
-        )
-        
-        // Display threshold summary
-        threshold_outputs.map { it.summary }.view { 
+        threshold_channel = RAREFACTION_THRESHOLD.out.threshold_file
+    } else {
+        threshold_channel = Channel.value(params.sampling_depth)
+    }
+
+    // 2.11. Run alpha diversity only after threshold is calculated
+    ALPHA_DIVERSITY(
+        ch_denoised_table,
+        BUILD_TREE.out.rooted_tree,
+        ch_metadata,
+        threshold_channel
+    )
+
+    if (params.auto_rarefaction) {
+        RAREFACTION_THRESHOLD.out.summary.view { 
             "\n=== RAREFACTION THRESHOLD CALCULATED ===\n${it.text}\n========================================\n" 
         }
-        
-        ch_rarefaction_summary = threshold_outputs.map { it.summary }
-        
-    } 
-    // else {
-    //     // Use manual threshold if auto_rarefaction is disabled
-    //     ALPHA_DIVERSITY(
-    //         ch_denoised_table,
-    //         BUILD_TREE.out.rooted_tree,
-    //         ch_metadata,
-    //         params.sampling_depth
-    //     )
-        
-    //     ch_rarefaction_summary = Channel.empty()
-    // }
+        ch_rarefaction_summary = RAREFACTION_THRESHOLD.out.summary
+    } else {
+        ch_rarefaction_summary = Channel.empty()
+    }
 
     // 2.11. Create Final Results Summary
     CREATE_RESULTS_SUMMARY(
@@ -171,7 +160,7 @@ workflow {
         EXPORT_TAXONOMY.out.taxonomy_tsv,
         EXPORT_TREE.out.tree_newick,
         ch_metadata,
-        // ch_rarefaction_summary.ifEmpty(file("NO_FILE"))
+        ch_rarefaction_summary.ifEmpty(file("NO_FILE"))
     )
 
     // println("Workflow completed at: ${new Date()}")
