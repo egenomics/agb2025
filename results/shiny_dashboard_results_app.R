@@ -28,6 +28,11 @@ library(viridis)
 library(FSA)
 library(ggtree)
 library(treeio)
+library(DESeq2)
+library(broom)
+library(shinyBS)
+library(beyonce)
+library(tayloRswift)
 
 # Define UI
 ui <- dashboardPage(
@@ -210,51 +215,304 @@ ui <- dashboardPage(
     tabItems(
       # Home tab 
       tabItem(tabName = "home", 
+              # Hero Section
               fluidRow(
                 box(
-                  title = "Welcome to AGB Results", 
+                  title = NULL,
                   status = "primary", 
-                  solidHeader = TRUE, 
-                  width = 12, 
+                  solidHeader = FALSE, 
+                  width = 12,
+                  style = "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1);",
                   div(
-                    h3("Comprehensive Microbiome Analysis Dashboard"), 
-                    hr(), 
+                    style = "text-align: center; padding: 40px 20px;",
+                    div(
+                      style = "font-size: 3.5em; margin-bottom: 15px;",
+                      "🧬"
+                    ),
+                    h1("AGB Microbiome Analysis Platform", 
+                       style = "font-size: 2.8em; font-weight: 300; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);"),
+                    h3("Comprehensive Analysis Dashboard for Microbial Communities", 
+                       style = "font-weight: 300; opacity: 0.9; margin-bottom: 30px;")
+                  )
+                )
+              ),
+              
+              # Quick Stats Row
+              fluidRow(
+                valueBoxOutput("home_samples_count", width = 3),
+                valueBoxOutput("home_taxa_count", width = 3), 
+                valueBoxOutput("home_analyses_count", width = 3),
+                valueBoxOutput("home_reports_count", width = 3)
+              ),
+              
+              # Main Features Section
+              fluidRow(
+                # Data Management
+                column(width = 6,
+                       box(
+                         title = NULL,
+                         status = "info",
+                         solidHeader = FALSE,
+                         width = 12,
+                         style = "border-top: 4px solid #3498db; box-shadow: 0 2px 10px rgba(0,0,0,0.08);",
+                         div(
+                           style = "padding: 20px;",
+                           div(
+                             style = "display: flex; align-items: center; margin-bottom: 15px;",
+                             div(style = "font-size: 2.5em; margin-right: 15px; color: #3498db;", "📊"),
+                             h3("Data Management", style = "margin: 0; color: #2c3e50;")
+                           ),
+                           p("Upload and manage your microbiome datasets with ease", 
+                             style = "color: #7f8c8d; font-size: 1.1em; margin-bottom: 20px;"),
+                           div(
+                             style = "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;",
+                             h5("✓ Manual Upload", style = "color: #27ae60; margin-bottom: 8px;"),
+                             p("Upload sample metadata, run data, and taxonomy files individually", 
+                               style = "margin: 0; font-size: 0.95em; color: #6c757d;")
+                           ),
+                           div(
+                             style = "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;",
+                             h5("✓ Automatic Import", style = "color: #27ae60; margin-bottom: 8px;"),
+                             p("Connect to hospital data structures for seamless data loading", 
+                               style = "margin: 0; font-size: 0.95em; color: #6c757d;")
+                           ),
+                         )
+                       )
+                ),
+                
+                # Analysis Tools
+                column(width = 6,
+                       box(
+                         title = NULL,
+                         status = "success",
+                         solidHeader = FALSE,
+                         width = 12,
+                         style = "border-top: 4px solid #27ae60; box-shadow: 0 2px 10px rgba(0,0,0,0.08);",
+                         div(
+                           style = "padding: 20px;",
+                           div(
+                             style = "display: flex; align-items: center; margin-bottom: 15px;",
+                             div(style = "font-size: 2.5em; margin-right: 15px; color: #27ae60;", "🔬"),
+                             h3("Analysis Suite", style = "margin: 0; color: #2c3e50;")
+                           ),
+                           p("Comprehensive tools for microbiome data exploration", 
+                             style = "color: #7f8c8d; font-size: 1.1em; margin-bottom: 20px;"),
+                           div(
+                             style = "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;",
+                             h5("✓ Taxonomic Profiling", style = "color: #27ae60; margin-bottom: 8px;"),
+                             p("Visualize microbial composition with interactive plots and heatmaps", 
+                               style = "margin: 0; font-size: 0.95em; color: #6c757d;")
+                           ),
+                           div(
+                             style = "background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;",
+                             h5("✓ Diversity Analysis", style = "color: #27ae60; margin-bottom: 8px;"),
+                             p("Alpha and beta diversity metrics with statistical testing", 
+                               style = "margin: 0; font-size: 0.95em; color: #6c757d;")
+                           )
+                         )
+                       )
+                )
+              ),
+              
+              # Analysis Workflow Section
+              fluidRow(
+                box(
+                  title = "Analysis Workflow",
+                  status = "warning",
+                  solidHeader = TRUE,
+                  width = 12,
+                  style = "box-shadow: 0 2px 10px rgba(0,0,0,0.08);",
+                  div(
+                    style = "padding: 20px;",
+                    h4("Follow these steps for comprehensive microbiome analysis:", 
+                       style = "color: #2c3e50; margin-bottom: 30px; text-align: center;"),
+                    
+                    # Workflow Steps
                     fluidRow(
-                      column(
-                        width = 6, 
-                        h4("🔍 Features"), 
-                        tags$ul(
-                          tags$li(strong("Taxonomic Profiles:"), "Explore the microbial composition at various taxonomic levels"),
-                          tags$li(strong("Diversity Analysis:"), "Assess alpha and beta diversity metrics"), 
-                          tags$li(strong("Metadata Exploration:"), "Correlate microbial features with sample metadata"), 
-                          tags$li(strong("Report Generation:"), "Generate customized reports for your findings")
-                        )
-                      ), 
-                      column(
-                        width = 6, 
-                        h4("🚀 Getting Started"), 
-                        p("Begin by uploading your data files in the Data Upload tab"),
-                        tags$ul(
-                          tags$li("Upload ASV/OTU table, taxonomy assignments, and sample metadata"),
-                          tags$li("Explore taxonomic composition in the Taxonomy tab"), 
-                          tags$li("Analyze diversity metrics in the Alpha and Beta Diversity tabs"), 
-                          tags$li("Generate reports with key findings")
-                        )
+                      # Step 1
+                      column(width = 2,
+                             div(
+                               style = "text-align: center; padding: 20px; background: #ecf0f1; border-radius: 10px; margin: 10px;",
+                               div(style = "font-size: 3em; color: #3498db; margin-bottom: 10px;", "1️⃣"),
+                               h5("Data Upload", style = "color: #2c3e50; margin-bottom: 10px;"),
+                               p("Load your microbiome datasets", style = "font-size: 0.9em; color: #7f8c8d; margin: 0;")
+                             )
+                      ),
+                      
+                      # Arrow
+                      column(width = 1,
+                             div(style = "text-align: center; padding-top: 50px; font-size: 1.5em; color: #bdc3c7;", "→")
+                      ),
+                      
+                      # Step 2
+                      column(width = 2,
+                             div(
+                               style = "text-align: center; padding: 20px; background: #ecf0f1; border-radius: 10px; margin: 10px;",
+                               div(style = "font-size: 3em; color: #27ae60; margin-bottom: 10px;", "2️⃣"),
+                               h5("Taxonomy", style = "color: #2c3e50; margin-bottom: 10px;"),
+                               p("Explore microbial composition", style = "font-size: 0.9em; color: #7f8c8d; margin: 0;")
+                             )
+                      ),
+                      
+                      # Arrow
+                      column(width = 1,
+                             div(style = "text-align: center; padding-top: 50px; font-size: 1.5em; color: #bdc3c7;", "→")
+                      ),
+                      
+                      # Step 3
+                      column(width = 2,
+                             div(
+                               style = "text-align: center; padding: 20px; background: #ecf0f1; border-radius: 10px; margin: 10px;",
+                               div(style = "font-size: 3em; color: #e74c3c; margin-bottom: 10px;", "3️⃣"),
+                               h5("Diversity", style = "color: #2c3e50; margin-bottom: 10px;"),
+                               p("Analyze alpha & beta diversity", style = "font-size: 0.9em; color: #7f8c8d; margin: 0;")
+                             )
+                      ),
+                      
+                      # Arrow
+                      column(width = 1,
+                             div(style = "text-align: center; padding-top: 50px; font-size: 1.5em; color: #bdc3c7;", "→")
+                      ),
+                      
+                      # Step 4
+                      column(width = 2,
+                             div(
+                               style = "text-align: center; padding: 20px; background: #ecf0f1; border-radius: 10px; margin: 10px;",
+                               div(style = "font-size: 3em; color: #9b59b6; margin-bottom: 10px;", "4️⃣"),
+                               h5("Reports", style = "color: #2c3e50; margin-bottom: 10px;"),
+                               p("Generate comprehensive reports", style = "font-size: 0.9em; color: #7f8c8d; margin: 0;")
+                             )
                       )
                     )
                   )
                 )
+              ),
+              
+              # Feature Highlights
+              fluidRow(
+                # Taxonomy Features
+                column(width = 4,
+                       box(
+                         title = "🦠 Taxonomic Analysis",
+                         status = "primary",
+                         solidHeader = TRUE,
+                         width = 12,
+                         style = "box-shadow: 0 2px 10px rgba(0,0,0,0.08);",
+                         tags$ul(
+                           style = "padding-left: 20px;",
+                           tags$li("Interactive relative abundance plots"),
+                           tags$li("Taxonomic heatmaps with clustering"),
+                           tags$li("Multiple statistical testing options:"),
+                           tags$ul(
+                             style = "margin-top: 5px; margin-bottom: 10px;",
+                             tags$li("PERMANOVA for community structure"),
+                             tags$li("DESeq2 for differential abundance"),
+                             tags$li("Wilcoxon & t-tests for comparisons")
+                           ),
+                           tags$li("Customizable color schemes"),
+                           tags$li("Patient vs Control comparisons")
+                         )
+                       )
+                ),
+                
+                # Diversity Features
+                column(width = 4,
+                       box(
+                         title = "📊 Diversity Metrics",
+                         status = "success",
+                         solidHeader = TRUE,
+                         width = 12,
+                         style = "box-shadow: 0 2px 10px rgba(0,0,0,0.08);",
+                         div(
+                           h5("Alpha Diversity:", style = "color: #27ae60; margin-bottom: 8px;"),
+                           tags$ul(
+                             style = "padding-left: 15px; margin-bottom: 15px;",
+                             tags$li("Shannon, Simpson indices"),
+                             tags$li("Observed OTUs/Species"),
+                             tags$li("Box plots and violin plots")
+                           ),
+                           h5("Beta Diversity:", style = "color: #27ae60; margin-bottom: 8px;"),
+                           tags$ul(
+                             style = "padding-left: 15px;",
+                             tags$li("Multiple distance metrics"),
+                             tags$li("PCoA, NMDS, t-SNE, UMAP"),
+                             tags$li("Clustering dendrograms"),
+                             tags$li("Group ellipses & statistics")
+                           )
+                         )
+                       )
+                ),
+                
+                # Additional Features
+                column(width = 4,
+                       box(
+                         title = "🔧 Advanced Tools",
+                         status = "warning",
+                         solidHeader = TRUE,
+                         width = 12,
+                         style = "box-shadow: 0 2px 10px rgba(0,0,0,0.08);",
+                         tags$ul(
+                           style = "padding-left: 20px;",
+                           tags$li(strong("Phylogenetic Trees:"), "Visualize evolutionary relationships"),
+                           tags$li(strong("Multifactor Analysis:"), "Parallel coordinate plots"),
+                           tags$li(strong("Metadata Integration:"), "Clinical condition grouping"),
+                           tags$li(strong("Control Samples:"), "Automatic comparison analysis"),
+                           tags$li(strong("Export Options:"), "High-quality plots and data"),
+                           tags$li(strong("Report Generation:"), "PDF, HTML, and Word formats")
+                         )
+                       )
+                )
+              ),
+              
+              # Quick Tips Section
+              fluidRow(
+                box(
+                  title = "💡 Quick Tips for Best Results",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 12,
+                  style = "box-shadow: 0 2px 10px rgba(0,0,0,0.08);",
+                  fluidRow(
+                    column(width = 6,
+                           div(
+                             style = "background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 10px;",
+                             h5("📁 Data Preparation", style = "color: #2c3e50; margin-bottom: 15px;"),
+                             tags$ul(
+                               tags$li("Ensure your CSV/TSV files have proper headers"),
+                               tags$li("Include both patient and control samples when possible"),
+                               tags$li("Check that sample IDs match across all files"),
+                               tags$li("Remove any special characters from column names")
+                             )
+                           )
+                    ),
+                    column(width = 6,
+                           div(
+                             style = "background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 10px;",
+                             h5("🎯 Analysis Strategy", style = "color: #2c3e50; margin-bottom: 15px;"),
+                             tags$ul(
+                               tags$li("Start with taxonomy overview to understand your data"),
+                               tags$li("Use appropriate statistical tests for your sample size"),
+                               tags$li("Consider clinical metadata for meaningful groupings"),
+                               tags$li("Generate reports to document your findings")
+                             )
+                           )
+                    )
+                  )
+                )
               )
-      ), 
+      ),
       
       # TAB 1: Data Upload & Overview
       tabItem(tabName = "data_overview",
               fluidRow(
+                # Manual Upload Section 
                 box(
-                  title = "Upload Microbiome Data", 
+                  title = "Upload Microbiome Data Manually", 
                   status = "primary", 
                   solidHeader = TRUE, 
-                  width = 8, 
+                  width = 12, 
+                  collapsible = TRUE, 
+                  collapsed = FALSE, 
                   fluidRow(
                     column(
                       width = 12,
@@ -277,90 +535,183 @@ ui <- dashboardPage(
                                    icon = icon("database"),
                                    class = "btn-info")
                     )
-                  ),
-                  br(), 
-                  fluidRow(
-                    box(
-                      title = "Sample Selection",
-                      status = "warning",
-                      solidHeader = TRUE, 
-                      width = 12,
-                      fluidRow(
-                        column(
-                          width = 4,
-                          selectizeInput("selected_sample_id", "Select Sample to Analyze:",
-                                         choices = NULL,
-                                         options = list(
-                                           placeholder = "Choose a sample...", 
-                                           onInitialize = I('function() { this.setValue(""); }')
-                                         ))
-                        ),
-                        column(
-                          width = 8, 
-                          htmlOutput("selected_sample_info"),
-                          htmlOutput("comparison_info")
-                        )
-                      )
-                    )
                   )
-                ),
-                column(
-                  width = 4, 
-                  valueBoxOutput("total_samples_box", width = 12), 
-                  valueBoxOutput("total_species_box", width = 12), 
-                  valueBoxOutput("total_runs_box", width = 12), 
-                  valueBoxOutput("total_control_samples_box", width = 12)
                 )
               ), 
               
-              # Metadata Previews
-              fluidRow(
-                box(
-                  title = "Metadata Tables", 
-                  status = "primary",
-                  solidHeader = TRUE,
-                  width = 12, 
-                  tabBox(
+              # Manual Statistics and Sample Selection (Only for Manual Upload)
+              conditionalPanel(
+                condition = "output.manual_data_loaded == true", 
+                
+                # Manual Data Status and Statistics 
+                fluidRow(
+                  column(
                     width = 12, 
-                    tabPanel("Sample Metadata",
-                             fluidRow(
-                               column(width = 12, 
-                                      radioButtons("sample_metadata_filter", "Filter by Condition:",
-                                                   choices = c("All", "Control", "Sample"),
-                                                   selected = "All", 
-                                                   inline = TRUE))
-                             ),
-                             dataTableOutput("sample_metadata_preview")), 
-                    tabPanel("Run Metadata",
-                             fluidRow(
-                               column(width = 12, 
-                                      radioButtons("run_metadata_filter", "Filter by Condition:",
-                                                   choices = c("All", "Control", "Sample"),
-                                                   selected = "All", 
-                                                   inline = TRUE))
-                             ),
-                             dataTableOutput("run_metadata_preview")), 
-                    tabPanel("Taxonomy Data Preview", 
-                             fluidRow(
-                               column(width = 12, 
-                                      radioButtons("taxonomy_data_filter", "Filter by Condition:",
-                                                   choices = c("All", "Control", "Sample"),
-                                                   selected = "All", 
-                                                   inline = TRUE))
-                             ),
-                             dataTableOutput("taxonomy_data_preview"))
+                    box(
+                      title = "Manual Data Loading Status", 
+                      status = "info", 
+                      solidHeader = TRUE, 
+                      width = 12, 
+                      verbatimTextOutput("manual_data_loading_status")
+                    )
                   )
-                ) 
+                ), 
+                # Sample Selection Section
+                fluidRow(
+                  box(
+                    title = "Sample Selection", 
+                    status = "warning",
+                    solidHeader = TRUE, 
+                    width = 8, 
+                    fluidRow(
+                      column(
+                        width = 4, 
+                        selectizeInput("selected_sample_id", "Select Sample to Analyze:", 
+                                       choices = NULL, 
+                                       options = list(
+                                         placeholder = "Choose a sample...", 
+                                         onInitialize = I('function() { this.setValue(""); }')
+                                       )), 
+                        br(), 
+                        actionButton("clear_sample_selection", "Clear Selection", 
+                                     icon = icon("times"),
+                                     class = "btn-warning")
+                      ), 
+                      column(
+                        width = 8, 
+                        htmlOutput("selected_sample_info")
+                      )
+                    )
+                  ), 
+                  column(
+                    width = 4, 
+                    valueBoxOutput("total_samples_box", width = 12), 
+                    valueBoxOutput("total_species_box", width = 12), 
+                    valueBoxOutput("total_runs_box", width = 12), 
+                    valueBoxOutput("total_control_samples_box", width = 12)
+                  )
+                )
               ), 
               
-              # Data Overview
+              # Automatic Upload Section
               fluidRow(
                 box(
-                  title = "Data Summary",
-                  status = "primary", 
+                  title = "Automatic Data Upload", 
+                  status = "success",
                   solidHeader = TRUE, 
-                  width = 12,
-                  uiOutput("data_summary_dynamic")
+                  width = 12, 
+                  collapsible = TRUE, 
+                  fluidRow(
+                    column(
+                      width = 12, 
+                      h4("Hospital Data Structure"), 
+                      p("Automatically load data from the hospital's data structure folder."), 
+                      br(),
+                      textInput("data_folder_path", "Data Folder Path:", 
+                                value = "path/to/hospital/data/structure", 
+                                placeholder = "Enter the path to your data structure folder"), 
+                      br(), 
+                      actionButton("scan_folder", "Scan Data Folder", 
+                                   icon = icon("folder-open"), 
+                                   class = "btn-warning"), 
+                      br(), 
+                      conditionalPanel(
+                        condition = "output.folder_scanned", 
+                        h5("Available Run IDs:"), 
+                        selectizeInput("available_run_ids", "Select Run ID to Analyze:", 
+                                       choices = NULL, 
+                                       options = list(
+                                         placeholder = "First scan the folder...", 
+                                         onInitialize = I('function() { this.setValue(""); }')
+                                       )),
+                        actionButton("load_automatic_data", "Load Selected Run Data", 
+                                     icon = icon("download"), 
+                                     class = "btn-success")
+                      ), 
+                      br(), 
+                      h5("Control Data Status:"), 
+                      verbatimTextOutput("control_data_status")
+                    )
+                  )
+                )
+              ), 
+              # Automatic data status and statistics 
+              conditionalPanel(
+                condition = "output.automatic_data_loaded == true", 
+                fluidRow(
+                  column(
+                    width = 8, 
+                    box(
+                      title = "Automatic Data Loading Status", 
+                      status = "info", 
+                      solidHeader = TRUE, 
+                      width = 12, 
+                      verbatimTextOutput("automatic_data_loading_status")
+                    )
+                  ), 
+                  column(
+                    width = 4, 
+                    valueBoxOutput("automatic_total_samples_box", width = 12), 
+                    valueBoxOutput("automatic_total_species_box", width = 12), 
+                    valueBoxOutput("automatic_total_runs_box", width = 12), 
+                    valueBoxOutput("automatic_total_control_samples_box", width = 12)
+                  )
+                )
+              ),
+              
+              # Metadata Previews
+              conditionalPanel(
+                condition = "output.manual_data_loaded == true || output.automatic_data_loaded == true", 
+                fluidRow(
+                  box(
+                    title = "Metadata & Data Preview", 
+                    status = "primary", 
+                    solidHeader = TRUE, 
+                    width = 12, 
+                    tabBox(
+                      width = 12, 
+                      tabPanel("Sample Metadata", 
+                               fluidRow(
+                                 column(width = 12, 
+                                        radioButtons("sample_metadata_filter", "Filter by Conditiions:", 
+                                                     choices = c("All", "Control", "Sample"), 
+                                                     selected = "All", 
+                                                     inline = TRUE))
+                               ), 
+                               dataTableOutput("sample_metadata_preview")), 
+                      tabPanel("Run Metadata", 
+                               fluidRow(
+                                 column(width = 12, 
+                                        radioButtons("run_metadata_filter", "Filter by Condition:", 
+                                                     choices = c("All", "Control", "Sample"), 
+                                                     selected = "All", 
+                                                     inline = TRUE))
+                               ), 
+                               dataTableOutput("run_metadata_preview")), 
+                      tabPanel("Taxonomy Data Preview", 
+                               fluidRow(
+                                 column(width = 12, 
+                                        radioButtons("taxonomy_data_filter", "Filter by Condition:", 
+                                                     choices = c("All", "Control", "Sample"), 
+                                                     selected = "All", 
+                                                     inline = TRUE))
+                               ), 
+                               dataTableOutput("taxonomy_data_preview"))
+                    )
+                  )
+                )
+              ), 
+              # Data Overview 
+              conditionalPanel(
+                condition = "output.manual_data_loaded == true || output.automatic_data_loaded == true", 
+                fluidRow(
+                  box(
+                    title = "Data Summary", 
+                    status = "primary", 
+                    solidHeader = TRUE, 
+                    width = 12, 
+                    uiOutput("data_summary_dynamic")
+                  )
                 )
               )
       ),
@@ -386,7 +737,7 @@ ui <- dashboardPage(
                          # Taxonomic level selection
                          selectInput("tax_level", "Taxonomic Level:", 
                                      choices = c("Phylum", "Class", "Order", "Family", "Genus", "Species"), 
-                                     selected = "Species"), 
+                                     selected = "Genus"), 
                          
                          # Filtering options 
                          radioButtons("sample_group", "Sample Group:", 
@@ -397,34 +748,75 @@ ui <- dashboardPage(
                          
                          # Metadata grouping options 
                          selectInput("metadata_group", "Group by Metadata:", 
-                                     choices = c("None", "Age", "Gender", "BMI"),
+                                     choices = c("None", "Age", "Gender", "Body_Mass_Index", "Ongoing_conditions", "Allergies", "Dietary_Information", "Antibiotic_intake", "Exercise_frequency", "Alcohol_consumption"),
                                      selected = "None"), 
                          
                          checkboxInput("compare_groups", "Compare Patients vs Controls", value = TRUE), 
                          
                          hr(), 
                          
-                         # Statistical testing options 
+                         # Statistical testing options - SIMPLIFIED
                          selectInput("stat_test", "Statistical Test:", 
-                                     choices = c("None", "PERMANOVA", "DESeq2"), 
-                                     selected = "None"), 
-                         ), 
-                       # Sample selection box 
+                                     choices = c("None", "PERMANOVA", "DESeq2", "Wilcoxon", "t-test"), 
+                                     selected = "None")
+                       ),
+                       
+                       # Statistical Tests Information Box
                        box(
-                         title = "Sample Selection", 
+                         title = "Statistical Tests Guide", 
                          status = "warning", 
                          solidHeader = TRUE, 
-                         width = 12, 
-                         fluidRow(
-                           column(
-                             width = 12, 
-                             selectizeInput("selected_sample_id", "Select Sample to Analyze:", 
-                                            choices = NULL, 
-                                            options = list(
-                                              placeholder = "Choose a sample...",
-                                              onInitialize = I('function() { this.setValue(""); }')
-                                            ))
-                           )
+                         width = 12,
+                         collapsible = TRUE,
+                         collapsed = TRUE,
+                         
+                         div(style = "padding: 10px;",
+                             HTML("
+                         <div style='margin-bottom: 15px;'>
+                           <h5 style='color: #2c3e50; margin-bottom: 8px;'><strong>PERMANOVA</strong></h5>
+                           <p style='margin-bottom: 5px; font-size: 13px;'>
+                             <strong>Purpose:</strong> Tests for differences in overall microbial community composition between groups.
+                           </p>
+                           <p style='margin-bottom: 0; font-size: 13px; color: #7f8c8d;'>
+                             <strong>Best for:</strong> Comparing entire microbiome profiles, beta-diversity analysis.
+                           </p>
+                         </div>
+                         
+                         <div style='margin-bottom: 15px;'>
+                           <h5 style='color: #2c3e50; margin-bottom: 8px;'><strong>DESeq2</strong></h5>
+                           <p style='margin-bottom: 5px; font-size: 13px;'>
+                             <strong>Purpose:</strong> Identifies individual taxa that are significantly different between groups.
+                           </p>
+                           <p style='margin-bottom: 0; font-size: 13px; color: #7f8c8d;'>
+                             <strong>Best for:</strong> Finding specific bacteria/taxa that differ between conditions.
+                           </p>
+                         </div>
+                         
+                         <div style='margin-bottom: 15px;'>
+                           <h5 style='color: #2c3e50; margin-bottom: 8px;'><strong>Wilcoxon Test</strong></h5>
+                           <p style='margin-bottom: 5px; font-size: 13px;'>
+                             <strong>Purpose:</strong> Non-parametric test for comparing abundance distributions between two groups.
+                           </p>
+                           <p style='margin-bottom: 0; font-size: 13px; color: #7f8c8d;'>
+                             <strong>Best for:</strong> Robust comparisons when data is not normally distributed.
+                           </p>
+                         </div>
+                         
+                         <div style='margin-bottom: 10px;'>
+                           <h5 style='color: #2c3e50; margin-bottom: 8px;'><strong>T-test</strong></h5>
+                           <p style='margin-bottom: 5px; font-size: 13px;'>
+                             <strong>Purpose:</strong> Parametric test comparing means of log-transformed abundance data.
+                           </p>
+                           <p style='margin-bottom: 0; font-size: 13px; color: #7f8c8d;'>
+                             <strong>Best for:</strong> When abundance data is approximately normally distributed after transformation.
+                           </p>
+                         </div>
+                         
+                         <hr style='margin: 15px 0; border-color: #bdc3c7;'>
+                         <p style='font-style: italic; font-size: 12px; color: #95a5a6; margin-bottom: 0;'>
+                           <strong>Note:</strong> All statistical tests include False Discovery Rate (FDR) correction for multiple comparisons.
+                         </p>
+                       ")
                          )
                        )
                 ),
@@ -433,7 +825,7 @@ ui <- dashboardPage(
                        # Quick stat boxes
                        fluidRow(
                          valueBoxOutput("total_taxa_box", width = 3), 
-                         valueBoxOutput("dominant_taxa_box", width = 3),
+                         valueBoxOutput("dominant_taxa_box", width = 6),
                          valueBoxOutput("unique_taxa_box", width = 3)
                        ),
                        # Main visualizations 
@@ -446,7 +838,7 @@ ui <- dashboardPage(
                          tabBox(
                            width = 12, 
                            height = "700px", 
-                          
+                           
                            # Tab 1: Relative Abundance bar plot
                            tabPanel("Relative Abundance", 
                                     fluidRow(
@@ -458,13 +850,13 @@ ui <- dashboardPage(
                                                hr(), 
                                                checkboxInput("sort_abundance", "Sort by Abundance", value = TRUE),
                                                selectInput("abundance_color_scheme", "Color Scheme:", 
-                                                           choices = c("Default", "Viridis", "Set1", "Set2", "Paired"), 
-                                                           selected = "Default")
+                                                           choices = c("Mix", "Viridis", "Turbo", "Rainbow", "Set3", "Spectral"), 
+                                                           selected = "Turbo")
                                              )),
                                       # Plot area 
                                       column(width = 9, 
                                              div(style = "height: 600px; overflow-y: auto;", 
-                                                 plotOutput("relative_abundance_plot", height = "550px")
+                                                 plotlyOutput("relative_abundance_plot", height = "550px")
                                              )
                                       )
                                     ),
@@ -476,7 +868,6 @@ ui <- dashboardPage(
                                       )
                                     )
                            ), 
-                           ######### LEFT SIDE CONTROLS OR NOT? ########
                            # Tab 2: Heatmap Visualization
                            tabPanel("Heatmap", 
                                     fluidRow(
@@ -486,9 +877,9 @@ ui <- dashboardPage(
                                                column(width = 6, 
                                                       offset = 3, 
                                                       selectInput("heatmap_color", "Color Palette:", 
-                                                                  choices = c("Viridis", "Magma", "Plasma", "Inferno", "Blues", "RdBu"),
-                                                                  selected = "Viridis"), 
-                                                      )
+                                                                  choices = c("Viridis", "Magma", "Plasma", "RdBu", "Beyonce", "TayloRSwift"),
+                                                                  selected = "RdBu"), 
+                                               )
                                              ),
                                              div(style = "height: 600px; overflow-y: auto;", 
                                                  plotOutput("heatmap_plot", height = "550px")
@@ -502,38 +893,35 @@ ui <- dashboardPage(
                                                             class = "btn-sm btn-info")
                                       )
                                     )
-                           ),
-                           # Tab 3: Clustering Visualization
-                           tabPanel("Clustering",
-                                    fluidRow(
-                                      column(width = 12, 
-                                             # Clustering methods and options 
-                                             fluidRow(
-                                               column(width = 6, 
-                                                      offset = 3, 
-                                                      selectInput("cluster_method", "Cluster Method:", 
-                                                         choices = c("PCA", "t-SNE", "UMAP", "NMDS"), 
-                                                         selected = "PCA"), 
-                                                      checkboxInput("show_ellipses", "Show Group Ellipses", value = TRUE), 
-                                                      checkboxInput("show_labels", "Show Sample Labels", value = FALSE)
-                                                      )
-                                             ), 
-                                             div(style = "height: 600px; overflow-y: auto;",
-                                                 plotOutput("clustering_plot", height = "550px")
-                                             )
-                                      )
-                                    ), 
-                                    fluidRow(
-                                      column(width = 12, 
-                                             align = "right", 
-                                             downloadButton("download_clustering_plot", "Download Plot", 
-                                                            class = "btn-sm btn-info")
-                                      )
-                                    )
                            )
+                         )
+                       ), 
+                       # Statistical results display box 
+                       conditionalPanel(
+                         condition = "input.stat_test != 'None' && input.compare_groups == true",
+                         box(
+                           title = "Statistical Analysis Results", 
+                           status = "warning", 
+                           solidHeader = TRUE, 
+                           width = 12, 
+                           collapsible = TRUE, 
+                           fluidRow(
+                             column(width = 12, 
+                                    uiOutput("statistical_results"))
+                           )
+                         ), 
+                         fluidRow(
+                           column(width = 12, 
+                                  align = "right", 
+                                  conditionalPanel(
+                                    condition = "output.statistical_results", 
+                                    downloadButton("download_statistical_results", 
+                                                   "Download Results", 
+                                                   class = "btn-warning")
+                                  ))
+                         )
                        )
-                     )
-                     )
+                )
               )
       ),
                   
@@ -942,8 +1330,346 @@ server <- function(input, output, session) {
     control_run_metadata = NULL, 
     control_taxonomy_data = NULL, 
     error_message = NULL, 
-    success_message = NULL
+    success_message = NULL, 
+    available_runs = NULL, 
+    folder_scanned = FALSE, 
+    automatic_data_loaded = FALSE, 
+    manual_data_loaded = FALSE 
   )
+  
+  ########## AUTOMATIC DATA LOADING FROM HOSPITAL STRUCTURE #######
+  # Helper function to extract date from run ID (R01030525 -> 030525)
+  extract_date_from_run <- function(run_id) {
+    # Extract the date part 
+    date_part <- substr(run_id, nchar(run_id) - 5, nchar(run_id))
+    # Convert to proper date format
+    paste0(substr(date_part, 1, 2), "/", 
+           substr(date_part, 3, 4), "/", 
+           "20", substr(date_part, 5, 6))
+  }
+  
+  # Helper function to validate directory structure 
+  validate_run_directory <- function(run_path) {
+    required_dirs <- c("metadata", "qiime_output/relevant_results")
+    required_files <- c("metadata/metadata_sample.csv", "metadata/metadata_run.csv")
+    
+    validation <- list(valid = TRUE, missing = c())
+    
+    # Check directories 
+    for (dir in required_dirs) {
+      if (!dir.exists(file.path(run_path, dir))) {
+        validation$valid <- FALSE
+        validation$missing <- c(validation$missing, paste("Directory:", dir))
+      }
+    }
+    
+    # Check files 
+    for (file in required_files) {
+      if (!file.exists(file.path(run_path, file))) {
+        validation$valid <- FALSE
+        validation$missing <- c(validation$missing, paste("File:", file))
+      }
+    }
+    return(validation)
+  }
+  
+  # Scan folder for available runs 
+  observeEvent(input$scan_folder, {
+    data_store$error_message <- NULL
+    data_store$folder_scanned <- FALSE 
+    
+    tryCatch({
+      folder_path <- input$data_folder_path
+      
+      if (is.null(folder_path) || trimws(folder_path) == "" || folder_path == "path/to/hospital/data/structure") {
+        data_store$error_message <- "Please enter a valid data folder path"
+        showNotification("Please enter a valid data folder path", type = "warning")
+        return()
+      }
+      
+      # Clean the path 
+      folder_path <- normalizePath(folder_path, mustWork = FALSE)
+      
+      if (!dir.exists(folder_path)) {
+        data_store$error_message <- paste("Directory does not exist:", folder_path)
+        showNotification(paste("Directory does not exist:", folder_path), type = "error")
+        return()
+      }
+      
+      # Look for runs directory 
+      runs_path <- file.path(folder_path, "runs")
+      if (!dir.exists(runs_path)) {
+        data_store$error_message <- "Runs directory not found. Please check the folder structure."
+        showNotification("Runs directory not found in the specified path", type = "error")
+        return()
+      }
+      
+      # Find all run directories (pattern: R[01-99][DDMMYY])
+      all_dirs <- list.dirs(runs_path, full.names = FALSE, recursive = FALSE)
+      run_pattern <- "^R[0-9]+$"
+      run_dirs <- all_dirs[grepl(run_pattern, all_dirs)]
+      
+      if (length(run_dirs) == 0) {
+        data_store$error_message <- paste("No valid run directories found in:", runs_path, "\n(expected format: R[01-99][DDMMYY])") 
+        showNotification("No valid run directories found", type = "warning")
+        return()
+      }
+      
+      # Validate each run directory and create detailed info
+      valid_runs <- c()
+      run_info <- list()
+      
+      for (run_id in run_dirs) {
+        run_path <- file.path(runs_path, run_id)
+        validation <- validate_run_directory(run_path)
+        
+        if (validation$valid) {
+          valid_runs <- c(valid_runs, run_id)
+          
+          # Try to get additional info from metadata 
+          metadata_path <- file.path(run_path, "metadata", "metadata_run.csv")
+          run_date <- extract_date_from_run(run_id)
+          
+          if (file.exists(metadata_path)) {
+            tryCatch({
+              run_meta <- read.csv(metadata_path, stringsAsFactors = FALSE)
+              sample_count <- nrow(run_meta)
+              platform <- if("Sequencing_Platform" %in% colnames(run_meta)) {
+                paste(unique(run_meta$Sequencing_Platform), collapse = ", ")
+              } else "Unknown"
+              
+              run_info[[run_id]] <- list(
+                date = run_date, 
+                samples = sample_count,
+                platform = platform
+              )
+            }, error = function(e) {
+              run_info[[run_id]] <- list(
+                date = run_date, 
+                samples = "Unknown", 
+                platform = "Unknown"
+              )
+            })
+          } else { 
+            run_info[[run_id]] <- list(
+              date = run_date, 
+              samples = "Unknown", 
+              platform = "Unknown"
+            )
+          }
+        } else {
+          # Log what's missing for debugging 
+          message(paste("Run", run_id, "validation failed. Missing:", paste(validation$missing, collapse = ", ")))
+        }
+      }
+      if (length(valid_runs) == 0) {
+        data_store$error_message <- "No valid run directories found with complete data structure"
+        showNotification("No complete run directories found. Check that each run has metadata/ and qiime_output/relevant_results/ folders", type = "error")
+        return()
+      }
+      # Create choices with additional information
+      run_choices <- valid_runs 
+      names(run_choices) <- sapply(valid_runs, function(run) {
+        info <- run_info[[run]]
+        paste0(run, " | ", info$date, " | ", info$samples, " samples | ", info$platform)
+      })
+      
+      data_store$available_runs <- run_choices
+      data_store$folder_scanned <- TRUE
+      
+      updateSelectizeInput(session, "available_run_ids", 
+                           choices = run_choices, 
+                           server = TRUE, 
+                           options = list(placeholder = "Select a run to load..."))
+      
+      showNotification(paste("Found", length(valid_runs), "valid run(s)"), type = "message")
+    }, error = function(e) {
+      data_store$error_message <- paste("Error scanning folder:", e$message)
+      showNotification(paste("Scan error:", e$message), type = "error")
+      data_store$folder_scanned <- FALSE
+    })
+  })
+  
+  # Load automatic data 
+  observeEvent(input$load_automatic_data, {
+    req(input$available_run_ids)
+    
+    data_store$error_message <- NULL
+    data_store$success_message <- NULL
+    
+    tryCatch({
+      selected_run <- input$available_run_ids 
+      folder_path <- input$data_folder_path
+      run_path <- file.path(folder_path, "runs", selected_run)
+      
+      # Load sample metadata 
+      sample_meta_path <- file.path(run_path, "metadata", "metadata_sample.csv")
+      sample_metadata <- read.csv(sample_meta_path, stringsAsFactors = FALSE)
+      
+      # Load run metadata 
+      run_meta_path <- file.path(run_path, "metadata", "metadata_run.csv")
+      run_metadata <- read.csv(run_meta_path, stringsAsFactors = FALSE)
+      
+      # Try to load taxonomy data from QIIME output 
+      taxonomy_paths <- c(
+        file.path(run_path, "qiime_output", "relevant_results", "taxonomy_table.tsv"),
+        file.path(run_path, "qiime_output", "relevant_results", "feature_table.tsv"),
+        file.path(run_path, "qiime_output", "artifacts", "04_taxonomy", "taxonomy.tsv")
+      )
+      
+      taxonomy_data <- NULL
+      for(path in taxonomy_paths) {
+        if(file.exists(path)) {
+          tryCatch({
+            taxonomy_data <- read.delim(path, sep = "\t", stringsAsFactors = FALSE)
+            break
+          }, error = function(e) {
+            # Continue to next path
+          })
+        }
+      }
+      
+      # Try to load control data 
+      control_sample_metadata <- NULL
+      control_run_metadata <- NULL
+      control_taxonomy_data <- NULL
+      
+      # Look for control data in a separate controls directory
+      controls_path <- file.path(run_path, "controls")
+      if(dir.exists(controls_path)) {
+        tryCatch({
+          if(file.exists(file.path(controls_path, "metadata_sample.csv"))) {
+            control_sample_metadata <- read.csv(file.path(controls_path, "metadata_sample.csv"),
+                                                stringsAsFactors = FALSE)
+          }
+          if(file.exists(file.path(controls_path, "metadata_run.csv"))) {
+            control_run_metadata <- read.csv(file.path(controls_path, "metadata_run.csv"), 
+                                             stringsAsFactors = FALSE)
+          }
+          # Look for control taxonomy data 
+          for(path in c("taxonomy_table.tsv", "feature_table.tsv")) {
+            control_tax_path <- file.path(controls_path, path)
+            if(file.exists(control_tax_path)) {
+              control_taxonomy_data <- read.delim(control_tax_path, sep = "\t", stringsAsFactors = FALSE)
+              break
+            }
+          }
+        }, error = function(e) {
+          # Control data loading failed, continue without controls 
+        })
+      }
+      # Store the loaded data 
+      data_store$sample_metadata <- sample_metadata
+      data_store$run_metadata <- run_metadata
+      data_store$taxonomy_data <- taxonomy_data
+      data_store$control_sample_metadata <- control_sample_metadata
+      data_store$control_run_metadata <- control_run_metadata
+      data_store$control_taxonomy_data <- control_taxonomy_data
+      data_store$automatic_data_loaded <- TRUE
+      data_store$manual_data_loaded <- FALSE
+      
+      control_status <- if(!is.null(control_sample_metadata)) {
+        paste("Control data loaded:", nrow(control_sample_metadata), "control samples")
+      } else {
+        "No control data found"
+      }
+      
+      data_store$success_message <- paste0(
+        "Automatic data loading successful!\n", 
+        "Run: ", selected_run, "\n", 
+        "Samples: ", nrow(sample_metadata), "\n",
+        "Runs: ", nrow(run_metadata), "\n",
+        "Species: ", length(unique(taxonomy_data$Species)), "\n",
+        control_status
+      )
+      showNotification("Automatic data loaded successfully!", type = "message")
+    }, error = function(e) {
+      data_store$error_message <- paste("Error loading automatic data:", e$message)
+      showNotification(paste("Loading error:", e$message), type = "error")
+    })
+  })
+  
+  ## Reactive outputs and UI updates (value boxes)
+  # Output for folder scan status 
+  output$folder_scanned <- reactive({
+    data_store$folder_scanned
+  })
+  outputOptions(output, "folder_scanned", suspendWhenHidden = FALSE)
+  
+  # Output for automatic data loading status 
+  output$automatic_data_loaded <- reactive({
+    data_store$automatic_data_loaded 
+  })
+  outputOptions(output, "automatic_data_loaded", suspendWhenHidden = FALSE)
+  
+  # Control data status output 
+  output$control_data_status <- renderText({
+    if(!is.null(data_store$control_sample_metadata)) {
+      paste("Control data available:", nrow(data_store$control_sample_metadata), "control samples")
+    } else {
+      "No control data loaded"
+    }
+  })
+  
+  # Automatic data loading status 
+  output$automatic_data_loading_status <- renderText({
+    if(!is.null(data_store$error_message)) {
+      data_store$error_message
+    } else if (!is.null(data_store$success_message)) {
+      data_store$success_message
+    } else {
+      "No data loaded yet"
+    }
+  })
+  
+  # Value boxes for automatic data 
+  output$automatic_total_samples_box <- renderValueBox({
+    req(data_store$sample_metadata, data_store$automatic_data_loaded)
+    valueBox(
+      nrow(data_store$sample_metadata), 
+      "Total Samples", 
+      icon = icon("users"), 
+      color = "blue"
+    )
+  })
+  
+  output$automatic_total_species_box <- renderValueBox({
+    req(data_store$taxonomy_data, data_store$automatic_data_loaded)
+    valueBox(
+      length(unique(data_store$taxonomy_data$Species)), 
+      "Unique Species", 
+      icon = icon("bacteria"), 
+      color = "green"
+    )
+  })
+  
+  output$automatic_total_runs_box <- renderValueBox({
+    req(data_store$run_metadata, data_store$automatic_data_loaded)
+    valueBox(
+      nrow(data_store$run_metadata), 
+      "Total Runs", 
+      icon = icon("server"),
+      color = "purple"
+    )
+  })
+  
+  output$automatic_total_control_samples_box <- renderValueBox({
+    req(data_store$automatic_data_loaded)
+    control_count <- if(!is.null(data_store$control_sample_metadata)) {
+      nrow(data_store$control_sample_metadata)
+    } else {
+      0
+    }
+    valueBox(
+      control_count, 
+      "Control Samples", 
+      icon = icon("vial"), 
+      color = "yellow"
+    )
+  })
+  
+  
+  ######### MANUAL DATA UPLOAD FUNCTIONALITY ################
   
   # Generate example data when button is clicked 
   observeEvent(input$generate_example, {
@@ -952,44 +1678,62 @@ server <- function(input, output, session) {
     
     # Generate sample metadata 
     sample_metadata <- data.frame(
-      Run_ID = paste0("RUN", sprintf("%03d", 1:50)),
-      Sample_ID = paste0("SAMPLE", sprintf("%03d", 1:50)),
-      Collection_Date = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-04-30'), by="day"), 50)),
-      Collection_Storage_Temperature = sample(c("-80", "-20", "4", "Room Temperature"), 50, replace = TRUE),
-      Analyst_Processor_Name = sample(c("John Doe", "Jane Smith", "Alex Johnson"), 50, replace = TRUE),
-      Gender = sample(c("Male", "Female", "Other"), 50, replace = TRUE),
+      Sample_ID = paste0("SHM", sprintf("%02d", 1:50), format(Sys.Date(), "%d%m%y")),
+      Institution = sample(c("Hospital_del_mar", "Clinical_university", "Medical_center", "Research_institute"), 50, replace = TRUE),
+      Department = sample(c("Digestology_unit", "Gastroenterology_department", "Internal_medicine", "Clinical_research"), 50, replace = TRUE),
+      Collection_Date = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-06-05'), by="day"), 50)),
+      `Collection_Storage(Temperature(ºC))` = sample(c("-80", "-20", "4", "Room Temperature"), 50, replace = TRUE),
+      Analyst_Processor_Name = sample(c("Sam_1", "Ana_garcia", "John_smith", "Maria_lopez"), 50, replace = TRUE),
+      Gender = sample(c("Female", "Male", "Not_specified"), 50, replace = TRUE),
       Age = sample(18:80, 50, replace = TRUE),
-      Ongoing_conditions = sample(c("None", "Diabetes", "Hypertension", "IBS", "Crohn's Disease"), 50, replace = TRUE),
-      Neurological_Disorders = sample(c("None", "Alzheimer's", "Parkinson's", "Multiple Sclerosis"), 50, replace = TRUE),
-      Allergies = sample(c("None", "Pollen", "Food", "Medicine", "Multiple"), 50, replace = TRUE),
-      Bowel_movement_frequency = sample(c("Daily", "2-3 times a week", "4-6 times a week", "Multiple times daily"), 50, replace = TRUE),
-      Bowel_movement_quality = sample(c("Normal", "Constipated", "Loose", "Variable"), 50, replace = TRUE),
-      Antibiotic_intake = sample(c("None in past year", "Within past month", "Within past 6 months", "Currently taking"), 50, replace = TRUE),
-      Medications = sample(c("None", "Antidepressants", "Blood pressure medication", "Multiple medications"), 50, replace = TRUE),
-      Cancer = sample(c("No", "Yes, currently", "Yes, in remission"), 50, replace = TRUE),
-      Cancer_treatment = sample(c("None", "Chemotherapy", "Radiation", "Surgery", "Combination"), 50, replace = TRUE),
-      BMI = round(rnorm(50, mean = 25, sd = 4), 1),
-      Exercise_frequency = sample(c("Never", "1-2 times a week", "3-4 times a week", "5+ times a week"), 50, replace = TRUE),
-      Exercise_intensity = sample(c("Low", "Moderate", "High", "Variable"), 50, replace = TRUE),
-      Smoking_status = sample(c("Never smoked", "Former smoker", "Current smoker"), 50, replace = TRUE),
-      Cigarettes_per_day = sample(c(NA, "1-5", "6-10", "11-20", "20+"), 50, replace = TRUE),
-      Stopped_smoking = sample(c(NA, "Less than 1 year ago", "1-5 years ago", "5+ years ago"), 50, replace = TRUE),
-      Alcohol_consumption = sample(c("Never", "Occasionally", "Weekly", "Daily"), 50, replace = TRUE),
-      Alcohol_frequency = sample(c(NA, "1-2 drinks", "3-4 drinks", "5+ drinks"), 50, replace = TRUE),
-      Drinks_per_day = sample(c(NA, "1", "2", "3", "4+"), 50, replace = TRUE)
+      Ongoing_conditions = sample(c("Acid reflux", "Helicobacter pylori–associated gastritis", "Irritable bowel syndrome (IBS)", 
+                                    "Diabetes(Type 1)", "Diabetes (Mellitus)", "Metabolic syndromes", 
+                                    "Non-alcoholic fatty liver disease (NAFLD)", "Fatty liver disease (FLD)", 
+                                    "Inflammatory Bowel Disease (IBD)", "Lupus (SLE)", "Crohn's disease", 
+                                    "Rheumatoid arthritis", "Stomach ache"), 50, replace = TRUE),
+      Appendix_removed = sample(c("Yes", "No"), 50, replace = TRUE),
+      Allergies = sample(c("Peanuts", "Shellfish", "Tree nuts", "Eggs", "Milk", "Unspecified", "Allergy free",
+                           "Penicillin", "Amoxicillin", "Asthma", "Seasonal_allergies", "Sulfa_drugs"), 50, replace = TRUE),
+      Dietary_Information = sample(c("Omnivore", "Vegetarian", "Vegetarian but eat seafood", "Vegan", 
+                                     "Gluten free", "Keto", "Halal", "Kosher", "Paleo"), 50, replace = TRUE),
+      Bowel_movement_quality = sample(c("Constipated", "Normal", "Diarrhea"), 50, replace = TRUE),
+      Antibiotic_intake = sample(c("Past year", "Year", "Month", "6 months", "Week"), 50, replace = TRUE),
+      Medications = sample(c("Antidiabetics", "Probiotics", "Prebiotics", "Laxatives", "Antiemetic", 
+                             "PPIs (proton-pump inhibitors)", "Immunosupressors", 
+                             "Antidepressors/Antipsicotics/Anxiolytics", "Contraceptives", "Retinoids", 
+                             "Antihistamines", "NSAIDs"), 50, replace = TRUE),
+      Cancer = sample(c("Yes", "No"), 50, replace = TRUE),
+      Body_Mass_Index = sample(c("Underweight<18.5", "Normal Weight 18.5-24.9", "Overweight 25-29.9", "Obese >30"), 50, replace = TRUE),
+      Exercise_frequency = sample(c("Never", "Rarely", "1-2 times per week", "3-5 times per week", "Daily"), 50, replace = TRUE),
+      Smoking_status = sample(c("Smoker", "Non-smoker"), 50, replace = TRUE),
+      Daily_cigarettes = sample(c("1-5", "6-10", "11-15", "16-20", "+20"), 50, replace = TRUE),
+      Alcohol_consumption = sample(c("Yes", "No"), 50, replace = TRUE),
+      Frequency_of_alcohol_consumption = sample(c("1_per_week", "2_per_week", "3_per_week", "4_per_week", 
+                                                  "5_per_week", "6_per_week", "7_per_week", "8_per_week", 
+                                                  "9_per_week", "10_per_week"), 50, replace = TRUE),
+      Notes_Samples = sample(c("Normal_collection", "Delayed_processing", "Good_quality_sample", 
+                               "Standard_procedure", "No_complications"), 50, replace = TRUE),
+      stringsAsFactors = FALSE
     )
     
     # Generate run metadata 
     run_metadata <- data.frame(
-      Timestamp = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-04-30'), by="day"), 30)),
-      Run_ID = paste0("RUN", sprintf("%03d", 1:30)),
-      Sequencing_Date = as.character(sample(seq(as.Date('2023-01-15'), as.Date('2025-05-01'), by="day"), 30)),
-      Sequencing_Platform = sample(c("Illumina", "Ion Torrent", "Oxford Nanopore", "PacBio"), 30, replace = TRUE),
-      Sequencing_Type = sample(c("16S rRNA", "Shotgun", "ITS", "Amplicon"), 30, replace = TRUE),
-      Expected_read_length = sample(c("150bp", "250bp", "300bp", "400bp"), 30, replace = TRUE),
-      Sequencing_depth_target = paste0(sample(c("10", "20", "30", "50", "100"), 30, replace = TRUE), "M reads"),
-      Library_preparation_kit = sample(c("Nextera XT", "TruSeq Nano", "NEBNext", "Swift Biosciences"), 30, replace = TRUE),
-      Technician_name = sample(c("Maria Garcia", "Thomas Johnson", "Sophia Lee", "Michael Brown"), 30, replace = TRUE)
+      RunID = paste0("RHM", sprintf("%02d", 1:30), "_01"),
+      Run_accession = paste0("ERR", sample(1000000:9999999, 30)),
+      Sequencing_Date = as.character(sample(seq(as.Date('2023-01-15'), as.Date('2025-06-05'), by="day"), 30)),
+      Sequencing_Platform = sample(c("MiSeq", "NextSeq", "GrindION", "MinION", "Ion GeneStudio S5"), 30, replace = TRUE),
+      Sequencing_Type = sample(c("16S_rRNA", "WGS", "Shotgun metagenomic", "RNA-Seq", "Long-read", "Metatranscriptomics"), 30, replace = TRUE),
+      Expected_read_length = sample(c("2x75 bp", "2x100 bp", "2x150 bp", "2x250 bp", "2x300bp"), 30, replace = TRUE),
+      Sequencing_depth_target = sample(c("<1 million reads/sample", "1-5 million reads/sample", 
+                                         "5-10 million reads/sample", "10-20 million reads/sample", 
+                                         "20-50 million reads/sample", "50 million reads/sample"), 30, replace = TRUE),
+      Library_preparation_kit = sample(c("Nextera XT", "Nextera DNA Flex", "TruSeq Nano", "NEBNext Ultra II", 
+                                         "Swift Biosciences 16S", "QIAseq"), 30, replace = TRUE),
+      Technician_name = sample(c("Maria_garcia", "Thomas_johnson", "Sophia_lee", "Michael_brown"), 30, replace = TRUE),
+      Notes_Runs = sample(c("Standard_run", "Good_quality_output", "Normal_processing", 
+                            "Successful_sequencing", "No_issues_detected"), 30, replace = TRUE),
+      Sample_ID = paste0("SHM", sprintf("%02d", sample(1:50, 30, replace = TRUE)), format(Sys.Date(), "%d%m%y")),
+      stringsAsFactors = FALSE
     )
     
     # Generate taxonomy data 
@@ -1001,58 +1745,60 @@ server <- function(input, output, session) {
     )
     
     taxonomy_data <- data.frame(
-      Sample_ID = rep(paste0("SAMPLE", sprintf("%03d", 1:50)), each = length(species_names)),
-      Species = rep(species_names, 50),
-      Abundance = round(runif(50 * length(species_names), min = 0, max = 10000))
+      Sample_ID = rep(sample_metadata$Sample_ID, each = length(species_names)),
+      Species = rep(species_names, nrow(sample_metadata)),
+      Abundance = round(runif(nrow(sample_metadata) * length(species_names), min = 0, max = 10000))
     )
     
-    # Generate CONTROL sample metadata with some different characteristics 
+    # Generate CONTROL sample metadata with healthier characteristics 
     control_sample_metadata <- data.frame(
-      Run_ID = paste0("CTRL_RUN", sprintf("%03d", 1:30)),
-      Sample_ID = paste0("CTRL_SAMPLE", sprintf("%03d", 1:30)),
-      Collection_Date = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-04-30'), by="day"), 30)),
-      Collection_Storage_Temperature = sample(c("-80", "-20", "4", "Room Temperature"), 30, replace = TRUE),
-      Analyst_Processor_Name = sample(c("John Doe", "Jane Smith", "Alex Johnson"), 30, replace = TRUE),
-      Gender = sample(c("Male", "Female", "Other"), 30, replace = TRUE),
-      Age = sample(18:80, 30, replace = TRUE),
-      Ongoing_conditions = "None",  # Controls have no conditions
-      Neurological_Disorders = "None",  # Controls have no neurological disorders
-      Allergies = sample(c("None", "Pollen", "Food", "Medicine"), 30, replace = TRUE),
-      Bowel_movement_frequency = sample(c("Daily", "2-3 times a week", "4-6 times a week"), 30, replace = TRUE),
-      Bowel_movement_quality = sample(c("Normal", "Variable"), 30, replace = TRUE, prob = c(0.8, 0.2)),
-      Antibiotic_intake = sample(c("None in past year", "Within past 6 months"), 30, replace = TRUE, prob = c(0.9, 0.1)),
-      Medications = "None",  # Controls take no medications
-      Cancer = "No",  # Controls have no cancer
-      Cancer_treatment = "None",  # Controls have no cancer treatment
-      BMI = round(rnorm(30, mean = 22, sd = 2), 1),  # Controls have healthier BMI
-      Exercise_frequency = sample(c("3-4 times a week", "5+ times a week"), 30, replace = TRUE),  # Controls exercise more
-      Exercise_intensity = sample(c("Moderate", "High"), 30, replace = TRUE),
-      Smoking_status = sample(c("Never smoked", "Former smoker"), 30, replace = TRUE, prob = c(0.9, 0.1)),
-      Cigarettes_per_day = NA,
-      Stopped_smoking = NA,
-      Alcohol_consumption = sample(c("Never", "Occasionally"), 30, replace = TRUE),
-      Alcohol_frequency = NA,
-      Drinks_per_day = NA
+      Sample_ID = paste0("CTRL_SHM", sprintf("%02d", 1:30), format(Sys.Date(), "%d%m%y")),
+      Institution = sample(c("Hospital_del_mar", "Clinical_university", "Medical_center"), 30, replace = TRUE),
+      Department = sample(c("Digestology_unit", "Gastroenterology_department", "Clinical_research"), 30, replace = TRUE),
+      Collection_Date = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-06-05'), by="day"), 30)),
+      `Collection_Storage(Temperature(ºC))` = sample(c("-80", "-20"), 30, replace = TRUE), # Controls stored at better temps
+      Analyst_Processor_Name = sample(c("Sam_1", "Ana_garcia", "John_smith"), 30, replace = TRUE),
+      Gender = sample(c("Female", "Male"), 30, replace = TRUE, prob = c(0.5, 0.5)),
+      Age = sample(20:65, 30, replace = TRUE), # Healthier age range
+      Ongoing_conditions = "Acid reflux", # Controls have minimal conditions
+      Appendix_removed = sample(c("Yes", "No"), 30, replace = TRUE, prob = c(0.2, 0.8)),
+      Allergies = sample(c("Allergy free", "Seasonal_allergies"), 30, replace = TRUE, prob = c(0.8, 0.2)),
+      Dietary_Information = sample(c("Omnivore", "Vegetarian"), 30, replace = TRUE, prob = c(0.7, 0.3)),
+      Bowel_movement_quality = sample(c("Normal", "Constipated"), 30, replace = TRUE, prob = c(0.9, 0.1)),
+      Antibiotic_intake = sample(c("Past year", "Year"), 30, replace = TRUE, prob = c(0.8, 0.2)),
+      Medications = sample(c("Probiotics", "Antihistamines"), 30, replace = TRUE, prob = c(0.3, 0.7)),
+      Cancer = "No", # Controls have no cancer
+      Body_Mass_Index = sample(c("Normal Weight 18.5-24.9", "Overweight 25-29.9"), 30, replace = TRUE, prob = c(0.8, 0.2)),
+      Exercise_frequency = sample(c("3-5 times per week", "Daily"), 30, replace = TRUE, prob = c(0.7, 0.3)),
+      Smoking_status = sample(c("Non-smoker"), 30, replace = TRUE), # Controls are non-smokers
+      Daily_cigarettes = "1-5", # Placeholder since they don't smoke
+      Alcohol_consumption = sample(c("Yes", "No"), 30, replace = TRUE, prob = c(0.3, 0.7)),
+      Frequency_of_alcohol_consumption = sample(c("1_per_week", "2_per_week"), 30, replace = TRUE),
+      Notes_Samples = sample(c("Control_sample", "Healthy_control", "Standard_control"), 30, replace = TRUE),
+      stringsAsFactors = FALSE
     )
     
     # Generate CONTROL run metadata 
     control_run_metadata <- data.frame(
-      Timestamp = as.character(sample(seq(as.Date('2023-01-01'), as.Date('2025-04-30'), by="day"), 20)),
-      Run_ID = paste0("CTRL_RUN", sprintf("%03d", 1:20)),
-      Sequencing_Date = as.character(sample(seq(as.Date('2023-01-15'), as.Date('2025-05-01'), by="day"), 20)),
-      Sequencing_Platform = sample(c("Illumina", "Ion Torrent"), 20, replace = TRUE),  # Controls use only two platforms
-      Sequencing_Type = sample(c("16S rRNA", "Shotgun"), 20, replace = TRUE),  # Controls use only two types
-      Expected_read_length = sample(c("250bp", "300bp"), 20, replace = TRUE),
-      Sequencing_depth_target = paste0(sample(c("20", "30", "50"), 20, replace = TRUE), "M reads"),
+      RunID = paste0("CTRL_RHM", sprintf("%02d", 1:20), "_01"),
+      Run_accession = paste0("ERR", sample(1000000:9999999, 20)),
+      Sequencing_Date = as.character(sample(seq(as.Date('2023-01-15'), as.Date('2025-06-05'), by="day"), 20)),
+      Sequencing_Platform = sample(c("MiSeq", "NextSeq"), 20, replace = TRUE), # Controls use consistent platforms
+      Sequencing_Type = sample(c("16S_rRNA", "WGS"), 20, replace = TRUE),
+      Expected_read_length = sample(c("2x150 bp", "2x250 bp"), 20, replace = TRUE),
+      Sequencing_depth_target = sample(c("10-20 million reads/sample", "20-50 million reads/sample"), 20, replace = TRUE),
       Library_preparation_kit = sample(c("Nextera XT", "TruSeq Nano"), 20, replace = TRUE),
-      Technician_name = sample(c("Maria Garcia", "Thomas Johnson"), 20, replace = TRUE)
+      Technician_name = sample(c("Maria_garcia", "Thomas_johnson"), 20, replace = TRUE),
+      Notes_Runs = sample(c("Control_run", "Quality_control", "Standard_control_processing"), 20, replace = TRUE),
+      Sample_ID = sample(control_sample_metadata$Sample_ID, 20, replace = TRUE),
+      stringsAsFactors = FALSE
     )
     
-    # Generate CONTROL taxonomy data with different abundances 
+    # Generate CONTROL taxonomy data with healthier microbiome profile
     control_taxonomy_data <- data.frame(
-      Sample_ID = rep(paste0("CTRL_SAMPLE", sprintf("%03d", 1:30)), each = length(species_names)),
-      Species = rep(species_names, 30),
-      Abundance = round(runif(30 * length(species_names), min = 0, max = 10000))
+      Sample_ID = rep(control_sample_metadata$Sample_ID, each = length(species_names)),
+      Species = rep(species_names, nrow(control_sample_metadata)),
+      Abundance = round(runif(nrow(control_sample_metadata) * length(species_names), min = 0, max = 10000))
     )
     
     # Modify control taxonomy to have more of the "healthy" microbiome species
@@ -1083,6 +1829,8 @@ server <- function(input, output, session) {
     data_store$control_run_metadata <- control_run_metadata
     data_store$control_taxonomy_data <- control_taxonomy_data
     data_store$success_message <- "Example data generated successfully! Ready for analysis."
+    data_store$manual_data_loaded <- TRUE
+    data_store$automatic_data_loaded <- FALSE
     
     # Show notification 
     showNotification("Example data generated successfully!", type = "message")
@@ -1128,8 +1876,11 @@ server <- function(input, output, session) {
       data_store$control_sample_metadata <- control_sample_metadata
       data_store$control_run_metadata <- control_run_metadata
       data_store$control_taxonomy_data <- control_taxonomy_data
+      data_store$manual_data_loaded <- TRUE
+      data_store$automatic_data_loaded <- FALSE 
       
       # Show notification 
+      data_store$success_message <- "Data loaded successfully! Ready for analysis."
       showNotification("Data loaded successfully!", type = "message")
     }, error = function(e) {
       # Handle any error that occur during file reading
@@ -1138,9 +1889,26 @@ server <- function(input, output, session) {
     })
   })
   
-  # Value boxes
+  # Output for manual data loading status
+  output$manual_data_loaded <- reactive({
+    data_store$manual_data_loaded
+  })
+  outputOptions(output, "manual_data_loaded", suspendWhenHidden = FALSE)
+  
+  # Manual data loading status
+  output$manual_data_loading_status <- renderText({
+    if(!is.null(data_store$error_message)) {
+      data_store$error_message
+    } else if(!is.null(data_store$success_message)) {
+      data_store$success_message
+    } else {
+      "No data loaded yet"
+    }
+  })
+  
+  # Value boxes for manual data 
   output$total_samples_box <- renderValueBox({
-    req(data_store$sample_metadata)
+    req(data_store$sample_metadata, data_store$manual_data_loaded)
     valueBox(
       nrow(data_store$sample_metadata), 
       "Total Samples", 
@@ -1150,7 +1918,7 @@ server <- function(input, output, session) {
   })
   
   output$total_species_box <- renderValueBox({
-    req(data_store$taxonomy_data)
+    req(data_store$taxonomy_data, data_store$manual_data_loaded)
     valueBox(
       length(unique(data_store$taxonomy_data$Species)), 
       "Unique Species", 
@@ -1160,7 +1928,7 @@ server <- function(input, output, session) {
   })
   
   output$total_runs_box <- renderValueBox({
-    req(data_store$run_metadata)
+    req(data_store$run_metadata, data_store$manual_data_loaded)
     valueBox(
       nrow(data_store$run_metadata), 
       "Total Runs", 
@@ -1169,536 +1937,670 @@ server <- function(input, output, session) {
     )
   })
   
-  # Add a control samples value box
   output$total_control_samples_box <- renderValueBox({
-    req(data_store$control_sample_metadata)
+    req(data_store$manual_data_loaded)
+    control_count <- if(!is.null(data_store$control_sample_metadata)) {
+      nrow(data_store$control_sample_metadata)
+    } else {
+      0
+    }
     valueBox(
-      nrow(data_store$control_sample_metadata), 
+      control_count, 
       "Control Samples", 
       icon = icon("vial"), 
       color = "yellow"
     )
   })
   
-  ###############################################################
-  ##### ENHANCED DYNAMIC SUMMARY WITH MISSING DATA HANDLING ####
-  ###############################################################
-  
-  # Helper function to safely calculate statistics with NA handling
-  safe_stats <- function(x, type = "basic") {
-    x <- x[!is.na(x)]
-    if (length(x) == 0) return("No data")
-    
-    switch(type,
-           "basic" = paste0("n=", length(x)),
-           "range" = paste0(min(x), " - ", max(x)),
-           "mean_sd" = paste0("Mean: ", round(mean(x), 1), " ± ", round(sd(x), 1)),
-           "count" = length(x)
-    )
-  }
-  
-  # Helper function to create summary cards
-  create_summary_card <- function(title, icon, content, color = "primary") {
-    paste0('
-  <div class="summary-col">
-    <div class="summary-card">
-      <div class="summary-card-header ', color, '">
-        <i class="', icon, '"></i> ', title, '
-      </div>
-      <div class="summary-card-body">
-        ', content, '
-      </div>
-    </div>
-  </div>
-  ')
-  }
-  
-  # Updated sample info display for shinydashboard
-  output$selected_sample_info <- renderUI({
-    req(filtered_data())
-    
-    if (!filtered_data()$filtered) {
-      return(HTML(paste0(
-        '<div class="alert-custom alert-info">',
-        '<i class="fas fa-info-circle"></i> ',
-        '<strong>All Samples View:</strong> Showing data for all ', filtered_data()$sample_count, ' samples. ',
-        'Select a specific sample above to view detailed information.',
-        '</div>'
-      )))
-    }
-    
-    sample_data <- filtered_data()$sample_metadata
-    
-    # Create info table rows
-    info_rows <- c()
-    
-    # Define fields with icons
-    fields <- list(
-      "Sample_ID" = list(label = "Sample ID", icon = "fas fa-barcode"),
-      "Collection_Date" = list(label = "Collection Date", icon = "fas fa-calendar-alt"), 
-      "Institution" = list(label = "Institution", icon = "fas fa-hospital"),
-      "Department" = list(label = "Department", icon = "fas fa-building"),
-      "Gender" = list(label = "Gender", icon = "fas fa-venus-mars"),
-      "Age" = list(label = "Age", icon = "fas fa-birthday-cake"),
-      "Body_Mass_Index" = list(label = "BMI Category", icon = "fas fa-weight"),
-      "Ongoing_conditions" = list(label = "Ongoing Conditions", icon = "fas fa-stethoscope"),
-      "Allergies" = list(label = "Allergies", icon = "fas fa-exclamation-triangle"),
-      "Dietary_Information" = list(label = "Diet", icon = "fas fa-utensils"),
-      "Exercise_frequency" = list(label = "Exercise Frequency", icon = "fas fa-dumbbell"),
-      "Smoking_status" = list(label = "Smoking Status", icon = "fas fa-smoking-ban"),
-      "Alcohol_consumption" = list(label = "Alcohol Consumption", icon = "fas fa-wine-glass")
-    )
-    
-    for(field in names(fields)) {
-      if(field %in% colnames(sample_data)) {
-        value <- sample_data[[field]]
-        if(!is.na(value) && value != "") {
-          info_rows <- c(info_rows, paste0(
-            "<tr>",
-            "<th class='sample-info-table'><i class='", fields[[field]]$icon, "'></i> ", 
-            fields[[field]]$label, "</th>",
-            "<td class='sample-info-table'>", value, "</td>",
-            "</tr>"
-          ))
-        }
-      }
-    }
-    
-    HTML(paste0(
-      '<div class="sample-info-card">',
-      '<div class="sample-info-header">',
-      '<i class="fas fa-user"></i> Sample Details',
-      '</div>',
-      '<table class="table sample-info-table">',
-      paste(info_rows, collapse = ""),
-      '</table>',
-      '</div>'
-    ))
-  })
-  
-  # Updated dynamic summary for shinydashboard
-  output$data_summary_dynamic <- renderUI({
-    req(data_store$sample_metadata, data_store$run_metadata, data_store$taxonomy_data)
-    
-    # === GENERAL OVERVIEW ===
-    total_samples <- nrow(data_store$sample_metadata)
-    total_runs <- nrow(data_store$run_metadata)
-    total_species <- length(unique(data_store$taxonomy_data$Species[!is.na(data_store$taxonomy_data$Species)]))
-    
-    # Handle date ranges safely
-    sample_dates <- as.Date(data_store$sample_metadata$Collection_Date, format = "%d/%m/%Y")
-    sample_dates <- sample_dates[!is.na(sample_dates)]
-    sample_date_range <- if(length(sample_dates) > 0) {
-      paste(min(sample_dates), "to", max(sample_dates))
-    } else "No valid dates"
-    
-    seq_dates <- as.Date(data_store$run_metadata$Sequencing_Date, format = "%d/%m/%Y")
-    seq_dates <- seq_dates[!is.na(seq_dates)]
-    seq_date_range <- if(length(seq_dates) > 0) {
-      paste(min(seq_dates), "to", max(seq_dates))
-    } else "No valid dates"
-    
-    overview_content <- paste0(
-      '<div style="line-height: 1.6;">',
-      '<div><span class="stat-badge primary"><i class="fas fa-vial"></i> Samples: ', total_samples, '</span></div>',
-      '<div><span class="stat-badge info"><i class="fas fa-play"></i> Runs: ', total_runs, '</span></div>',
-      '<div><span class="stat-badge success"><i class="fas fa-microscope"></i> Species: ', total_species, '</span></div>',
-      '<hr style="margin: 10px 0;">',
-      '<div style="font-size: 12px; color: #666;">',
-      '<div><i class="fas fa-calendar"></i> Collection: ', sample_date_range, '</div>',
-      '<div><i class="fas fa-dna"></i> Sequencing: ', seq_date_range, '</div>',
-      '</div>',
-      '</div>'
-    )
-    
-    # === SEQUENCING SUMMARY ===
-    platform_counts <- table(data_store$run_metadata$Sequencing_Platform[!is.na(data_store$run_metadata$Sequencing_Platform)])
-    platforms <- if(length(platform_counts) > 0) {
-      paste0('<div style="margin-bottom: 10px;">',
-             paste(paste0('<span class="stat-badge secondary">', 
-                          names(platform_counts), ' (', platform_counts, ')</span>'), 
-                   collapse = '<br>'),
-             '</div>')
-    } else '<span style="color: #999;">No data</span>'
-    
-    seq_types <- unique(data_store$run_metadata$Sequencing_Type[!is.na(data_store$run_metadata$Sequencing_Type)])
-    seq_types_str <- if(length(seq_types) > 0) {
-      paste0('<div>',
-             paste(paste0('<span class="stat-badge info">', seq_types, '</span>'), 
-                   collapse = '<br>'),
-             '</div>')
-    } else '<span style="color: #999;">No data</span>'
-    
-    sequencing_content <- paste0(
-      '<div><strong>Platforms:</strong></div>', platforms,
-      '<div><strong>Types:</strong></div>', seq_types_str
-    )
-    
-    # === DEMOGRAPHICS ===
-    gender_counts <- table(data_store$sample_metadata$Gender[!is.na(data_store$sample_metadata$Gender)])
-    gender_dist <- if(length(gender_counts) > 0) {
-      paste0('<div>',
-             paste(paste0('<span class="stat-badge">', 
-                          names(gender_counts), ' (', gender_counts, ')</span>'), 
-                   collapse = ' '),
-             '</div>')
-    } else '<span style="color: #999;">No data</span>'
-    
-    ages <- data_store$sample_metadata$Age[!is.na(data_store$sample_metadata$Age)]
-    age_stats <- if(length(ages) > 0) {
-      paste0('<span class="stat-badge primary">', min(ages), '-', max(ages), ' years</span>',
-             '<br><small style="color: #666;">Mean: ', round(mean(ages), 1), ' years</small>')
-    } else '<span style="color: #999;">No data</span>'
-    
-    demographics_content <- paste0(
-      '<div style="margin-bottom: 10px;"><strong>Gender:</strong><br>', gender_dist, '</div>',
-      '<div><strong>Age Range:</strong><br>', age_stats, '</div>'
-    )
-    
-    # === TOP CONDITIONS ===
-    conditions <- data_store$sample_metadata$Ongoing_conditions[!is.na(data_store$sample_metadata$Ongoing_conditions)]
-    condition_counts <- sort(table(conditions), decreasing = TRUE)
-    top_conditions <- if(length(condition_counts) > 0) {
-      top_3 <- head(condition_counts, 3)
-      paste0('<div>',
-             paste(paste0('<div style="margin-bottom: 5px;"><span class="stat-badge warning">', 
-                          names(top_3), '</span> <small style="color: #666;">(', top_3, ')</small></div>'), 
-                   collapse = ''),
-             '</div>')
-    } else '<span style="color: #999;">No data available</span>'
-    
-    # === TAXONOMY HIGHLIGHTS ===
-    species_data <- data_store$taxonomy_data[!is.na(data_store$taxonomy_data$Species) & 
-                                               !is.na(data_store$taxonomy_data$Abundance), ]
-    
-    if(nrow(species_data) > 0) {
-      species_abundance <- aggregate(Abundance ~ Species, data = species_data, mean)
-      species_abundance <- species_abundance[order(species_abundance$Abundance, decreasing = TRUE), ]
-      top_species <- if(nrow(species_abundance) > 0) {
-        head(species_abundance$Species, 3)
-      } else character(0)
-      
-      species_richness <- aggregate(Species ~ Sample_ID, 
-                                    data = species_data[species_data$Abundance > 0, ], 
-                                    function(x) length(unique(x)))
-      mean_richness <- if(nrow(species_richness) > 0) {
-        round(mean(species_richness$Species), 1)
-      } else 0
-    } else {
-      top_species <- character(0)
-      mean_richness <- 0
-    }
-    
-    top_species_content <- if(length(top_species) > 0) {
-      paste0('<div>',
-             paste(paste0('<div style="margin-bottom: 3px;"><span class="stat-badge success">', top_species, '</span></div>'), 
-                   collapse = ''),
-             '</div>')
-    } else '<span style="color: #999;">No data</span>'
-    
-    taxonomy_content <- paste0(
-      '<div style="margin-bottom: 10px;"><strong>Top Species:</strong><br>', top_species_content, '</div>',
-      '<div><strong>Avg Richness:</strong><br>',
-      '<span class="stat-badge primary">', mean_richness, ' species/sample</span></div>'
-    )
-    
-    # Create the complete dashboard
-    HTML(paste0('
-  <div class="summary-grid">
-    ', create_summary_card("📊 Overview", "fas fa-chart-bar", overview_content, "primary"), '
-    ', create_summary_card("🧬 Sequencing", "fas fa-dna", sequencing_content, "info"), '
-    ', create_summary_card("👥 Demographics", "fas fa-users", demographics_content, "success"), '
-    ', create_summary_card("🏥 Top Conditions", "fas fa-heartbeat", top_conditions, "warning"), '
-    ', create_summary_card("🦠 Taxonomy", "fas fa-microscope", taxonomy_content, "secondary"), '
-  </div>
-  '))
-  })
-  
-  ##############################################################
-  ##### ENHANCED DATA TABLES WITH ADVANCED FILTERING #########
-  ##############################################################
-  
-  # Enhanced sample selection with more information
+  # Update sample selection choices when data is loaded
   observe({
-    req(data_store$sample_metadata)
-    
-    # Create more informative choices
-    sample_info <- data_store$sample_metadata
-    sample_choices <- sample_info$Sample_ID
-    
-    # Create labels with additional context
-    choice_labels <- paste0(
-      sample_info$Sample_ID, 
-      " | ", ifelse(is.na(sample_info$Collection_Date), "No date", sample_info$Collection_Date),
-      " | ", ifelse(is.na(sample_info$Gender), "Unknown", sample_info$Gender),
-      " | Age: ", ifelse(is.na(sample_info$Age), "Unknown", sample_info$Age)
-    )
-    names(sample_choices) <- choice_labels
-    
+    if(data_store$manual_data_loaded && !is.null(data_store$sample_metadata)) {
+      sample_choices <- data_store$sample_metadata$Sample_ID
+      names(sample_choices) <- paste0(data_store$sample_metadata$Sample_ID, 
+                                      " (", data_store$sample_metadata$Collection_Date, ")")
+      
+      updateSelectizeInput(session, "selected_sample_id", 
+                           choices = sample_choices,
+                           selected = character(0), 
+                           options = list(placeholder = "Choose a sample to analyze..."))
+    }
+  })
+  
+  # Clear sample selection button
+  observeEvent(input$clear_sample_selection, {
     updateSelectizeInput(session, "selected_sample_id", 
-                         choices = c("All Samples" = "", sample_choices), 
-                         selected = "")
+                         selected = character(0))
+    showNotification("Sample selection cleared", type = "message")
   })
   
-  # Enhanced filtering with search capabilities
-  filtered_data <- reactive({
-    req(data_store$sample_metadata, data_store$taxonomy_data)
-    
-    selected_sample <- input$selected_sample_id
-    
-    if (selected_sample == "" || is.null(selected_sample)) {
-      return(list(
-        sample_metadata = data_store$sample_metadata, 
-        taxonomy_data = data_store$taxonomy_data, 
-        filtered = FALSE,
-        sample_count = nrow(data_store$sample_metadata)
-      ))
-    } else {
-      # Flexible column name handling
-      sample_col <- if("Sample_ID" %in% colnames(data_store$sample_metadata)) "Sample_ID" else "SampleID"
-      tax_col <- if("Sample_ID" %in% colnames(data_store$taxonomy_data)) "Sample_ID" else "SampleID"
-      
-      # Filter metadata
-      filtered_sample_metadata <- data_store$sample_metadata[
-        data_store$sample_metadata[[sample_col]] == selected_sample, 
-      ]
-      
-      # Filter taxonomy data
-      filtered_taxonomy_data <- data_store$taxonomy_data[
-        data_store$taxonomy_data[[tax_col]] == selected_sample, 
-      ]
-      
-      return(list(
-        sample_metadata = filtered_sample_metadata,
-        taxonomy_data = filtered_taxonomy_data, 
-        filtered = TRUE,
-        sample_count = 1
-      ))
-    }
-  })
-  
-  # Enhanced sample information display
+  # Selected sample information display
   output$selected_sample_info <- renderUI({
-    req(filtered_data())
-    
-    if (!filtered_data()$filtered) {
-      return(HTML(paste0(
-        '<div class="alert alert-info">',
-        '<i class="fas fa-info-circle"></i> ',
-        'Showing data for all ', filtered_data()$sample_count, ' samples. ',
-        'Select a specific sample above to view detailed information.',
-        '</div>'
-      )))
+    # only show info if a sample is actually selected 
+    if(is.null(input$selected_sample_id) || input$selected_sample_id == "" ||
+       is.null(data_store$sample_metadata)) {
+      return(HTML("<p><em>No sample selected</em></p>"))
     }
     
-    sample_data <- filtered_data()$sample_metadata
+    sample_info <- data_store$sample_metadata[data_store$sample_metadata$Sample_ID == input$selected_sample_id, ]
     
-    # Create a more comprehensive info table
-    info_rows <- c()
-    
-    # Define fields to display with their labels
-    fields <- list(
-      "Sample_ID" = "Sample ID",
-      "Collection_Date" = "Collection Date", 
-      "Institution" = "Institution",
-      "Department" = "Department",
-      "Gender" = "Gender",
-      "Age" = "Age",
-      "Body_Mass_Index" = "BMI Category",
-      "Ongoing_conditions" = "Ongoing Conditions",
-      "Allergies" = "Allergies",
-      "Dietary_Information" = "Diet",
-      "Exercise_frequency" = "Exercise Frequency",
-      "Smoking_status" = "Smoking Status",
-      "Alcohol_consumption" = "Alcohol Consumption"
-    )
-    
-    for(field in names(fields)) {
-      if(field %in% colnames(sample_data)) {
-        value <- sample_data[[field]]
-        if(!is.na(value) && value != "") {
-          info_rows <- c(info_rows, paste0(
-            "<tr><th>", fields[[field]], "</th><td>", value, "</td></tr>"
-          ))
-        }
-      }
-    }
-    
-    HTML(paste0(
-      '<div class="card">',
-      '<div class="card-header bg-primary text-white">',
-      '<h5 class="mb-0"><i class="fas fa-user"></i> Sample Details</h5>',
-      '</div>',
-      '<div class="card-body">',
-      '<table class="table table-sm table-hover">',
-      paste(info_rows, collapse = ""),
-      '</table>',
-      '</div>',
-      '</div>'
-    ))
-  })
-  
-  ## METADATA & DATA PREVIEW 
-  # Enhanced data table rendering with better options
-  create_enhanced_datatable <- function(data, title = "Data") {
-    if(is.null(data) || nrow(data) == 0) {
-      return(datatable(
-        data.frame(Message = "No data available"),
-        options = list(
-          dom = 't',
-          ordering = FALSE,
-          searching = FALSE
-        )
+    if(nrow(sample_info) > 0) {
+      HTML(paste0(
+        "<h4>Sample Information</h4>",
+        "<p><strong>Sample ID:</strong> ", sample_info$Sample_ID, "</p>",
+        "<p><strong>Collection Date:</strong> ", sample_info$Collection_Date, "</p>",
+        "<p><strong>Age:</strong> ", sample_info$Age, "</p>",
+        "<p><strong>Gender:</strong> ", sample_info$Gender, "</p>",
+        "<p><strong>BMI:</strong> ", sample_info$Body_Mass_Index, "</p>",
+        "<p><strong>Conditions:</strong> ", sample_info$Ongoing_conditions, "</p>"
       ))
     }
+  })
+  
+  
+  ## DATA PREVIEWS OUTPUTS 
+  # Helper function for consistent DataTable styling
+  create_enhanced_datatable <- function(data, table_name = "data") {
+    # Handle empty or problematic data
+    if(is.null(data) || nrow(data) == 0) {
+      data <- data.frame(Message = "No data available to display", stringsAsFactors = FALSE)
+    }
     
-    datatable(
-      data,
-      filter = "top", 
+    # Ensure all columns are properly formatted for display
+    data <- data.frame(lapply(data, function(x) {
+      if(is.numeric(x)) {
+        # Format numeric columns for better display
+        ifelse(is.na(x), "0", as.character(x))
+      } else {
+        # Convert factors and other types to character, handle NAs
+        ifelse(is.na(x) | x == "", "N/A", as.character(x))
+      }
+    }), stringsAsFactors = FALSE)
+    
+    # Create the datatable
+    dt <- datatable(
+      data, 
+      extensions = c('Buttons', 'ColReorder', 'FixedHeader'),
       options = list(
-        pageLength = 15,
+        dom = 'Bfrtip',
+        buttons = list(
+          list(extend = 'copy', text = 'Copy'),
+          list(extend = 'csv', filename = paste0(table_name, '_', Sys.Date())),
+          list(extend = 'excel', filename = paste0(table_name, '_', Sys.Date())),
+          list(extend = 'pdf', filename = paste0(table_name, '_', Sys.Date())),
+          list(extend = 'print', text = 'Print')
+        ),
         scrollX = TRUE,
         scrollY = "400px",
-        scrollCollapse = TRUE,
+        pageLength = 25,
+        lengthMenu = list(c(10, 25, 50, 100, -1), c('10', '25', '50', '100', 'All')),
+        search = list(regex = TRUE, caseInsensitive = TRUE),
+        searchCols = lapply(1:ncol(data), function(x) list(search = "")),
+        colReorder = TRUE,
         fixedHeader = TRUE,
-        searchHighlight = TRUE,
-        stateSave = TRUE,
-        dom = 'Bfrtip',
-        buttons = c('copy', 'csv', 'excel', 'colvis'),
+        autoWidth = FALSE,
         columnDefs = list(
-          list(className = 'dt-center', targets = '_all')
-        ), 
-        # Additional search options 
-        search = list(regex = TRUE, caseInsentive = TRUE)
+          list(className = "dt-center", targets = "_all"),
+          # Handle wide taxonomy columns better - more restrictive width
+          list(width = "150px", targets = which(grepl("taxonomy|Taxon", colnames(data), ignore.case = TRUE)) - 1),
+          # Handle numeric abundance columns
+          list(className = "dt-right", targets = which(sapply(data, function(x) all(grepl("^[0-9.]+$", x[x != "N/A" & x != "0"])))) - 1),
+          # Force word wrapping for long text
+          list(className = "dt-body-nowrap", targets = "_all")
+        )
       ),
-      extensions = c('Buttons', 'FixedHeader'),
-      class = 'table-striped table-hover compact',
-      caption = htmltools::tags$caption(
-        style = "caption-side: top; text-align: center; font-weight: bold;",
-        title
-      )
-    ) %>%
-      formatStyle(columns = colnames(data), fontSize = '12px')
+      filter = 'top',  # Add individual column search boxes
+      class = 'cell-border stripe hover compact',
+      rownames = FALSE
+    )
+    
+    # Apply styling
+    dt <- dt %>% formatStyle(columns = colnames(data), fontSize = '12px')
+    
+    # Apply Type column styling if it exists
+    if("Type" %in% colnames(data)) {
+      dt <- dt %>% formatStyle('Type', 
+                               backgroundColor = styleEqual(c('Sample', 'Control'), 
+                                                            c('#e8f4fd', '#fff2cc')),
+                               fontWeight = 'bold')
+    }
+    
+    # Apply special styling for taxonomy columns (make them more readable)
+    taxonomy_cols <- colnames(data)[grepl("taxonomy|Taxon", colnames(data), ignore.case = TRUE)]
+    if(length(taxonomy_cols) > 0) {
+      for(col in taxonomy_cols) {
+        dt <- dt %>% formatStyle(col, 
+                                 fontSize = '10px',
+                                 whiteSpace = 'normal',
+                                 wordWrap = 'break-word',
+                                 maxWidth = '150px',
+                                 overflow = 'hidden',
+                                 textOverflow = 'ellipsis')
+      }
+    }
+    
+    return(dt)
   }
   
-  # Enhanced sample metadata table
+  # Sample Metadata Preview with filtering
   output$sample_metadata_preview <- renderDataTable({
     req(data_store$sample_metadata)
     
-    filter_value <- input$sample_metadata_filter 
-    selected_sample <- input$selected_sample_id
+    data_to_show <- switch(input$sample_metadata_filter,
+                           "All" = {
+                             combined_data <- data_store$sample_metadata
+                             if(!is.null(data_store$control_sample_metadata)) {
+                               # Ensure columns match before binding
+                               sample_cols <- colnames(data_store$sample_metadata)
+                               control_cols <- colnames(data_store$control_sample_metadata)
+                               common_cols <- intersect(sample_cols, control_cols)
+                               
+                               combined_data <- rbind(
+                                 cbind(data_store$sample_metadata[, common_cols, drop = FALSE], Type = "Sample"),
+                                 cbind(data_store$control_sample_metadata[, common_cols, drop = FALSE], Type = "Control")
+                               )
+                             } else {
+                               combined_data <- cbind(data_store$sample_metadata, Type = "Sample")
+                             }
+                             combined_data
+                           },
+                           "Sample" = cbind(data_store$sample_metadata, Type = "Sample"),
+                           "Control" = {
+                             if(!is.null(data_store$control_sample_metadata)) {
+                               cbind(data_store$control_sample_metadata, Type = "Control")
+                             } else {
+                               data.frame(Message = "No control data available", stringsAsFactors = FALSE)
+                             }
+                           }
+    )
     
-    # Start with base data 
-    sample_data <- data_store$sample_metadata
-    
-    # Apply sample filter if selected 
-    if (!is.null(selected_sample) && selected_sample != "") {
-      sample_col <- if("Sample_ID" %in% colnames(sample_data)) "Sample_ID" else "SampleID"
-      sample_data <- sample_data[sample_data[[sample_col]] == selected_sample, ]
-    }
-    
-    # Apply data source filter
-    if (!is.null(filter_value)) {
-      if (filter_value == "Control" && !is.null(data_store$control_sample_metadata)) {
-        sample_data <- data_store$control_sample_metadata
-        sample_data$Data_Source <- "Control"
-      } else if (filter_value == "All" && !is.null(data_store$control_sample_metadata)) {
-        # Combine datasets
-        main_data <- data_store$sample_metadata
-        main_data$Data_Source <- "Sample"
-        
-        control_data <- data_store$control_sample_metadata
-        control_data$Data_Source <- "Control"
-        
-        # Ensure compatible columns
-        common_cols <- intersect(colnames(main_data), colnames(control_data))
-        sample_data <- rbind(main_data[common_cols], control_data[common_cols])
-      } else {
-        sample_data$Data_Source <- "Sample"
-      }
-    }
-    
-    create_enhanced_datatable(sample_data, "Sample Metadata")
+    create_enhanced_datatable(data_to_show, "sample_metadata")
   })
   
-  # Enhanced run metadata table  
+  # Run Metadata Preview with filtering  
   output$run_metadata_preview <- renderDataTable({
     req(data_store$run_metadata)
     
-    filter_value <- input$run_metadata_filter
+    data_to_show <- switch(input$run_metadata_filter,
+                           "All" = {
+                             combined_data <- data_store$run_metadata
+                             if(!is.null(data_store$control_run_metadata)) {
+                               # Ensure columns match before binding
+                               sample_cols <- colnames(data_store$run_metadata)
+                               control_cols <- colnames(data_store$control_run_metadata)
+                               common_cols <- intersect(sample_cols, control_cols)
+                               
+                               combined_data <- rbind(
+                                 cbind(data_store$run_metadata[, common_cols, drop = FALSE], Type = "Sample"),
+                                 cbind(data_store$control_run_metadata[, common_cols, drop = FALSE], Type = "Control")
+                               )
+                             } else {
+                               combined_data <- cbind(data_store$run_metadata, Type = "Sample")
+                             }
+                             combined_data
+                           },
+                           "Sample" = cbind(data_store$run_metadata, Type = "Sample"),
+                           "Control" = {
+                             if(!is.null(data_store$control_run_metadata)) {
+                               cbind(data_store$control_run_metadata, Type = "Control")
+                             } else {
+                               data.frame(Message = "No control data available", stringsAsFactors = FALSE)
+                             }
+                           }
+    )
     
-    run_data <- data_store$run_metadata
-    
-    if (!is.null(filter_value)) {
-      if (filter_value == "Control" && !is.null(data_store$control_run_metadata)) {
-        run_data <- data_store$control_run_metadata
-        run_data$Data_Source <- "Control"
-      } else if (filter_value == "All" && !is.null(data_store$control_run_metadata)) {
-        main_data <- data_store$run_metadata
-        main_data$Data_Source <- "Sample"
-        
-        control_data <- data_store$control_run_metadata  
-        control_data$Data_Source <- "Control"
-        
-        common_cols <- intersect(colnames(main_data), colnames(control_data))
-        run_data <- rbind(main_data[common_cols], control_data[common_cols])
-      } else {
-        run_data$Data_Source <- "Sample"
-      }
-    }
-    
-    create_enhanced_datatable(run_data, "Run Metadata")
+    create_enhanced_datatable(data_to_show, "run_metadata")
   })
   
-  # Enhanced taxonomy data table
+  # Taxonomy Data Preview with filtering
   output$taxonomy_data_preview <- renderDataTable({
     req(data_store$taxonomy_data)
     
-    filter_value <- input$taxonomy_data_filter
-    selected_sample <- input$selected_sample_id
+    data_to_show <- switch(input$taxonomy_data_filter,
+                           "All" = {
+                             combined_data <- data_store$taxonomy_data
+                             if(!is.null(data_store$control_taxonomy_data)) {
+                               # Ensure columns match before binding
+                               sample_cols <- colnames(data_store$taxonomy_data)
+                               control_cols <- colnames(data_store$control_taxonomy_data)
+                               common_cols <- intersect(sample_cols, control_cols)
+                               
+                               if(length(common_cols) > 0) {
+                                 combined_data <- rbind(
+                                   cbind(data_store$taxonomy_data[, common_cols, drop = FALSE], Type = "Sample"),
+                                   cbind(data_store$control_taxonomy_data[, common_cols, drop = FALSE], Type = "Control")
+                                 )
+                               } else {
+                                 # If no common columns, show sample data with a warning
+                                 combined_data <- cbind(data_store$taxonomy_data, Type = "Sample")
+                               }
+                             } else {
+                               combined_data <- cbind(data_store$taxonomy_data, Type = "Sample")
+                             }
+                             combined_data[1:min(1000, nrow(combined_data)), ] # Limit for performance
+                           },
+                           "Sample" = {
+                             limited_data <- data_store$taxonomy_data[1:min(1000, nrow(data_store$taxonomy_data)), ]
+                             cbind(limited_data, Type = "Sample")
+                           },
+                           "Control" = {
+                             if(!is.null(data_store$control_taxonomy_data)) {
+                               limited_data <- data_store$control_taxonomy_data[1:min(1000, nrow(data_store$control_taxonomy_data)), ]
+                               cbind(limited_data, Type = "Control")
+                             } else {
+                               data.frame(Message = "No control data available", stringsAsFactors = FALSE)
+                             }
+                           }
+    )
     
-    taxonomy_data <- data_store$taxonomy_data 
-    
-    # Apply sample filter if selected
-    if (!is.null(selected_sample) && selected_sample != "") {
-      tax_col <- if("Sample_ID" %in% colnames(taxonomy_data)) "Sample_ID" else "SampleID"
-      taxonomy_data <- taxonomy_data[taxonomy_data[[tax_col]] == selected_sample, ]
+    create_enhanced_datatable(data_to_show, "taxonomy_data")
+  })
+  
+  ##### DATA SUMMARY OUTPUT 
+  output$data_summary_dynamic <- renderUI({
+    # Check which type of data is loaded
+    if(data_store$automatic_data_loaded) {
+      create_data_summary("automatic")
+    } else if(data_store$manual_data_loaded) {
+      create_data_summary("manual")
+    } else {
+      HTML("<div class='alert alert-warning text-center'>
+          <i class='fa fa-exclamation-triangle fa-2x'></i>
+          <h4>No Data Loaded</h4>
+          <p>Please upload data manually or use automatic data loading to get started.</p>
+          </div>")
     }
+  })
+  
+  # Enhanced helper function to create data summary with icons and better styling
+  create_data_summary <- function(data_type) {
+    req(data_store$sample_metadata, data_store$run_metadata, data_store$taxonomy_data)
     
-    # Apply data source filter
-    if (!is.null(filter_value)) {
-      if (filter_value == "Control" && !is.null(data_store$control_taxonomy_data)) {
-        taxonomy_data <- data_store$control_taxonomy_data
-        taxonomy_data$Data_Source <- "Control"
-      } else if (filter_value == "All" && !is.null(data_store$control_taxonomy_data)) {
-        main_data <- data_store$taxonomy_data
-        main_data$Data_Source <- "Sample"
+    # Age distribution with error handling
+    age_summary <- tryCatch({
+      summary(as.numeric(data_store$sample_metadata$Age))
+    }, error = function(e) {
+      c(0, 0, 0, 0, 0, 0)
+    })
+    
+    # Gender distribution
+    gender_dist <- table(data_store$sample_metadata$Gender)
+    
+    # Most abundant species (top 10) with error handling - Handle both data formats
+    top_species <- tryCatch({
+      # Check if this is the long format (generated data) with Abundance and Species columns
+      if("Abundance" %in% colnames(data_store$taxonomy_data) && "Species" %in% colnames(data_store$taxonomy_data)) {
+        # Long format - aggregate by species
+        species_abundance <- aggregate(Abundance ~ Species, data_store$taxonomy_data, sum)
+        species_abundance[order(species_abundance$Abundance, decreasing = TRUE)[1:min(10, nrow(species_abundance))], ]
+      } 
+      # Check if this is OTU table format (wide format with taxonomy column)
+      else if("Taxon" %in% colnames(data_store$taxonomy_data) || "taxonomy" %in% colnames(data_store$taxonomy_data)) {
+        # Wide format OTU table - columns are samples, rows are OTUs
+        taxonomy_col <- if("Taxon" %in% colnames(data_store$taxonomy_data)) "Taxon" else "taxonomy"
         
-        control_data <- data_store$control_taxonomy_data
-        control_data$Data_Source <- "Control"
+        # Get sample columns (exclude taxonomy and confidence columns)
+        sample_cols <- setdiff(colnames(data_store$taxonomy_data), 
+                               c(taxonomy_col, "Confidence", "confidence", "OTU_ID", "otu_id", "#OTU ID"))
         
-        common_cols <- intersect(colnames(main_data), colnames(control_data))
-        taxonomy_data <- rbind(main_data[common_cols], control_data[common_cols])
-      } else {
-        taxonomy_data$Data_Source <- "Sample"
+        if(length(sample_cols) > 0) {
+          # Calculate total abundance per OTU across all samples
+          abundance_data <- data_store$taxonomy_data[, sample_cols, drop = FALSE]
+          # Convert to numeric and handle any non-numeric values
+          abundance_data[] <- lapply(abundance_data, function(x) as.numeric(as.character(x)))
+          abundance_data[is.na(abundance_data)] <- 0
+          
+          # Sum across samples for each OTU
+          total_abundance <- rowSums(abundance_data, na.rm = TRUE)
+          
+          # Extract species names from taxonomy string
+          taxonomy_strings <- data_store$taxonomy_data[[taxonomy_col]]
+          
+          # Try to extract species level taxonomy (look for s__ or last level)
+          species_names <- sapply(taxonomy_strings, function(tax_str) {
+            if(is.na(tax_str) || tax_str == "" || tax_str == "Unassigned") {
+              return("Unassigned")
+            }
+            
+            # Split by common delimiters
+            tax_levels <- unlist(strsplit(as.character(tax_str), "[;|]"))
+            
+            # Look for species level (s__)
+            species_level <- grep("s__", tax_levels, value = TRUE)
+            if(length(species_level) > 0) {
+              species_name <- gsub("s__", "", species_level[1])
+              species_name <- gsub("_", " ", species_name)
+              return(ifelse(species_name == "" || species_name == " ", "Unassigned", species_name))
+            }
+            
+            # If no species level, take the last non-empty level
+            tax_levels <- tax_levels[tax_levels != "" & !is.na(tax_levels)]
+            if(length(tax_levels) > 0) {
+              last_level <- tail(tax_levels, 1)
+              # Remove common prefixes
+              last_level <- gsub("^[a-z]__", "", last_level)
+              last_level <- gsub("_", " ", last_level)
+              return(ifelse(last_level == "" || last_level == " ", "Unassigned", last_level))
+            }
+            
+            return("Unassigned")
+          })
+          
+          # Create data frame and aggregate by species (in case multiple OTUs have same species)
+          species_abundance <- aggregate(total_abundance, 
+                                         by = list(Species = species_names), 
+                                         FUN = sum, na.rm = TRUE)
+          colnames(species_abundance) <- c("Species", "Abundance")
+          
+          # Sort and get top 10
+          species_abundance <- species_abundance[order(species_abundance$Abundance, decreasing = TRUE), ]
+          species_abundance[1:min(10, nrow(species_abundance)), ]
+        } else {
+          data.frame(Species = "No sample data found", Abundance = 0)
+        }
       }
+      # Fallback - if neither format is recognized
+      else {
+        # Try to count occurrences of any species-like column
+        possible_species_cols <- c("Species", "species", "Taxon", "taxonomy", "OTU_ID")
+        species_col <- intersect(possible_species_cols, colnames(data_store$taxonomy_data))[1]
+        
+        if(!is.na(species_col)) {
+          species_counts <- table(data_store$taxonomy_data[[species_col]])
+          top_10 <- head(sort(species_counts, decreasing = TRUE), 10)
+          data.frame(Species = names(top_10), Abundance = as.numeric(top_10))
+        } else {
+          data.frame(Species = "Data format not recognized", Abundance = 0)
+        }
+      }
+    }, error = function(e) {
+      data.frame(Species = paste("Error processing data:", e$message), Abundance = 0)
+    })
+    
+    # Sequencing platform distribution
+    platform_dist <- if("Sequencing_Platform" %in% colnames(data_store$run_metadata)) {
+      table(data_store$run_metadata$Sequencing_Platform)
+    } else {
+      total_runs <- nrow(data_store$run_metadata)
+      c("Unknown" = total_runs)
     }
     
-    create_enhanced_datatable(taxonomy_data, "Taxonomy Data")
+    # date range parsing with multiple format support
+    date_range <- tryCatch({
+      collection_dates <- data_store$sample_metadata$Collection_Date
+      
+      # Remove any NA, empty, or null values
+      collection_dates <- collection_dates[!is.na(collection_dates) & 
+                                             collection_dates != "" & 
+                                             !is.null(collection_dates)]
+      
+      if(length(collection_dates) == 0) {
+        return(c("No dates available", "No dates available"))
+      }
+      
+      # Try different date formats commonly used
+      date_formats <- c("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d", 
+                        "%m-%d-%Y", "%d-%m-%Y", "%B %d, %Y", "%d %B %Y",
+                        "%Y%m%d", "%m/%d/%y", "%d/%m/%y")
+      
+      parsed_dates <- NULL
+      
+      # Try each format until one works
+      for(fmt in date_formats) {
+        parsed_dates <- tryCatch({
+          as.Date(collection_dates, format = fmt)
+        }, error = function(e) NULL)
+        
+        # If we got valid dates (not all NA), use this format
+        if(!is.null(parsed_dates) && sum(!is.na(parsed_dates)) > 0) {
+          break
+        }
+      }
+      
+      # If no format worked, try automatic parsing
+      if(is.null(parsed_dates) || sum(!is.na(parsed_dates)) == 0) {
+        # Try lubridate-style parsing if available, otherwise use as.Date without format
+        parsed_dates <- tryCatch({
+          # First try base R automatic parsing
+          as.Date(collection_dates)
+        }, error = function(e) {
+          # If that fails, try converting to character first
+          tryCatch({
+            as.Date(as.character(collection_dates))
+          }, error = function(e2) {
+            # Last resort: try parsing as numeric (Excel dates)
+            tryCatch({
+              as.Date(as.numeric(collection_dates), origin = "1899-12-30")
+            }, error = function(e3) {
+              rep(NA, length(collection_dates))
+            })
+          })
+        })
+      }
+      
+      # Filter out NA dates and get range
+      valid_dates <- parsed_dates[!is.na(parsed_dates)]
+      
+      if(length(valid_dates) == 0) {
+        return(c("Invalid date format", "Invalid date format"))
+      }
+      
+      date_range <- range(valid_dates, na.rm = TRUE)
+      format(date_range, "%Y-%m-%d")
+      
+    }, error = function(e) {
+      c("Error parsing dates", "Error parsing dates")
+    })
+    
+    # Calculate total samples and runs
+    total_samples <- nrow(data_store$sample_metadata)
+    total_runs <- nrow(data_store$run_metadata)
+    
+    # Calculate collection days more safely
+    collection_days <- tryCatch({
+      if(all(date_range != "Unknown") && 
+         all(date_range != "No dates available") && 
+         all(date_range != "Invalid date format") &&
+         all(date_range != "Error parsing dates")) {
+        start_date <- as.Date(date_range[1])
+        end_date <- as.Date(date_range[2])
+        as.numeric(end_date - start_date + 1)
+      } else {
+        "N/A"
+      }
+    }, error = function(e) {
+      "N/A"
+    })
+    
+    # Create enhanced HTML summary with icons and cards
+    HTML(paste0(
+      # Details Section
+      "<div class='row'>",
+      
+      # Left column - Demographics & Collection Info
+      "<div class='col-md-6'>",
+      "<div class='box box-info'>",
+      "<div class='box-header with-border'>",
+      "<h3 class='box-title'><i class='fa fa-chart-pie'></i> Demographics & Collection</h3>",
+      "</div>",
+      "<div class='box-body'>",
+      
+      # Collection Period
+      "<div class='row mb-3'>",
+      "<div class='col-xs-12'>",
+      "<strong><i class='fa fa-calendar'></i> Collection Period:</strong><br>",
+      "<span class='text-muted'>", date_range[1], " to ", date_range[2], "</span>",
+      "</div></div>",
+      
+      # Age Statistics
+      "<div class='row mb-3'>",
+      "<div class='col-xs-6'>",
+      "<strong><i class='fa fa-birthday-cake'></i> Age Range:</strong><br>",
+      "<span class='text-muted'>", round(age_summary[1], 1), " - ", round(age_summary[6], 1), " years</span>",
+      "</div>",
+      "<div class='col-xs-6'>",
+      "<strong><i class='fa fa-calculator'></i> Mean Age:</strong><br>",
+      "<span class='text-muted'>", round(age_summary[4], 1), " years</span>",
+      "</div></div>",
+      
+      # Gender Distribution
+      "<div class='row mb-3'>",
+      "<div class='col-xs-12'>",
+      "<strong><i class='fa fa-venus-mars'></i> Gender Distribution:</strong><br>",
+      paste0("<span class='label label-", 
+             c("primary", "success", "warning")[1:length(gender_dist)], 
+             " mr-2'>", names(gender_dist), ": ", gender_dist, 
+             " (", round(gender_dist/sum(gender_dist)*100, 1), "%)</span>", 
+             collapse = " "),
+      "</div></div>",
+      
+      # Sequencing Info
+      "<div class='row mb-3'>",
+      "<div class='col-xs-12'>",
+      "<strong><i class='fa fa-server'></i> Sequencing Platforms:</strong><br>",
+      paste0("<span class='label label-info mr-2'>", 
+             names(platform_dist), ": ", platform_dist, " runs</span>", 
+             collapse = " "),
+      "</div></div>",
+      
+      "</div></div></div>",
+      
+      # Right column - Top Species
+      "<div class='col-md-6'>",
+      "<div class='box box-success'>",
+      "<div class='box-header with-border'>",
+      "<h3 class='box-title'><i class='fa fa-list-ol'></i> Top Abundant Species</h3>",
+      "</div>",
+      "<div class='box-body'>",
+      "<div class='table-responsive'>",
+      "<table class='table table-striped table-condensed'>",
+      "<thead><tr><th>#</th><th>Species</th><th>Total Abundance</th></tr></thead>",
+      "<tbody>",
+      
+      # Top species list
+      paste0(sapply(1:nrow(top_species), function(i) {
+        paste0("<tr>",
+               "<td><span class='badge bg-blue'>", i, "</span></td>",
+               "<td><i class='fa fa-bacteria text-green'></i> ", 
+               if(nchar(as.character(top_species$Species[i])) > 35) {
+                 paste0(substr(as.character(top_species$Species[i]), 1, 35), "...")
+               } else {
+                 as.character(top_species$Species[i])
+               }, "</td>",
+               "<td><strong>", format(top_species$Abundance[i], big.mark = ","), "</strong></td>",
+               "</tr>")
+      }), collapse = ""),
+      
+      "</tbody></table>",
+      "</div></div></div></div>",
+      
+      "</div>",
+      
+      # Additional Info Row
+      "<div class='row mt-3'>",
+      "<div class='col-md-12'>",
+      "<div class='alert alert-info'>",
+      "<i class='fa fa-info-circle'></i> ",
+      "<strong>Data Summary:</strong> This overview shows key statistics from your microbiome data. ",
+      "The taxonomy data has been processed to extract species-level information from ",
+      ifelse("Abundance" %in% colnames(data_store$taxonomy_data), 
+             "abundance tables", "OTU/ASV tables with taxonomic assignments"), ". ",
+      "Use the tabs above to explore detailed metadata and taxonomy information.",
+      "</div></div></div>"
+    ))
+  }
+  
+  
+  ## ADDITIONAL HELPER FUNCTIONS 
+  # Function to validate uploaded files
+  validate_uploaded_file <- function(file_path, expected_columns = NULL) {
+    tryCatch({
+      if(grepl("\\.csv$", file_path)) {
+        data <- read.csv(file_path, stringsAsFactors = FALSE)
+      } else {
+        data <- read.delim(file_path, sep = "\t", stringsAsFactors = FALSE)
+      }
+      
+      if(!is.null(expected_columns)) {
+        missing_cols <- setdiff(expected_columns, colnames(data))
+        if(length(missing_cols) > 0) {
+          return(list(valid = FALSE, message = paste("Missing columns:", paste(missing_cols, collapse = ", "))))
+        }
+      }
+      
+      return(list(valid = TRUE, data = data))
+    }, error = function(e) {
+      return(list(valid = FALSE, message = paste("Error reading file:", e$message)))
+    })
+  }
+  
+  # Function to check data consistency
+  check_data_consistency <- function() {
+    req(data_store$sample_metadata, data_store$run_metadata, data_store$taxonomy_data)
+    
+    issues <- c()
+    
+    # Check if Sample_IDs in taxonomy data match those in sample metadata
+    sample_ids_meta <- data_store$sample_metadata$Sample_ID
+    sample_ids_tax <- unique(data_store$taxonomy_data$Sample_ID)
+    
+    missing_in_taxonomy <- setdiff(sample_ids_meta, sample_ids_tax)
+    missing_in_metadata <- setdiff(sample_ids_tax, sample_ids_meta)
+    
+    if(length(missing_in_taxonomy) > 0) {
+      issues <- c(issues, paste("Samples in metadata but not in taxonomy:", paste(missing_in_taxonomy, collapse = ", ")))
+    }
+    
+    if(length(missing_in_metadata) > 0) {
+      issues <- c(issues, paste("Samples in taxonomy but not in metadata:", paste(missing_in_metadata, collapse = ", ")))
+    }
+    
+    # Check for duplicate Sample_IDs
+    if(any(duplicated(data_store$sample_metadata$Sample_ID))) {
+      issues <- c(issues, "Duplicate Sample_IDs found in sample metadata")
+    }
+    
+    if(any(duplicated(data_store$run_metadata$Run_ID))) {
+      issues <- c(issues, "Duplicate Run_IDs found in run metadata")
+    }
+    
+    return(issues)
+  }
+  
+  # Reactive expression for data validation
+  data_validation <- reactive({
+    if(data_store$manual_data_loaded || data_store$automatic_data_loaded) {
+      check_data_consistency()
+    } else {
+      NULL
+    }
+  })
+  
+  # Show data validation warnings if any
+  observe({
+    validation_issues <- data_validation()
+    if(!is.null(validation_issues) && length(validation_issues) > 0) {
+      showNotification(
+        paste("Data validation warnings:", paste(validation_issues, collapse = "; ")),
+        type = "warning",
+        duration = 10
+      )
+    }
   })
   
   
- 
   
   #### TAXONOMY TAB ######
   
   # Define colors 
   taxonomic_colors <- list(
     "Viridis" = scale_fill_viridis_d(),
-    "Set1" = scale_fill_brewer(palette = "Set1"),
-    "Set2" = scale_fill_brewer(palette = "Set2"),
-    "Paired" = scale_fill_brewer(palette = "Paired"),
-    "Default" = scale_fill_discrete()
+    "Mix" = scale_fill_discrete(), 
+    "Turbo" = scale_fill_viridis_d(option = "turbo"), 
+    "Rainbow" = scale_fill_manual(values = rainbow(25)), 
+    "Set3" = scale_fill_brewer(palette = "Set3"), 
+    "Spectral" = scale_fill_brewer(palette = "Spectral")
+    
+    
   )
   
   # Function to extract taxonomic levels from species names
@@ -1708,42 +2610,103 @@ server <- function(input, output, session) {
     # Combine patient and control taxonomy data 
     all_taxonomy <- rbind(data_store$taxonomy_data, data_store$control_taxonomy_data)
     
-    ### SIMPLIFIED APPROACH. Real data needs to parse proper taxonomic classification
-    
-    # Get unique species 
-    species_list <- unique(all_taxonomy$Species)
-    
-    # Create a dataframe to store taxonomic hierarchy 
-    taxonomy_df <- data.frame(Species = species_list)
-    
-    # Extract Genus 
-    taxonomy_df$Genus <- sapply(strsplit(species_list, " "), function(x) x[1])
-    
-    # Create Family 
-    genera <- unique(taxonomy_df$Genus)
-    families <- paste0("Family_", ceiling(seq_along(genera)/2))
-    family_map <- setNames(families[1:length(genera)], genera)
-    taxonomy_df$Family <- family_map[taxonomy_df$Genus]
-    
-    # Create Order 
-    unique_families <- unique(taxonomy_df$Family)
-    orders <- paste0("Order_", ceiling(seq_along(unique_families)/3))
-    order_map <- setNames(orders[1:length(unique_families)], unique_families)
-    taxonomy_df$Order <- order_map[taxonomy_df$Family]
-    
-    # Create Class 
-    unique_orders <- unique(taxonomy_df$Order)
-    classes <- paste0("Class_", ceiling(seq_along(unique_orders)/2))
-    class_map <- setNames(classes[1:length(unique_orders)], unique_orders)
-    taxonomy_df$Class <- class_map[taxonomy_df$Order]
-    
-    # Create Phylum 
-    unique_classes <- unique(taxonomy_df$Class)
-    phyla <- paste0("Phylum_", ceiling(seq_along(unique_classes)/2))
-    phylum_map <- setNames(phyla[1:length(unique_classes)], unique_classes)
-    taxonomy_df$Phylum <- phylum_map[taxonomy_df$Class]
-    
-    return(taxonomy_df)
+    # Check if we have real OTU data with taxonomic columns or simplified data
+    if ("Taxon" %in% colnames(all_taxonomy) && any(!is.na(all_taxonomy$Taxon))) {
+      # REAL OTU DATA APPROACH - Parse actual taxonomic strings
+      
+      # Get unique taxa strings
+      taxa_list <- unique(all_taxonomy$Taxon[!is.na(all_taxonomy$Taxon) & all_taxonomy$Taxon != ""])
+      
+      # Create a dataframe to store taxonomic hierarchy 
+      taxonomy_df <- data.frame(Taxon = taxa_list, stringsAsFactors = FALSE)
+      
+      # Initialize taxonomic columns
+      taxonomy_df$Species <- NA
+      taxonomy_df$Genus <- NA
+      taxonomy_df$Family <- NA
+      taxonomy_df$Order <- NA
+      taxonomy_df$Class <- NA
+      taxonomy_df$Phylum <- NA
+      taxonomy_df$Kingdom <- NA
+      
+      # Parse taxonomic strings (format: k__Kingdom;p__Phylum;c__Class;o__Order;f__Family;g__Genus;s__Species)
+      for (i in 1:nrow(taxonomy_df)) {
+        taxon_string <- taxonomy_df$Taxon[i]
+        
+        if (!is.na(taxon_string) && taxon_string != "") {
+          # Split by semicolon
+          tax_parts <- strsplit(taxon_string, ";")[[1]]
+          
+          for (part in tax_parts) {
+            if (grepl("^k__", part)) {
+              taxonomy_df$Kingdom[i] <- gsub("^k__", "", part)
+            } else if (grepl("^p__", part)) {
+              taxonomy_df$Phylum[i] <- gsub("^p__", "", part)
+            } else if (grepl("^c__", part)) {
+              taxonomy_df$Class[i] <- gsub("^c__", "", part)
+            } else if (grepl("^o__", part)) {
+              taxonomy_df$Order[i] <- gsub("^o__", "", part)
+            } else if (grepl("^f__", part)) {
+              taxonomy_df$Family[i] <- gsub("^f__", "", part)
+            } else if (grepl("^g__", part)) {
+              taxonomy_df$Genus[i] <- gsub("^g__", "", part)
+            } else if (grepl("^s__", part)) {
+              taxonomy_df$Species[i] <- gsub("^s__", "", part)
+            }
+          }
+        }
+      }
+      
+      # Clean up empty or undefined taxonomic assignments
+      taxonomy_df[taxonomy_df == "" | is.na(taxonomy_df)] <- "Unassigned"
+      
+      # For species level, create a more readable name if available
+      taxonomy_df$Species <- ifelse(
+        taxonomy_df$Species == "Unassigned" & taxonomy_df$Genus != "Unassigned",
+        paste(taxonomy_df$Genus, "sp."),
+        taxonomy_df$Species
+      )
+      
+      return(taxonomy_df)
+      
+    } else {
+      # SIMPLIFIED APPROACH for generated data (existing code)
+      
+      # Get unique species 
+      species_list <- unique(all_taxonomy$Species)
+      
+      # Create a dataframe to store taxonomic hierarchy 
+      taxonomy_df <- data.frame(Species = species_list)
+      
+      # Extract Genus 
+      taxonomy_df$Genus <- sapply(strsplit(species_list, " "), function(x) x[1])
+      
+      # Create Family 
+      genera <- unique(taxonomy_df$Genus)
+      families <- paste0("Family_", ceiling(seq_along(genera)/2))
+      family_map <- setNames(families[1:length(genera)], genera)
+      taxonomy_df$Family <- family_map[taxonomy_df$Genus]
+      
+      # Create Order 
+      unique_families <- unique(taxonomy_df$Family)
+      orders <- paste0("Order_", ceiling(seq_along(unique_families)/3))
+      order_map <- setNames(orders[1:length(unique_families)], unique_families)
+      taxonomy_df$Order <- order_map[taxonomy_df$Family]
+      
+      # Create Class 
+      unique_orders <- unique(taxonomy_df$Order)
+      classes <- paste0("Class_", ceiling(seq_along(unique_orders)/2))
+      class_map <- setNames(classes[1:length(unique_orders)], unique_orders)
+      taxonomy_df$Class <- class_map[taxonomy_df$Order]
+      
+      # Create Phylum 
+      unique_classes <- unique(taxonomy_df$Class)
+      phyla <- paste0("Phylum_", ceiling(seq_along(unique_classes)/2))
+      phylum_map <- setNames(phyla[1:length(unique_classes)], unique_classes)
+      taxonomy_df$Phylum <- phylum_map[taxonomy_df$Class]
+      
+      return(taxonomy_df)
+    }
   })
   
   # Update sample selection dropdown when data is available 
@@ -1761,7 +2724,6 @@ server <- function(input, output, session) {
   })
   
   # Filter taxonomy data based on user selections 
-  # Filter taxonomy data based on user selections
   filtered_taxonomy_data <- reactive({
     req(data_store$taxonomy_data, data_store$control_taxonomy_data)
     
@@ -1781,9 +2743,15 @@ server <- function(input, output, session) {
     
     # Merge with taxonomic hierarchy
     taxonomy_hierarchy <- extract_taxonomy()
-    filtered_data <- merge(filtered_data, taxonomy_hierarchy, by = "Species")
     
-    # Apply abundance threshold filter (will be used in visualization)
+    # Check if we have real OTU data or simplified data
+    if ("Taxon" %in% colnames(filtered_data)) {
+      # For real OTU data, merge by Taxon
+      filtered_data <- merge(filtered_data, taxonomy_hierarchy, by = "Taxon", all.x = TRUE)
+    } else {
+      # For simplified data, merge by Species
+      filtered_data <- merge(filtered_data, taxonomy_hierarchy, by = "Species", all.x = TRUE)
+    }
     
     return(filtered_data)
   })
@@ -1808,16 +2776,26 @@ server <- function(input, output, session) {
     # Get filtered data
     tax_data <- filtered_taxonomy_data()
     
+    # Determine the abundance column name
+    abundance_col <- if ("Abundance" %in% colnames(tax_data)) "Abundance" else "Count"
+    
     # Group by Sample_ID to calculate total abundance per sample
-    sample_totals <- aggregate(Abundance ~ Sample_ID, data = tax_data, FUN = sum)
+    sample_totals <- aggregate(tax_data[[abundance_col]], 
+                               by = list(Sample_ID = tax_data$Sample_ID), 
+                               FUN = sum)
+    colnames(sample_totals)[2] <- paste0(abundance_col, "_total")
     
     # Merge with original data to calculate relative abundance
-    tax_data_with_totals <- merge(tax_data, sample_totals, by = "Sample_ID", 
-                                  suffixes = c("", "_total"))
+    tax_data_with_totals <- merge(tax_data, sample_totals, by = "Sample_ID")
     
     # Calculate relative abundance
-    tax_data_with_totals$RelativeAbundance <- (tax_data_with_totals$Abundance / 
-                                                 tax_data_with_totals$Abundance_total) * 100
+    tax_data_with_totals$RelativeAbundance <- (tax_data_with_totals[[abundance_col]] / 
+                                                 tax_data_with_totals[[paste0(abundance_col, "_total")]]) * 100
+    
+    # Update the Abundance column to use the correct column name for downstream processing
+    if (abundance_col != "Abundance") {
+      tax_data_with_totals$Abundance <- tax_data_with_totals[[abundance_col]]
+    }
     
     # Filter by abundance threshold
     filtered_by_threshold <- tax_data_with_totals[tax_data_with_totals$RelativeAbundance >= input$abundance_threshold, ]
@@ -1855,6 +2833,7 @@ server <- function(input, output, session) {
         }
       }
     }
+    
     # Sort by abundance if requested
     if (input$sort_abundance) {
       # Aggregate by taxonomic group to get total abundance
@@ -1869,20 +2848,47 @@ server <- function(input, output, session) {
     return(aggregated_data)
   })
   
+  # Categorize categorical variables -> Age 
+  categorize_metadata <- reactive({
+    req(merged_metadata())
+    
+    metadata <- merged_metadata()
+    
+    if ("Age" %in% colnames(metadata) && is.numeric(metadata$Age)) {
+      # Create age categories 
+      metadata$Age_Category <- cut(metadata$Age, 
+                                   breaks = c(-Inf, 30, 45, 60, 75, Inf), 
+                                   labels = c("≤30", "31-45", "46-60", "61-75", ">75"), 
+                                   right = TRUE)
+      # Convert to character to avoid factor issues 
+      metadata$Age_Category <- as.character(metadata$Age_Category)
+    }
+    return(metadata)
+  })
+  
   # Add a group column to taxonomy data for comparison
   taxonomy_with_groups <- reactive({
-    req(taxonomy_relative_abundance(), merged_metadata())
+    req(taxonomy_relative_abundance(), categorize_metadata())
     
     tax_data <- taxonomy_relative_abundance()
-    metadata <- merged_metadata()
+    metadata <- categorize_metadata()
     
     # Merge taxonomy data with metadata to get group information
     result <- merge(tax_data, metadata[, c("Sample_ID", "Group")], by = "Sample_ID", all.x = TRUE)
     
     # If metadata_group is selected, add that grouping as well
     if (input$metadata_group != "None") {
-      metadata_subset <- metadata[, c("Sample_ID", input$metadata_group)]
-      result <- merge(result, metadata_subset, by = "Sample_ID", all.x = TRUE)
+      # Check if we should use the categorical version of Age
+      if (input$metadata_group == "Age" && "Age_Category" %in% colnames(metadata)) {
+        # Use Age_Category instead of Age
+        metadata_subset <- metadata[, c("Sample_ID", "Age_Category")]
+        colnames(metadata_subset)[2] <- "Age"  # Rename for consistency
+        result <- merge(result, metadata_subset, by = "Sample_ID", all.x = TRUE)
+      } else {
+        # Use the original metadata column
+        metadata_subset <- metadata[, c("Sample_ID", input$metadata_group)]
+        result <- merge(result, metadata_subset, by = "Sample_ID", all.x = TRUE)
+      }
     }
     
     return(result)
@@ -1948,48 +2954,140 @@ server <- function(input, output, session) {
     }
   })
   
-  # Generate the relative abundance plot
-  output$relative_abundance_plot <- renderPlot({
+  # Generate the interactive relative abundance plot
+  output$relative_abundance_plot <- renderPlotly({
     req(taxonomy_with_groups())
     
     # Get data with groups
     plot_data <- taxonomy_with_groups()
     
-    # Base plot with taxonomic groups
-    p <- ggplot(plot_data, aes(x = Sample_ID, y = RelativeAbundance, fill = TaxonomicGroup)) +
-      geom_bar(stat = "identity") +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
-            strip.text = element_text(size = 10, face = "bold"),
-            legend.position = "bottom",
-            legend.text = element_text(size = 8)) +
-      labs(x = "Sample ID", y = "Relative Abundance (%)", 
-           title = paste("Relative Abundance of", input$tax_level),
-           fill = input$tax_level) +
-      get_color_scheme()
-    
-    # Determine if we need to split by a metadata group
+    # Check if we have a metadata group selected
     if (input$metadata_group != "None") {
-      # Get the metadata column name
       metadata_col <- input$metadata_group
       
-      # Create plot based on metadata grouping
+      # Create a combined grouping variable for X-axis positioning
+      # This will group samples by metadata category and patient/control group if available
       if (input$compare_groups && "Group" %in% colnames(plot_data)) {
-        # Plot with both metadata group and patient/control group
-        p <- p + facet_grid(reformulate("Group", metadata_col), scales = "free_x", space = "free") +
-          labs(title = paste("Relative Abundance of", input$tax_level, "by", metadata_col, "and Group"))
+        # Create combined grouping: Group_MetadataValue (e.g., "Control_Female", "Patient_Male")
+        plot_data$XGroup <- paste(plot_data$Group, plot_data[[metadata_col]], sep = "_")
+        plot_data$XGroup <- factor(plot_data$XGroup, 
+                                   levels = unique(plot_data$XGroup[order(plot_data$Group, plot_data[[metadata_col]])]))
       } else {
-        # Plot with only metadata grouping
-        p <- p + facet_wrap(reformulate(metadata_col), scales = "free_x") +
-          labs(title = paste("Relative Abundance of", input$tax_level, "by", metadata_col))
+        # Use just the metadata group
+        plot_data$XGroup <- plot_data[[metadata_col]]
+        plot_data$XGroup <- factor(plot_data$XGroup, levels = unique(sort(plot_data$XGroup)))
       }
+      
+      # Order samples within each group
+      plot_data <- plot_data[order(plot_data$XGroup, plot_data$Sample_ID), ]
+      plot_data$Sample_ID <- factor(plot_data$Sample_ID, levels = unique(plot_data$Sample_ID))
+      
+      # Create the plot with samples on X-axis but grouped by metadata
+      p <- ggplot(plot_data, aes(x = Sample_ID, y = RelativeAbundance, fill = TaxonomicGroup,
+                                 text = paste("Sample:", Sample_ID,
+                                              "<br>Taxonomic Group:", TaxonomicGroup,
+                                              "<br>Relative Abundance:", round(RelativeAbundance, 2), "%",
+                                              "<br>Metadata Group:", .data[[metadata_col]],
+                                              if(input$compare_groups && "Group" %in% colnames(plot_data)) 
+                                                paste("<br>Group:", Group) else ""))) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 6),
+              strip.text = element_text(size = 10, face = "bold"),
+              legend.position = "bottom",
+              legend.text = element_text(size = 8),
+              panel.spacing = unit(0.5, "lines"),
+              panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
+        labs(x = "Sample ID", y = "Relative Abundance (%)", 
+             title = paste("Relative Abundance of", input$tax_level, "by", 
+                           ifelse(metadata_col == "Age", "Age Category", metadata_col)),
+             fill = input$tax_level) +
+        get_color_scheme()
+      
+      # Add faceting to group samples by metadata categories
+      if (input$compare_groups && "Group" %in% colnames(plot_data)) {
+        # Create nested faceting: Group ~ MetadataCategory
+        p <- p + facet_grid(reformulate(metadata_col, "Group"), scales = "free_x", space = "free_x") +
+          labs(title = paste("Relative Abundance of", input$tax_level, "by Group and", 
+                             ifelse(metadata_col == "Age", "Age Category", metadata_col)))
+      } else {
+        # Simple faceting by metadata category
+        p <- p + facet_wrap(reformulate(metadata_col), scales = "free_x") +
+          labs(title = paste("Relative Abundance of", input$tax_level, "by", 
+                             ifelse(metadata_col == "Age", "Age Category", metadata_col)))
+      }
+      
     } else if (input$compare_groups && "Group" %in% colnames(plot_data)) {
-      # Plot with only patient/control grouping
-      p <- p + facet_wrap(~ Group, scales = "free_x") +
-        labs(title = paste("Relative Abundance of", input$tax_level, "by Group"))
+      # Only group comparison without metadata grouping
+      plot_data <- plot_data[order(plot_data$Group, plot_data$Sample_ID), ]
+      plot_data$Sample_ID <- factor(plot_data$Sample_ID, levels = unique(plot_data$Sample_ID))
+      
+      p <- ggplot(plot_data, aes(x = Sample_ID, y = RelativeAbundance, fill = TaxonomicGroup,
+                                 text = paste("Sample:", Sample_ID,
+                                              "<br>Taxonomic Group:", TaxonomicGroup,
+                                              "<br>Relative Abundance:", round(RelativeAbundance, 2), "%",
+                                              "<br>Group:", Group))) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+              legend.position = "bottom",
+              legend.text = element_text(size = 8),
+              panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
+        labs(x = "Sample ID", y = "Relative Abundance (%)", 
+             title = paste("Relative Abundance of", input$tax_level, "by Group"),
+             fill = input$tax_level) +
+        get_color_scheme() +
+        facet_wrap(~ Group, scales = "free_x")
+      
+    } else {
+      # Default case - no grouping
+      plot_data$Sample_ID <- factor(plot_data$Sample_ID, levels = unique(sort(plot_data$Sample_ID)))
+      
+      p <- ggplot(plot_data, aes(x = Sample_ID, y = RelativeAbundance, fill = TaxonomicGroup,
+                                 text = paste("Sample:", Sample_ID,
+                                              "<br>Taxonomic Group:", TaxonomicGroup,
+                                              "<br>Relative Abundance:", round(RelativeAbundance, 2), "%"))) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+              legend.position = "bottom",
+              legend.text = element_text(size = 8)) +
+        labs(x = "Sample ID", y = "Relative Abundance (%)", 
+             title = paste("Relative Abundance of", input$tax_level),
+             fill = input$tax_level) +
+        get_color_scheme()
     }
     
-    return(p)
+    # Convert to plotly with custom tooltip and configuration
+    plotly_plot <- ggplotly(p, tooltip = "text") %>%
+      layout(
+        showlegend = TRUE,
+        legend = list(
+          orientation = "h",
+          x = 0,
+          y = -0.6,
+          font = list(size = 10)
+        ),
+        margin = list(b = 150, l = 50, r = 50, t = 80),
+        hovermode = "closest", 
+        xaxis = list(
+          title = list( standoff = 30 )
+        )
+      ) %>%
+      config(
+        displayModeBar = TRUE,
+        modeBarButtonsToRemove = c("select2d", "lasso2d", "autoScale2d", "hoverClosestCartesian", "hoverCompareCartesian"),
+        displaylogo = FALSE,
+        toImageButtonOptions = list(
+          format = "png",
+          filename = paste("taxonomy_", input$tax_level, "_plot_", format(Sys.time(), "%Y%m%d_%H%M%S"), sep = ""),
+          height = 600,
+          width = 1000,
+          scale = 2
+        )
+      )
+    
+    return(plotly_plot)
   })
   
   # Download handler for the abundance plot
@@ -2002,30 +3100,423 @@ server <- function(input, output, session) {
       # Capture the current plot data
       plot_data <- taxonomy_with_groups()
       
-      # Set up the plot with the same parameters as the displayed plot
-      p <- ggplot(plot_data, aes(x = Sample_ID, y = RelativeAbundance, fill = TaxonomicGroup)) +
-        geom_bar(stat = "identity") +
-        theme_minimal() +
-        theme(axis.text.x = element_text(angle = 90, hjust = 1),
-              legend.position = "bottom") +
-        labs(x = "Sample ID", y = "Relative Abundance (%)", 
-             title = paste("Relative Abundance of", input$tax_level),
-             fill = input$tax_level) +
-        get_color_scheme()
-      
-      # Add faceting if needed
-      if (input$metadata_group != "None" && input$compare_groups) {
-        p <- p + facet_grid(reformulate("Group", input$metadata_group), scales = "free_x", space = "free")
-      } else if (input$metadata_group != "None") {
-        p <- p + facet_wrap(reformulate(input$metadata_group), scales = "free_x")
-      } else if (input$compare_groups) {
-        p <- p + facet_wrap(~ Group, scales = "free_x")
+      # Apply the same reordering logic as in the display plot
+      if (input$metadata_group != "None") {
+        metadata_col <- input$metadata_group
+        
+        if (input$compare_groups && "Group" %in% colnames(plot_data)) {
+          plot_data$XGroup <- paste(plot_data$Group, plot_data[[metadata_col]], sep = "_")
+          plot_data$XGroup <- factor(plot_data$XGroup, 
+                                     levels = unique(plot_data$XGroup[order(plot_data$Group, plot_data[[metadata_col]])]))
+        } else {
+          plot_data$XGroup <- plot_data[[metadata_col]]
+          plot_data$XGroup <- factor(plot_data$XGroup, levels = unique(sort(plot_data$XGroup)))
+        }
+        
+        plot_data <- plot_data[order(plot_data$XGroup, plot_data$Sample_ID), ]
+        plot_data$Sample_ID <- factor(plot_data$Sample_ID, levels = unique(plot_data$Sample_ID))
+        
+        # Set up the plot with the same parameters as the displayed plot
+        p <- ggplot(plot_data, aes(x = Sample_ID, y = RelativeAbundance, fill = TaxonomicGroup)) +
+          geom_bar(stat = "identity") +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+                legend.position = "bottom",
+                panel.spacing = unit(0.5, "lines"),
+                panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
+          labs(x = "Sample ID", y = "Relative Abundance (%)", 
+               title = paste("Relative Abundance of", input$tax_level, "by", 
+                             ifelse(metadata_col == "Age", "Age Category", metadata_col)),
+               fill = input$tax_level) +
+          get_color_scheme()
+        
+        # Add faceting
+        if (input$compare_groups && "Group" %in% colnames(plot_data)) {
+          p <- p + facet_grid(reformulate(metadata_col, "Group"), scales = "free_x", space = "free_x")
+        } else {
+          p <- p + facet_wrap(reformulate(metadata_col), scales = "free_x")
+        }
+        
+      } else if (input$compare_groups && "Group" %in% colnames(plot_data)) {
+        plot_data <- plot_data[order(plot_data$Group, plot_data$Sample_ID), ]
+        plot_data$Sample_ID <- factor(plot_data$Sample_ID, levels = unique(plot_data$Sample_ID))
+        
+        p <- ggplot(plot_data, aes(x = Sample_ID, y = RelativeAbundance, fill = TaxonomicGroup)) +
+          geom_bar(stat = "identity") +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+                legend.position = "bottom",
+                panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
+          labs(x = "Sample ID", y = "Relative Abundance (%)", 
+               title = paste("Relative Abundance of", input$tax_level, "by Group"),
+               fill = input$tax_level) +
+          get_color_scheme() +
+          facet_wrap(~ Group, scales = "free_x")
+      } else {
+        plot_data$Sample_ID <- factor(plot_data$Sample_ID, levels = unique(sort(plot_data$Sample_ID)))
+        
+        p <- ggplot(plot_data, aes(x = Sample_ID, y = RelativeAbundance, fill = TaxonomicGroup)) +
+          geom_bar(stat = "identity") +
+          theme_minimal() +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+                legend.position = "bottom") +
+          labs(x = "Sample ID", y = "Relative Abundance (%)", 
+               title = paste("Relative Abundance of", input$tax_level),
+               fill = input$tax_level) +
+          get_color_scheme()
       }
       
       # Save the plot to the file
-      ggsave(file, plot = p, width = 10, height = 8, dpi = 300)
+      ggsave(file, plot = p, width = 14, height = 8, dpi = 300)
     }
   )
+  ## STATISTICAL TESTS 
+  # Prepare data for statistical testing 
+  prepare_statistical_data <- reactive({
+    req(taxonomy_with_groups())
+    
+    # Only proceed if compare_groups is TRUE and we have both groups
+    if (!input$compare_groups || input$stat_test == "None") {
+      return(NULL)
+    }
+    
+    tax_data <- taxonomy_with_groups()
+    
+    # Check if we have both Patient and Control groups
+    if (!"Group" %in% colnames(tax_data) || 
+        length(unique(tax_data$Group)) < 2) {
+      return(NULL)
+    }
+    
+    # Create abundance matrix (samples as rows, taxa as columns)
+    abundance_matrix <- tax_data %>%
+      select(Sample_ID, TaxonomicGroup, Abundance) %>%
+      tidyr::pivot_wider(names_from = TaxonomicGroup, 
+                         values_from = Abundance, 
+                         values_fill = 0) %>%
+      column_to_rownames("Sample_ID")
+    
+    # Get sample metadata
+    sample_metadata <- tax_data %>%
+      select(Sample_ID, Group) %>%
+      distinct() %>%
+      column_to_rownames("Sample_ID")
+    
+    # Ensure the row order matches between abundance matrix and metadata
+    sample_metadata <- sample_metadata[rownames(abundance_matrix), , drop = FALSE]
+    
+    return(list(
+      abundance_matrix = abundance_matrix,
+      metadata = sample_metadata,
+      original_data = tax_data
+    ))
+  })
+  
+  # Perform statistical tests
+  perform_statistical_test <- reactive({
+    req(input$stat_test != "None", prepare_statistical_data())
+    
+    stat_data <- prepare_statistical_data()
+    
+    if (is.null(stat_data)) {
+      return(NULL)
+    }
+    
+    abundance_matrix <- stat_data$abundance_matrix
+    metadata <- stat_data$metadata
+    
+    tryCatch({
+      switch(input$stat_test,
+             "Wilcoxon" = {
+               # Wilcoxon rank-sum test for each taxonomic group
+               results_list <- list()
+               
+               for (taxon in colnames(abundance_matrix)) {
+                 patient_data <- abundance_matrix[metadata$Group == "Patient", taxon]
+                 control_data <- abundance_matrix[metadata$Group == "Control", taxon]
+                 
+                 # Only test if both groups have non-zero values
+                 if (sum(patient_data > 0) >= 3 && sum(control_data > 0) >= 3) {
+                   test_result <- wilcox.test(patient_data, control_data)
+                   
+                   results_list[[taxon]] <- data.frame(
+                     Taxon = taxon,
+                     Test = "Wilcoxon",
+                     P_value = test_result$p.value,
+                     W_statistic = test_result$statistic,
+                     Mean_Patients = mean(patient_data),
+                     Mean_Controls = mean(control_data),
+                     stringsAsFactors = FALSE
+                   )
+                 }
+               }
+               
+               if (length(results_list) > 0) {
+                 results_df <- do.call(rbind, results_list)
+                 results_df$P_adjusted <- p.adjust(results_df$P_value, method = "BH")
+                 results_df$Significant <- results_df$P_adjusted < 0.05
+                 
+                 return(list(
+                   test_type = "Wilcoxon Rank-Sum Test",
+                   results = results_df,
+                   summary = paste("Tested", nrow(results_df), "taxa.",
+                                   "Significant differences found in", 
+                                   sum(results_df$Significant), "taxa (FDR < 0.05).")
+                 ))
+               }
+             },
+             
+             "t-test" = {
+               # T-test for each taxonomic group (log-transformed data)
+               results_list <- list()
+               
+               # Add small pseudocount to avoid log(0)
+               log_abundance <- log(abundance_matrix + 1)
+               
+               for (taxon in colnames(log_abundance)) {
+                 patient_data <- log_abundance[metadata$Group == "Patient", taxon]
+                 control_data <- log_abundance[metadata$Group == "Control", taxon]
+                 
+                 # Only test if both groups have sufficient samples
+                 if (length(patient_data) >= 3 && length(control_data) >= 3) {
+                   test_result <- t.test(patient_data, control_data)
+                   
+                   results_list[[taxon]] <- data.frame(
+                     Taxon = taxon,
+                     Test = "T-test",
+                     P_value = test_result$p.value,
+                     T_statistic = test_result$statistic,
+                     Mean_log_Patients = mean(patient_data),
+                     Mean_log_Controls = mean(control_data),
+                     stringsAsFactors = FALSE
+                   )
+                 }
+               }
+               
+               if (length(results_list) > 0) {
+                 results_df <- do.call(rbind, results_list)
+                 results_df$P_adjusted <- p.adjust(results_df$P_value, method = "BH")
+                 results_df$Significant <- results_df$P_adjusted < 0.05
+                 
+                 return(list(
+                   test_type = "T-test (log-transformed)",
+                   results = results_df,
+                   summary = paste("Tested", nrow(results_df), "taxa.",
+                                   "Significant differences found in", 
+                                   sum(results_df$Significant), "taxa (FDR < 0.05).")
+                 ))
+               }
+             },
+             
+             "PERMANOVA" = {
+               # PERMANOVA test using vegan package
+               if (!requireNamespace("vegan", quietly = TRUE)) {
+                 return(list(
+                   test_type = "PERMANOVA",
+                   error = "vegan package not installed. Please install with: install.packages('vegan')"
+                 ))
+               }
+               
+               # Calculate distance matrix (Bray-Curtis dissimilarity)
+               dist_matrix <- vegan::vegdist(abundance_matrix, method = "bray")
+               
+               # Perform PERMANOVA
+               permanova_result <- vegan::adonis2(dist_matrix ~ Group, 
+                                                  data = metadata, 
+                                                  permutations = 999)
+               
+               return(list(
+                 test_type = "PERMANOVA",
+                 results = permanova_result,
+                 summary = paste("PERMANOVA R² =", round(permanova_result$R2[1], 4),
+                                 ", p-value =", round(permanova_result$`Pr(>F)`[1], 4),
+                                 ifelse(permanova_result$`Pr(>F)`[1] < 0.05, 
+                                        "(Significant)", "(Not significant)"))
+               ))
+             },
+             
+             "DESeq2" = {
+               # DESeq2 analysis
+               if (!requireNamespace("DESeq2", quietly = TRUE)) {
+                 return(list(
+                   test_type = "DESeq2",
+                   error = "DESeq2 package not installed. Please install from Bioconductor."
+                 ))
+               }
+               
+               # Prepare count matrix (ensure integers)
+               count_matrix <- round(abundance_matrix)
+               count_matrix <- count_matrix[, colSums(count_matrix) > 0]  # Remove empty columns
+               
+               # Create DESeq2 dataset
+               sample_data <- data.frame(
+                 Group = factor(metadata$Group, levels = c("Control", "Patient"))
+               )
+               
+               dds <- DESeq2::DESeqDataSetFromMatrix(
+                 countData = t(count_matrix),  # DESeq2 expects genes as rows
+                 colData = sample_data,
+                 design = ~ Group
+               )
+               
+               # Filter low count features
+               keep <- rowSums(DESeq2::counts(dds)) >= 10
+               dds <- dds[keep,]
+               
+               # Run DESeq2 analysis
+               dds <- DESeq2::DESeq(dds, quiet = TRUE)
+               results_deseq <- DESeq2::results(dds, contrast = c("Group", "Patient", "Control"))
+               
+               # Convert to data frame and clean up
+               results_df <- as.data.frame(results_deseq)
+               results_df$Taxon <- rownames(results_df)
+               results_df$Significant <- !is.na(results_df$padj) & results_df$padj < 0.05
+               
+               # Remove rows with NA p-values
+               results_df <- results_df[!is.na(results_df$pvalue), ]
+               
+               return(list(
+                 test_type = "DESeq2",
+                 results = results_df,
+                 summary = paste("Tested", nrow(results_df), "taxa.",
+                                 "Significant differences found in", 
+                                 sum(results_df$Significant, na.rm = TRUE), 
+                                 "taxa (FDR < 0.05).")
+               ))
+             }
+      )
+    }, error = function(e) {
+      return(list(
+        test_type = input$stat_test,
+        error = paste("Error in statistical test:", e$message)
+      ))
+    })
+  })
+  
+  # Add this output to display statistical results
+  output$statistical_results <- renderUI({
+    if (input$stat_test == "None" || !input$compare_groups) {
+      return(NULL)
+    }
+    
+    stat_results <- perform_statistical_test()
+    
+    if (is.null(stat_results)) {
+      return(div(
+        class = "alert alert-warning",
+        icon("exclamation-triangle"),
+        " No statistical analysis available. Ensure you have both Patient and Control samples."
+      ))
+    }
+    
+    if (!is.null(stat_results$error)) {
+      return(div(
+        class = "alert alert-danger",
+        icon("exclamation-circle"),
+        " Error: ", stat_results$error
+      ))
+    }
+    
+    # Create results display based on test type
+    if (stat_results$test_type %in% c("Wilcoxon Rank-Sum Test", "T-test (log-transformed)", "DESeq2")) {
+      # For tests that produce per-taxon results
+      results_df <- stat_results$results
+      
+      if (nrow(results_df) == 0) {
+        return(div(
+          class = "alert alert-info",
+          icon("info-circle"),
+          " No taxa met the criteria for statistical testing."
+        ))
+      }
+      
+      # Sort by significance and p-value
+      results_df <- results_df[order(results_df$Significant, results_df$P_value, decreasing = c(TRUE, FALSE)), ]
+      
+      # Display top significant results
+      significant_results <- results_df[results_df$Significant == TRUE, ]
+      
+      result_content <- div(
+        h4(paste("Results:", stat_results$test_type), style = "color: #337ab7;"),
+        p(stat_results$summary, style = "font-weight: bold;"),
+        
+        if (nrow(significant_results) > 0) {
+          div(
+            h5("Significantly Different Taxa (FDR < 0.05):", style = "color: #d9534f;"),
+            renderTable({
+              display_cols <- c("Taxon", "P_value", "P_adjusted")
+              if ("Mean_Patients" %in% colnames(significant_results)) {
+                display_cols <- c(display_cols, "Mean_Patients", "Mean_Controls")
+              }
+              if ("log2FoldChange" %in% colnames(significant_results)) {
+                display_cols <- c("Taxon", "log2FoldChange", "pvalue", "padj")
+                significant_results$pvalue <- significant_results$pvalue
+                significant_results$padj <- significant_results$padj
+              }
+              
+              significant_results[, intersect(display_cols, colnames(significant_results))]
+            }, digits = 4, striped = TRUE, hover = TRUE)
+          )
+        } else {
+          div(
+            class = "alert alert-info",
+            icon("info-circle"),
+            " No taxa showed significant differences between groups."
+          )
+        }
+      )
+      
+    } else if (stat_results$test_type == "PERMANOVA") {
+      # For PERMANOVA results
+      permanova_table <- stat_results$results
+      
+      result_content <- div(
+        h4("Results: PERMANOVA", style = "color: #337ab7;"),
+        p(stat_results$summary, style = "font-weight: bold;"),
+        renderTable({
+          # Format PERMANOVA results for display
+          display_table <- data.frame(
+            Source = rownames(permanova_table),
+            Df = permanova_table$Df,
+            SumOfSqs = round(permanova_table$SumOfSqs, 4),
+            R2 = round(permanova_table$R2, 4),
+            F_value = round(permanova_table$`F`, 4),
+            P_value = round(permanova_table$`Pr(>F)`, 4)
+          )
+          display_table[!is.na(display_table$P_value), ]
+        }, striped = TRUE, hover = TRUE)
+      )
+    }
+    
+    return(result_content)
+  })
+  
+  # Add download handler for statistical results
+  output$download_statistical_results <- downloadHandler(
+    filename = function() {
+      paste("statistical_results_", input$stat_test, "_", 
+            format(Sys.time(), "%Y%m%d_%H%M%S"), ".csv", sep = "")
+    },
+    content = function(file) {
+      stat_results <- perform_statistical_test()
+      
+      if (!is.null(stat_results) && !is.null(stat_results$results) && is.null(stat_results$error)) {
+        if (input$stat_test == "PERMANOVA") {
+          # For PERMANOVA, save the results table
+          permanova_df <- data.frame(
+            Source = rownames(stat_results$results),
+            stat_results$results,
+            stringsAsFactors = FALSE
+          )
+          write.csv(permanova_df, file, row.names = FALSE)
+        } else {
+          # For other tests, save the results dataframe
+          write.csv(stat_results$results, file, row.names = FALSE)
+        }
+      }
+    }
+  )
+  
   
   ## HEATMAP 
   # Heatmap color schemes for ComplexHeatmap
@@ -2033,9 +3524,9 @@ server <- function(input, output, session) {
     "Viridis" = viridis::viridis(100),
     "Magma" = viridis::magma(100),
     "Plasma" = viridis::plasma(100),
-    "Inferno" = viridis::inferno(100),
-    "Blues" = RColorBrewer::brewer.pal(9, "Blues"),
-    "RdBu" = rev(RColorBrewer::brewer.pal(11, "RdBu"))
+    "RdBu" = rev(RColorBrewer::brewer.pal(11, "RdBu")), 
+    "Beyonce" = beyonce::beyonce_palette(76), 
+    "TayloRSwift" = tayloRswift::swift_palettes$speakNow
   )
   
   # Prepare data matrix for heatmap 
