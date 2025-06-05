@@ -560,8 +560,12 @@ ui <- dashboardPage(
                          conditionalPanel(
                            condition = "input.subdivide_samples == true",
                            selectInput("condition_column", "Clinical condition to group by:",
-                                       choices = c("Ongoing_conditions", "Neurological_Disorders", "Allergies", "Cancer"),
+                                       choices = c("Ongoing Conditions" = "Ongoing_conditions", 
+                                                   "Neurological Disorders" = "Neurological_Disorders", 
+                                                   "Allergies" = "Allergies", 
+                                                   "Cancer" = "Cancer"),
                                        selected = "Ongoing_conditions")
+                           
                          )
                        ),
                        
@@ -600,12 +604,21 @@ ui <- dashboardPage(
                        
                        # Download Button (below the box)
                        fluidRow(
-                         column(width = 12, 
-                                align = "center", 
-                                downloadButton("download_diversity_plot", "Download Plot",
-                                               class = "btn-sm btn-info")
+                         column(width = 12, align = "center",
+                                
+                                conditionalPanel(
+                                  condition = "input.diversity_type == 'alpha'",
+                                  downloadButton("download_alpha_plot", "Download Alpha Plot", class = "btn-sm btn-info")
+                                ),
+                                
+                                conditionalPanel(
+                                  condition = "input.diversity_type == 'beta'",
+                                  downloadButton("download_beta_ordination_plot", "Download Beta Plot", class = "btn-sm btn-info"),
+                                  downloadButton("download_beta_dendrogram_plot", "Download Dendrogram", class = "btn-sm btn-secondary")
+                                )
                          )
                        )
+                       
                 ),
                 
                 
@@ -864,7 +877,9 @@ ui <- dashboardPage(
                   width = 12,
                   helpText("Visualize the relationship between microbial taxa and selected metadata."),
                   uiOutput("parallel_var_select"),
-                  plotlyOutput("parallel_plot", height = "600px")
+                  plotlyOutput("parallel_plot", height = "600px"),
+                  br(),
+                  downloadButton("download_parallel_plot", "Download Plot (PNG)", class = "btn-sm btn-info")
                 )
               )
       ),
@@ -2580,9 +2595,6 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  
-  
   output$ordination_plot <- renderPlotly({
     req(input$diversity_type == "beta")
     req(data_store$sample_metadata, data_store$taxonomy_data)
@@ -2598,7 +2610,7 @@ server <- function(input, output, session) {
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
       column_to_rownames("Sample_ID")
     
-    # Distance method
+    # Distance
     dist_method <- switch(input$distance_metric,
                           "Bray-Curtis" = "bray",
                           "Euclidean"   = "euclidean",
@@ -2607,12 +2619,12 @@ server <- function(input, output, session) {
                           "Manhattan"   = "manhattan",
                           "Kulczynski"  = "kulczynski",
                           "Chord"       = "chord")
-    
     dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+    
+    # Ordination
     coords <- NULL
     title_prefix <- ""
     
-    # Ordination methods
     if (input$ordination_method == "PCoA") {
       ord <- ape::pcoa(dist_matrix)
       coords <- ord$vectors[, 1:2]
@@ -2631,8 +2643,7 @@ server <- function(input, output, session) {
         return(NULL)
       }
       dist_mat <- as.matrix(dist_matrix)
-      n_samples <- nrow(dist_mat)
-      perplexity_val <- min(30, floor((n_samples - 1) / 3))
+      perplexity_val <- min(30, floor((nrow(dist_mat) - 1) / 3))
       if (perplexity_val < 5) {
         showNotification("Too few samples for t-SNE.", type = "error")
         return(NULL)
@@ -2669,16 +2680,13 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
-    # Prepare plotting dataframe
+    # Build plotting data
     ord_df <- as.data.frame(coords)
-    colnames(ord_df)[1:2] <- c("Axis1", "Axis2")
+    colnames(ord_df) <- c("Axis1", "Axis2")
     ord_df$Sample_ID <- rownames(coords)
-    
-    # Merge metadata
     all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
     ord_df <- left_join(ord_df, all_meta, by = "Sample_ID")
     
-    # Grouping
     if (input$subdivide_samples) {
       req(input$condition_column)
       ord_df$GroupLabel <- ifelse(
@@ -2691,49 +2699,36 @@ server <- function(input, output, session) {
                                   "Control", "Sample")
     }
     
-    # Create base ggplot
+    # ggplot
     p <- ggplot(ord_df, aes(x = Axis1, y = Axis2, color = GroupLabel, text = Sample_ID)) +
       geom_point(size = 3, alpha = 0.8)
     
-    # Add ellipses BEFORE converting to plotly
     if (input$show_group_ellipses) {
-      p <- p + stat_ellipse(aes(group = GroupLabel, color = GroupLabel), 
-                            type = "norm", linetype = "dashed", alpha = 0.6, size = 1,
-                            show.legend = FALSE)
+      p <- p + stat_ellipse(aes(group = GroupLabel, color = GroupLabel),
+                            type = "norm", linetype = "dashed", alpha = 0.6, size = 1)
     }
     
-    # Highlight selected sample
     if (!is.null(input$selected_sample_id) && input$selected_sample_id %in% ord_df$Sample_ID) {
-      highlighted <- ord_df %>% filter(Sample_ID == input$selected_sample_id)
-      p <- p + geom_point(data = highlighted, aes(x = Axis1, y = Axis2),
+      p <- p + geom_point(data = ord_df %>% filter(Sample_ID == input$selected_sample_id),
+                          aes(x = Axis1, y = Axis2),
                           shape = 21, fill = "yellow", color = "red", size = 5, stroke = 1.5)
     }
     
     p <- p +
-      labs(x = "Axis 1", y = "Axis 2",
-           title = paste0(title_prefix, " on ", input$distance_metric, " Distance")) +
+      labs(title = paste0(title_prefix, " on ", input$distance_metric, " Distance"),
+           x = "Axis 1", y = "Axis 2") +
       theme_minimal()
     
-    # Control legend visibility
     if (!input$show_diversity_legend) {
       p <- p + theme(legend.position = "none")
     }
     
-    # STORE THE GGPLOT OBJECT FOR DOWNLOAD
     rv$latest_ggplot <- p
     rv$plot_type <- "beta"
     
-    # Convert to plotly
-    plotly_obj <- ggplotly(p, tooltip = c("x", "y", "text"))
-    
-    # Additional plotly-specific legend control
-    if (!input$show_diversity_legend) {
-      plotly_obj <- plotly_obj %>% 
-        layout(showlegend = FALSE)
-    }
-    
-    return(plotly_obj)
+    ggplotly(p, tooltip = c("x", "y", "text"))
   })
+  
   
   
   
@@ -2795,12 +2790,14 @@ server <- function(input, output, session) {
   })
   
   
+  rv <- reactiveValues(latest_dendrogram = NULL)
   
   output$clustering_plot <- renderPlot({
     req(input$diversity_type == "beta")
     req(data_store$sample_metadata, data_store$taxonomy_data)
     req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
     
+    # Combine taxonomy
     all_tax <- bind_rows(
       data_store$taxonomy_data,
       data_store$control_taxonomy_data
@@ -2809,47 +2806,57 @@ server <- function(input, output, session) {
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
       column_to_rownames("Sample_ID")
     
-    dist_matrix <- vegan::vegdist(all_tax, method = switch(input$distance_metric,
-                                                           "Bray-Curtis" = "bray",
-                                                           "Euclidean"   = "euclidean",
-                                                           "Jaccard"     = "jaccard",
-                                                           "Canberra"    = "canberra",
-                                                           "Manhattan"   = "manhattan",
-                                                           "Kulczynski"  = "kulczynski",
-                                                           "Chord"       = "chord")
-    )
-    hc <- hclust(dist_matrix, method = "ward.D2")
+    # Compute distance matrix
+    dist_method <- switch(input$distance_metric,
+                          "Bray-Curtis" = "bray",
+                          "Euclidean"   = "euclidean",
+                          "Jaccard"     = "jaccard",
+                          "Canberra"    = "canberra",
+                          "Manhattan"   = "manhattan",
+                          "Kulczynski"  = "kulczynski",
+                          "Chord"       = "chord")
     
+    dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+    hc <- hclust(dist_matrix, method = "ward.D2")
     dend <- as.dendrogram(hc)
     
-    plot(dend, main = paste("Clustering Dendrogram (", input$distance_metric, ")"))
+    selected_sample <- input$selected_sample_id
+    
+    # Only change the color of the selected label
+    dend <- dendrapply(dend, function(n) {
+      if (is.leaf(n)) {
+        label <- attr(n, "label")
+        attr(n, "nodePar") <- list(
+          lab.col = if (!is.null(selected_sample) && label == selected_sample) "red" else "black",
+          lab.cex = 0.6
+        )
+      }
+      return(n)
+    })
+    
+    rv$latest_dendrogram <- dend
+    
+    # Plot dendrogram
+    plot(dend,
+         main = paste("Clustering Dendrogram (", input$distance_metric, ")"),
+         ylab = "Distance")
   })
   
+
   
-  output$download_diversity_plot <- downloadHandler(
+  output$download_alpha_plot <- downloadHandler(
     filename = function() {
-      if (input$diversity_type == "alpha") {
-        metric <- tolower(gsub(" ", "_", input$alpha_metric))
-        paste0("diversity_alpha_", metric, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
-      } else {
-        method <- tolower(gsub("[^A-Za-z0-9]", "_", input$ordination_method))
-        distance <- tolower(gsub("[^A-Za-z0-9]", "_", input$distance_metric))
-        paste0("diversity_beta_", method, "_", distance, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
-      }
+      metric <- tolower(gsub(" ", "_", input$alpha_metric))
+      paste0("diversity_alpha_", metric, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
     },
-    
     content = function(file) {
-      # Check if we have a stored ggplot
       if (is.null(rv$latest_ggplot)) {
         showNotification("No plot available for download. Please generate a plot first.", type = "error")
         return(NULL)
       }
       
-      # Get the stored ggplot object
-      p <- rv$latest_ggplot
-      
-      # Apply consistent theming for download
-      p <- p + theme_minimal() + 
+      p <- rv$latest_ggplot +
+        theme_minimal() +
         theme(
           legend.position = "right",
           plot.title = element_text(size = 14, hjust = 0.5),
@@ -2859,23 +2866,67 @@ server <- function(input, output, session) {
           legend.title = element_text(size = 11)
         )
       
-      # Save the plot
       ggsave(file, plot = p, width = 12, height = 8, dpi = 300, bg = "white")
     },
-    
     contentType = "image/png"
   )
   
+  output$download_beta_ordination_plot <- downloadHandler(
+  filename = function() {
+    method <- tolower(gsub("[^A-Za-z0-9]", "_", input$ordination_method))
+    distance <- tolower(gsub("[^A-Za-z0-9]", "_", input$distance_metric))
+    paste0("ordination_", method, "_", distance, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
+  },
+  content = function(file) {
+    if (is.null(rv$latest_ggplot)) {
+      showNotification("No ordination plot available for download.", type = "error")
+      return(NULL)
+    }
+
+    ggsave(file, plot = rv$latest_ggplot, width = 12, height = 8, dpi = 300, bg = "white")
+  },
+  contentType = "image/png"
+)
+
   
+  output$download_beta_dendrogram_plot <- downloadHandler(
+    filename = function() {
+      distance <- tolower(gsub("[^A-Za-z0-9]", "_", input$distance_metric))
+      paste0("dendrogram_", distance, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
+    },
+    content = function(file) {
+      dend <- rv$latest_dendrogram
+      if (is.null(dend)) {
+        showNotification("No dendrogram available.", type = "error")
+        return(NULL)
+      }
+      
+      png(file, width = 1600, height = 1000, res = 150)
+      plot(dend,
+           main = paste("Clustering Dendrogram (", input$distance_metric, ")"),
+           ylab = "Distance")
+      dev.off()
+    },
+    contentType = "image/png"
+  )
+  
+
   
   ###### LIFESTYLE TAB ######
   output$parallel_var_select <- renderUI({
     req(data_store$sample_metadata)
+    
+    var_names <- names(data_store$sample_metadata)
+    
+    # Create named list: "Ongoing conditions" = "Ongoing_conditions", etc.
+    named_vars <- setNames(var_names, gsub("_", " ", var_names))
+    
     selectizeInput("parallel_vars", "Select Metadata Variables:",
-                   choices = names(data_store$sample_metadata),
+                   choices = named_vars,
                    selected = c("Age", "Gender", "BMI", "Ongoing_conditions"),
                    multiple = TRUE)
   })
+  
   
   output$parallel_plot <- renderPlotly({
     req(data_store$sample_metadata, data_store$taxonomy_data, input$parallel_vars)
@@ -2929,6 +2980,62 @@ server <- function(input, output, session) {
       })
     )
   })
+  
+  output$download_parallel_plot <- downloadHandler(
+    filename = function() {
+      paste0("parallel_coordinates_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
+    },
+    content = function(file) {
+      req(data_store$sample_metadata, data_store$taxonomy_data, input$parallel_vars)
+      
+      # Total Abundance per sample
+      taxa_data <- data_store$taxonomy_data %>%
+        group_by(Sample_ID) %>%
+        summarize(Total_Abundance = sum(Abundance), .groups = "drop")
+      
+      combined <- merge(data_store$sample_metadata, taxa_data, by = "Sample_ID")
+      vars <- input$parallel_vars
+      all_vars <- c(vars, "Total_Abundance")
+      
+      # Select, clean and prepare data
+      plot_data <- combined %>%
+        select(all_of(all_vars)) %>%
+        na.omit() %>%
+        mutate(across(where(is.character), as.factor)) %>%
+        mutate(across(where(is.factor), ~ as.numeric(as.factor(.)))) %>%
+        mutate(id = row_number())  # For coloring
+      
+      # User-friendly labels
+      friendly_labels <- gsub("_", " ", colnames(plot_data))
+      
+      # Create static plot
+      p <- GGally::ggparcoord(
+        data = plot_data,
+        columns = 1:length(all_vars),
+        groupColumn = "id",
+        scale = "uniminmax",
+        showPoints = FALSE,
+        alphaLines = 0.3
+      ) +
+        theme_minimal(base_size = 12) +
+        theme(
+          plot.background = element_rect(fill = "white", color = NA),
+          panel.background = element_rect(fill = "white", color = NA),
+          panel.grid.major = element_line(color = "gray90"),
+          panel.grid.minor = element_blank()
+        ) +
+        labs(title = "Parallel Coordinates Plot", x = "Variables", y = "Scaled Value") +
+        scale_x_discrete(labels = friendly_labels[1:length(all_vars)])
+      
+      
+      # Save as PNG
+      ggsave(filename = file, plot = p, width = 10, height = 6, dpi = 300, bg = "white")
+      },
+    contentType = "image/png"
+  )
+  
+  
+  
   
   
   # ==============================================================================
@@ -3175,159 +3282,7 @@ server <- function(input, output, session) {
       }
     }
   )
-  
-  
-  ###### SAVE PLOTS FOR THE REPORT ######
-  observeEvent({
-    data_store$sample_metadata
-    data_store$taxonomy_data
-    data_store$control_sample_metadata
-    data_store$control_taxonomy_data
-  }, {
-    req(input$alpha_metric, input$alpha_color_palette)
-    
-    ####### Save Alpha Diversity Plot #######
-    try({
-      sample_meta <- data_store$sample_metadata
-      control_meta <- data_store$control_sample_metadata
-      
-      sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
-      control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
-      
-      sample_wide <- sample_tax %>%
-        select(Sample_ID, Species, Abundance) %>%
-        pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
-      
-      sample_div <- sample_wide %>%
-        column_to_rownames("Sample_ID") %>%
-        as.matrix() %>%
-        {
-          tibble(
-            Sample_ID = rownames(.),
-            Observed = rowSums(. > 0),
-            Shannon = vegan::diversity(., index = "shannon"),
-            Simpson = vegan::diversity(., index = "simpson")
-          )
-        }
-      
-      control_wide <- control_tax %>%
-        select(Sample_ID, Species, Abundance) %>%
-        pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
-      
-      control_div <- control_wide %>%
-        column_to_rownames("Sample_ID") %>%
-        as.matrix() %>%
-        {
-          tibble(
-            Sample_ID = rownames(.),
-            Observed = rowSums(. > 0),
-            Shannon = vegan::diversity(., index = "shannon"),
-            Simpson = vegan::diversity(., index = "simpson"),
-            GroupLabel = "Control"
-          )
-        }
-      
-      diversity_df <- bind_rows(
-        sample_div %>%
-          left_join(sample_meta, by = "Sample_ID") %>%
-          mutate(GroupLabel = if (input$subdivide_samples) .[[input$condition_column]] else "Sample"),
-        control_div
-      )
-      
-      metric_col <- switch(input$alpha_metric,
-                           "Observed OTUs" = "Observed",
-                           "Shannon" = "Shannon",
-                           "Simpson" = "Simpson")
-      
-      p_alpha <- ggplot(diversity_df, aes(x = GroupLabel, y = .data[[metric_col]], fill = GroupLabel)) +
-        geom_boxplot(alpha = 0.6, outlier.shape = NA) +
-        geom_jitter(shape = 21, alpha = 0.6, color = "black", width = 0.2) +
-        labs(title = paste(input$alpha_metric, "Diversity across Groups"),
-             x = "Group", y = paste(input$alpha_metric, "Index")) +
-        theme_minimal() +
-        theme(
-          legend.position = "right",
-          plot.title = element_text(size = 14, hjust = 0.5),
-          axis.title = element_text(size = 12),
-          axis.text = element_text(size = 10),
-          legend.text = element_text(size = 10),
-          legend.title = element_text(size = 11)
-        ) +
-        scale_fill_brewer(palette = input$alpha_color_palette)
-      
-      ggsave("alpha_diversity_plot.png", plot = p_alpha, width = 10, height = 6, dpi = 300, bg = "white")
-      message("✅ Alpha plot saved.")
-    }, silent = TRUE)
-    
-    ####### Save Beta Diversity Plot #######
-    try({
-      all_tax <- bind_rows(
-        data_store$taxonomy_data,
-        data_store$control_taxonomy_data
-      ) %>%
-        select(Sample_ID, Species, Abundance) %>%
-        pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
-        column_to_rownames("Sample_ID")
-      
-      dist_method <- switch(input$distance_metric,
-                            "Bray-Curtis" = "bray",
-                            "Euclidean" = "euclidean",
-                            "Jaccard" = "jaccard",
-                            "Canberra" = "canberra",
-                            "Manhattan" = "manhattan",
-                            "Kulczynski" = "kulczynski",
-                            "Chord" = "chord")
-      
-      ord <- ape::pcoa(vegan::vegdist(all_tax, method = dist_method))
-      coords <- ord$vectors[, 1:2]
-      ord_df <- as.data.frame(coords)
-      colnames(ord_df) <- c("Axis1", "Axis2")
-      ord_df$Sample_ID <- rownames(coords)
-      
-      all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
-      ord_df <- left_join(ord_df, all_meta, by = "Sample_ID")
-      
-      ord_df$GroupLabel <- if (input$subdivide_samples) {
-        ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
-               "Control", ord_df[[input$condition_column]])
-      } else {
-        ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
-      }
-      
-      p_beta <- ggplot(ord_df, aes(x = Axis1, y = Axis2, color = GroupLabel)) +
-        geom_point(size = 3, alpha = 0.8)
-      
-      # Add ellipses if enabled
-      if (isTRUE(input$show_group_ellipses)) {
-        p_beta <- p_beta +
-          stat_ellipse(aes(group = GroupLabel),
-                       type = "norm", linetype = "dashed",
-                       alpha = 0.6, size = 1, show.legend = FALSE)
-      }
-      
-      # Final styling
-      p_beta <- p_beta +
-        labs(title = paste0("PCoA on ", input$distance_metric, " Distance"),
-             x = "Axis 1", y = "Axis 2") +
-        theme_minimal() +
-        theme(
-          legend.position = "right",
-          plot.title = element_text(size = 14, hjust = 0.5),
-          axis.title = element_text(size = 12),
-          axis.text = element_text(size = 10),
-          legend.text = element_text(size = 10),
-          legend.title = element_text(size = 11)
-        )
-      
-      
-      ggsave("beta_diversity_plot.png", plot = p_beta, width = 10, height = 6, dpi = 300, bg = "white")
-      message("✅ Beta plot saved.")
-    }, silent = TRUE)
-    
-  }, ignoreInit = TRUE)
-  
-  
-  
+
 }
 
   
