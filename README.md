@@ -14,60 +14,59 @@ In this wiki page you will find the information about the pipeline context, the 
 
 ```text
 HdMBioinfo-MicrobiotaPipeline/
+├── main.nf                        # Entry point of the pipeline     
+├── nextflow.config 
 │
-├── main.nf                        # Entry point of the pipeline
-├── nextflow.config
-│
-├── scripts/                         # Helper scripts and small executables
+├── scripts/                       # Helper scripts and small executables
 │   ├── api_csv.py
 │   ├── metadata_parsing.R
 │   ├── Reorder.R
 │   └── process_metadata.py
 │
-├── modules/                     # DSL2-style modules for each pipeline step
-│   ├── nf-core
-│   │   ├── fastqc/
-│   │   ├── trimmomatic/
-│   │   └── kraken2/kraken2
-│   ├── local
-│   │   ├── build_tree.nf
-│   │   ├── classify_taxonomy.nf
-│   │   ├── ...
-│   │   └── summarize_table.nf
+├── modules/                       # DSL2-style modules for each pipeline step
+│   └── nf-core/
+│       ├── fastqc/
+│       ├── trimmomatic/
+│       └── kraken2/kraken2
 │
-├── conf/   ??                     # Configuration files
+├── conf/                          # Configuration files (??)
+│
+├── controls/
+│   ├── metadata_controls.csv
+│   ├── taxonomy_control
+│   └── ...
 │
 ├── runs/
-│   ├── R[01-99][DDMMYY] (i.e. R01030525)
-│   │   ├── raw_data
-│   │   │    ├── S[A-Z][A-Z][1-9][DDMMYY][R1-R2].fastq.gz
-│   │   │    └── i.e. SAF1030525R1.fastq.gz
-│   │   ├── metadata
-│   │   │    ├── metadata_cleaned.csv
-│   │   │    ├── metadata_sample.csv
-│   │   │    └── metadata_run.csv
-│   │   ├── qc_reports
-│   │   │    ├── raw/
-│   │   │    │    ├── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_fastqc.html
-│   │   │    │    └── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_fastqc.zip
-│   │   │    └── trimmed/
-│   │   │    │    ├── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_trimmed_fastqc.html
-│   │   │    │    └── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_trimmed_fastqc.zip
-│   │   ├── trimmed_reads
-│   │   │    ├── S[A-Z][A-Z][1-9][DDMMYY][R1-R2]_trimmed.fastq.gz
-│   │   │    └── i.e. SAF1030525R1.paired.trim_[1-2].fastq.gz
-│   │   ├── qiime_output
-│   │   │    ├── artifacts
-│   │   │    │    ├── 01_imported_reads
-│   │   │    │    ├── 02_denoised_dada2
-│   │   │    │    ├── 03_summaries
-│   │   │    │    ├── 04_taxonomy
-│   │   │    │    └── 05_phylogeny
-│   │   │    └── relevant_results
-│   │   ├── results
-│   │   │    ├── pipeline.log ?
-│   │   │    ├── multiqc_report.html
-│   │   │    └── shiny_dashboard_results_app.R
+│   └── R[01-99][DDMMYY] (e.g. R01030525)/
+│       ├── raw_data/
+│       │   ├── S[A-Z]{2}[1-9][DDMMYY][R1-R2].fastq.gz 
+│       │   └── e.g. SAF1030525R1.fastq.gz
+│       ├── metadata/
+│       │   ├── metadata_cleaned.csv
+│       │   ├── metadata_sample.csv
+│       │   └── metadata_run.csv
+│       ├── qc_reports/
+│       │   ├── raw/
+│       │   │   ├── *_fastqc.html
+│       │   │   └── *_fastqc.zip
+│       │   └── trimmed/
+│       │       ├── *_trimmed_fastqc.html
+│       │       └── *_trimmed_fastqc.zip
+│       ├── preprocessed_data/
+│       │   ├── *_trimmed.fastq.gz
+│       │   └── e.g. SAF1030525R1_trimmed.fastq.gz
+│       ├── qiime_output/
+│       │   ├── artifacts/
+│       │   │   ├── 01_imported_reads
+│       │   │   ├── 02_denoised_dada2
+│       │   │   ├── 03_summaries
+│       │   │   ├── 04_taxonomy
+│       │   │   └── 05_phylogeny
+│       │   └── relevant_results/
+│       └── results/
+│           ├── pipeline.log ?
+│           ├── multiqc_report.html
+│           └── shiny_dashboard_results_app.R
 │
 ├── .gitignore
 ├── LICENSE
