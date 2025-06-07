@@ -144,8 +144,6 @@ process DENOISE_DADA2 {
         --i-demultiplexed-seqs ${demux_qza} \
         --p-trim-left-f 0 \
         --p-trim-left-r 0 \
-        --p-trunc-len-f ${params.trunc_len_f} \
-        --p-trunc-len-r ${params.trunc_len_r} \
         --o-table table.qza \
         --o-representative-sequences rep-seqs.qza \
         --o-denoising-stats denoising-stats.qza \
