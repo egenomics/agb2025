@@ -18,8 +18,8 @@ params.denoiser = "dada2" // Options: 'dada2', 'deblur'
 params.classifier_db = "group2_B/classifier/silva138_noEuk_AB_classifier.qza"
 params.metadata = "group2_B/metadata/metadata.tsv"
 
-// params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on the demux report!!!!!!
-// params.trunc_len_r = 180 // DADA2: Reverse read truncation length
+params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on the demux report!!!!!!
+params.trunc_len_r = 180 // DADA2: Reverse read truncation length
 
 
 
@@ -39,11 +39,11 @@ workflow {
     if (params.denoiser == 'dada2') {
         DENOISE_DADA2( IMPORT_READS.out.demux_qza )
         ch_denoised_table = DENOISE_DADA2.out.table
-        ch_denoised_reps = DENOISE_DADA2.out.rep_seqs
+        ch_denoised_reps =  DENOISE_DADA2.out.rep_seqs
     } else if (params.denoiser == 'deblur') {
         DENOISE_DEBLUR( IMPORT_READS.out.demux_qza )
         ch_denoised_table = DENOISE_DEBLUR.out.table
-        ch_denoised_reps = DENOISE_DEBLUR.out.rep_seqs
+        ch_denoised_reps =DENOISE_DEBLUR.out.rep_seqs
     } else {
         error "Invalid denoiser option: ${params.denoiser}. Choose 'dada2' or 'deblur'."
     }
@@ -52,18 +52,39 @@ workflow {
     SUMMARIZE_TABLE( ch_denoised_table, ch_metadata)
     SUMMARIZE_SEQS( ch_denoised_reps )
 
-    // 4. Taxonomic Classification
+    // 4. Export Feature Table to TSV
+    EXPORT_FEATURE_TABLE( ch_denoised_table )
+
+    // 5. Export Representative Sequences to FASTA
+    EXPORT_REP_SEQS( ch_denoised_reps )
+
+    // 6. Taxonomic Classification
     CLASSIFY_TAXONOMY( ch_denoised_reps, ch_classifier )
 
-    // 5. Phylogenetic Tree Construction
+    // 7. Export Taxonomy to TSV
+    EXPORT_TAXONOMY( CLASSIFY_TAXONOMY.out.taxonomy )
+
+    // 8. Phylogenetic Tree Construction
     BUILD_TREE( ch_denoised_reps )
+
+    // 9. Export Phylogenetic Tree to Newick format
+    EXPORT_TREE( BUILD_TREE.out.rooted_tree )
+
+    // 10. Create Final Results Summary
+    CREATE_RESULTS_SUMMARY( 
+        EXPORT_FEATURE_TABLE.out.feature_table_tsv,
+        EXPORT_REP_SEQS.out.rep_seqs_fasta,
+        EXPORT_TAXONOMY.out.taxonomy_tsv,
+        EXPORT_TREE.out.tree_newick,
+        ch_metadata
+    )
 }
 
 // == Processes ==
 
 // 1. Import Reads
 process IMPORT_READS {
-    publishDir "${params.outdir}/qiime2_artifacts/01_imported_reads", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/01_imported_reads", mode: 'copy'
     
     input:
     path(input_dir)
@@ -123,12 +144,9 @@ process IMPORT_READS {
     """
 }
 
-
-
-
 // 2a. Denoise with DADA2
 process DENOISE_DADA2 {
-    publishDir "${params.outdir}/qiime2_artifacts/02_denoised_dada2", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/02_denoised_dada2", mode: 'copy'
 
     input:
     path(demux_qza)
@@ -144,6 +162,8 @@ process DENOISE_DADA2 {
         --i-demultiplexed-seqs ${demux_qza} \
         --p-trim-left-f 0 \
         --p-trim-left-r 0 \
+        --p-trunc-len-f ${params.trunc_len_f} \
+        --p-trunc-len-r ${params.trunc_len_r} \
         --o-table table.qza \
         --o-representative-sequences rep-seqs.qza \
         --o-denoising-stats denoising-stats.qza \
@@ -156,7 +176,7 @@ process DENOISE_DADA2 {
 
 // 2b. Denoise with Deblur
 process DENOISE_DEBLUR {
-    publishDir "${params.outdir}/qiime2_artifacts/02_denoised_deblur", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/02_denoised_deblur", mode: 'copy'
 
     input:
     path(demux_qza)
@@ -217,7 +237,7 @@ process SUMMARIZE_TABLE {
 
 // 3b. Summarize Representative Sequences
 process SUMMARIZE_SEQS {
-    publishDir "${params.outdir}/qiime2_visualizations/03_summaries", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/03_summaries", mode: 'copy'
 
     input:
     path(rep_seqs_qza)
@@ -237,10 +257,61 @@ process SUMMARIZE_SEQS {
     """
 }
 
+// 4. Export Feature Table to TSV
+process EXPORT_FEATURE_TABLE {
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
 
-// 4. Taxonomic Classification
+    input:
+    path(table_qza)
+
+    output:
+    path("feature_table.tsv", emit: feature_table_tsv)
+
+    script:
+    """
+    qiime tools export \
+      --input-path ${table_qza} \
+      --output-path exported_table
+    
+    # Convert BIOM to TSV
+    biom convert \
+      -i exported_table/feature-table.biom \
+      -o feature_table.tsv \
+      --to-tsv
+    """
+    stub:
+    """
+    touch feature_table.tsv
+    """
+}
+
+// 5. Export Representative Sequences to FASTA
+process EXPORT_REP_SEQS {
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
+
+    input:
+    path(rep_seqs_qza)
+
+    output:
+    path("representative_sequences.fasta", emit: rep_seqs_fasta)
+
+    script:
+    """
+    qiime tools export \
+      --input-path ${rep_seqs_qza} \
+      --output-path exported_seqs
+    
+    mv exported_seqs/dna-sequences.fasta representative_sequences.fasta
+    """
+    stub:
+    """
+    touch representative_sequences.fasta
+    """
+}
+
+// 6. Taxonomic Classification
 process CLASSIFY_TAXONOMY {
-    publishDir "${params.outdir}/qiime2_artifacts/04_taxonomy", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/04_taxonomy", mode: 'copy'
 
     input:
     path(rep_seqs_qza)
@@ -271,9 +342,33 @@ process CLASSIFY_TAXONOMY {
     """
 }
 
-// 5. Build Phylogenetic Tree
+// 7. Export Taxonomy to TSV
+process EXPORT_TAXONOMY {
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
+
+    input:
+    path(taxonomy_qza)
+
+    output:
+    path("taxonomy.tsv", emit: taxonomy_tsv)
+
+    script:
+    """
+    qiime tools export \
+      --input-path ${taxonomy_qza} \
+      --output-path exported_taxonomy
+    
+    mv exported_taxonomy/taxonomy.tsv taxonomy.tsv
+    """
+    stub:
+    """
+    touch taxonomy.tsv
+    """
+}
+
+// 8. Build Phylogenetic Tree
 process BUILD_TREE {
-    publishDir "${params.outdir}/qiime2_artifacts/05_phylogeny", mode: 'copy'
+    publishDir "${params.outdir}/artifacts/05_phylogeny", mode: 'copy'
 
     input:
     path(rep_seqs_qza)
@@ -297,5 +392,95 @@ process BUILD_TREE {
     stub:
     """
     touch aligned-rep-seqs.qza masked-aligned-rep-seqs.qza unrooted-tree.qza rooted-tree.qza
+    """
+}
+
+// 9. Export Phylogenetic Tree to Newick format
+process EXPORT_TREE {
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
+
+    input:
+    path(rooted_tree_qza)
+
+    output:
+    path("phylogenetic_tree.nwk", emit: tree_newick)
+
+    script:
+    """
+    qiime tools export \
+      --input-path ${rooted_tree_qza} \
+      --output-path exported_tree
+    
+    mv exported_tree/tree.nwk phylogenetic_tree.nwk
+    """
+    stub:
+    """
+    touch phylogenetic_tree.nwk
+    """
+}
+
+// 10. Create Final Results Summary
+process CREATE_RESULTS_SUMMARY {
+    publishDir "${params.outdir}/relevant_results", mode: 'copy'
+
+    input:
+    path(feature_table_tsv)
+    path(rep_seqs_fasta)
+    path(taxonomy_tsv)
+    path(tree_newick)
+    path(metadata_file)
+
+    output:
+    path("analysis_summary.txt")
+    path("feature_table_with_taxonomy.tsv")
+
+    script:
+    """
+    # Create analysis summary
+    echo "QIIME 2 Analysis Summary" > analysis_summary.txt
+    echo "========================" >> analysis_summary.txt
+    echo "Date: \$(date)" >> analysis_summary.txt
+    echo "Denoiser used: ${params.denoiser}" >> analysis_summary.txt
+    echo "Sampling depth: ${params.sampling_depth}" >> analysis_summary.txt
+    echo "" >> analysis_summary.txt
+    
+    # Count samples and features
+    n_samples=\$(head -1 ${feature_table_tsv} | awk -F'\t' '{print NF-1}')
+    n_features=\$(tail -n +2 ${feature_table_tsv} | wc -l)
+    n_seqs=\$(grep -c "^>" ${rep_seqs_fasta})
+    
+    echo "Number of samples: \$n_samples" >> analysis_summary.txt
+    echo "Number of features (ASVs/OTUs): \$n_features" >> analysis_summary.txt
+    echo "Number of representative sequences: \$n_seqs" >> analysis_summary.txt
+    echo "" >> analysis_summary.txt
+    
+    echo "Output files:" >> analysis_summary.txt
+    echo "- feature_table.tsv: Feature abundance table" >> analysis_summary.txt
+    echo "- representative_sequences.fasta: Representative sequences" >> analysis_summary.txt
+    echo "- taxonomy.tsv: Taxonomic classifications" >> analysis_summary.txt
+    echo "- phylogenetic_tree.nwk: Phylogenetic tree in Newick format" >> analysis_summary.txt
+    echo "- feature_table_with_taxonomy.tsv: Combined feature table with taxonomy" >> analysis_summary.txt
+    
+    # Create combined feature table with taxonomy using Python
+    python3 << 'EOF'
+import pandas as pd
+
+# Load feature table
+feature_table = pd.read_csv('${feature_table_tsv}', sep='\\t', index_col=0, skiprows=1)
+
+# Load taxonomy
+taxonomy = pd.read_csv('${taxonomy_tsv}', sep='\\t', index_col=0)
+
+# Merge tables
+combined = feature_table.join(taxonomy, how='left')
+
+# Save combined table
+combined.to_csv('feature_table_with_taxonomy.tsv', sep='\\t')
+print("Combined feature table with taxonomy created successfully!")
+EOF
+    """
+    stub:
+    """
+    touch analysis_summary.txt feature_table_with_taxonomy.tsv
     """
 }
