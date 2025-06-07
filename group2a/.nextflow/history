@@ -20,3 +20,5 @@
 2025-05-29 15:53:15	1.9s	chaotic_kirch	OK	e7b52e2757ccfb635b0a1afa7ead680e	fe8de4e9-45d0-4a0f-b60c-c62519a991f7	nextflow run metadata.nf
 2025-05-29 15:58:13	2.1s	stupefied_noether	OK	86c6434c6be6d52307e653f107da99f6	17b2b28c-be4b-4229-832e-55abcd2bb975	nextflow run metadata.nf
 2025-05-29 16:08:26	2.3s	marvelous_montalcini	OK	5a4706ef1708f8bfeee551698053c31d	ecfb13dc-45f3-4ce5-bdb0-eaeed0091f95	nextflow run metadata.nf
+2025-06-07 13:49:07	1.5s	pedantic_dalembert	ERR	ee746da9c1393f391b267be509f6ebac	78e3789b-7c69-48ef-9ff1-5cf51920be3a	nextflow run metadata.nf --run_id R01070625
+2025-06-07 13:50:06	2.3s	adoring_hodgkin	ERR	65def2c0a2049bdcb9416b0c88824841	f3531354-023e-4816-81cf-b4428048fd93	nextflow run metadata.nf --run_id R01070625

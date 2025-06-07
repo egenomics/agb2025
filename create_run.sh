@@ -20,7 +20,7 @@ mkdir -p "$RUN_DIR"
 echo "Created: $RUN_DIR"
 
 mkdir -p runs/R${NEXT_RUN}${DATE}/metadata
-cp group2a/metadata.tsv runs/R${NEXT_RUN}${DATE}/metadata/
+cp group2a/sample_metadata.tsv runs/R${NEXT_RUN}${DATE}/metadata/
 
 # Extract run_accession column and download FASTQ files
 tail -n +2 "$CSV_PATH" | cut -d, -f2 | while read -r sample_id; do
