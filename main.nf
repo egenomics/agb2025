@@ -6,6 +6,7 @@ include { FASTQC as FASTQC_RAW  } from './modules/nf-core/fastqc/main.nf'
 include { FASTQC as FASTQC_TRIM } from './modules/nf-core/fastqc/main.nf'
 include { TRIMMOMATIC           } from './modules/nf-core/trimmomatic/main.nf'
 include { KRAKEN2_KRAKEN2 as KRAKEN } from './modules/nf-core/kraken2/kraken2/main.nf'
+include { MULTIQC               } from './modules/nf-core/multiqc/main.nf'
 
 // QIIME2 modules
 include { IMPORT_READS          } from './modules/local/import_reads.nf'
@@ -57,28 +58,50 @@ workflow {
 
     // 1. Pre-processing
     // 1.1. Run FastQC on raw reads
-    FASTQC_RAW(raw_reads)
+    def (ch_fastqc_raw_reports, ch_fastqc_raw_versions) = FASTQC_RAW(raw_reads)
 
     // 1.2. Run Trimmomatic
-    TRIMMOMATIC(raw_reads)
+    def (ch_trimmed_reads, ch_trimmomatic_logs, ch_trimmomatic_versions) = TRIMMOMATIC(raw_reads)
 
     // 1.3. Run FastQC on trimmed reads
-    FASTQC_TRIM(
-        TRIMMOMATIC.out.trimmed_reads.map { meta, reads ->
-            def new_meta = meta.clone()
-            new_meta.id = "${meta.id}_trimmed"
-            return tuple(new_meta, reads)
-        }
+    def trimmed_for_qc = ch_trimmed_reads.map { meta, reads ->
+        def new_meta = meta.clone()
+        new_meta.id = "${meta.id}_trimmed"
+        return tuple(new_meta, reads)
+    }
+    def (ch_fastqc_trim_reports, ch_fastqc_trim_versions) = FASTQC_TRIM(trimmed_for_qc)
+
+
+    // 1.4. Run Kraken2
+    def kraken_input = ch_trimmed_reads.map { meta, reads ->
+        tuple(meta, reads)
+    }
+
+    def (ch_kraken_reports, ch_kraken_versions) = KRAKEN(
+        kraken_input,
+        file(params.kraken2_db),
+        false,
+        true
     )
 
-    KRAKEN(
-        TRIMMOMATIC.out.trimmed_reads
-            .map { meta, reads ->
-                tuple(meta, reads)
-            },
-            file(params.kraken2_db),
-            false,
-            true
+    def channelsToMerge = [
+        ch_fastqc_raw_reports.map { meta, path -> path },
+        ch_fastqc_trim_reports.map { meta, path -> path },
+        ch_trimmomatic_logs.map { meta, path -> path },
+        ch_kraken_reports.map { meta, path -> path }
+    ]
+
+    mergeChannels(channelsToMerge).set { ch_multiqc_files }
+    mergeChannels(channelsToMerge).set { ch_software_versions }
+    
+    // 1.5. Run MultiQC
+    MULTIQC(
+        ch_multiqc_files,
+        Channel.value(file("dummy_multiqc_config.yaml")),
+        Channel.value(file("dummy_extra_config.yaml")),
+        Channel.value(file("dummy_logo.png")),
+        ch_software_versions,
+        Channel.value( file("dummy_summary.txt") )
     )
 
     TRIMMOMATIC.out.trimmed_reads
@@ -165,5 +188,13 @@ workflow {
 
     // println("Workflow completed at: ${new Date()}")
     //println("Execution status: ${workflow.success ? 'SUCCESS' : 'FAILED'}")
-    }
+}
 
+
+def mergeChannels(List channels) {
+    def merged = channels[0]
+    for (int i=1; i<channels.size(); i++) {
+        merged = merged.merge(channels[i])
+    }
+    return merged
+}

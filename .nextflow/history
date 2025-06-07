@@ -35,3 +35,17 @@
 2025-05-29 11:52:39	33.9s	chaotic_jennings	ERR	44678b1c003febdf0f1c06df0e1b60d3	9b1f41ad-67fc-44e7-9d0e-7611b46a83c9	nextflow run main.nf
 2025-05-29 11:55:01	34.2s	elated_faggin	ERR	e36a117f639ba506ef6bc0f7453c41ec	517ee723-391d-4f49-8f6a-5f6cea1a1b52	nextflow run main.nf
 2025-05-29 11:56:03	36.4s	hopeful_rubens	OK	01bbfd96f7d302bd8b82f29c5f4b203d	82ef2d06-409a-43c1-8427-36c47b51ff26	nextflow run main.nf
+2025-06-05 10:43:01	-	marvelous_goldwasser	-	4d092477f7ffecc43f141682d583664f	9c09ae17-d598-4b0f-870c-2af44669459e	nextflow run main.nf -profile docker
+2025-06-05 10:50:57	-	sick_pesquet	-	4d092477f7ffecc43f141682d583664f	8c7b4007-9966-48e1-8447-39dc30f750b8	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 10:51:56	-	spontaneous_hopper	-	2513734f01b8793bfcba8bb5d02f865a	fba8d98f-bda1-4cbb-99ba-a40743211ee7	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 10:52:54	-	furious_becquerel	-	c35d4b49de1546dcdcb2c124b958d426	b42e8fb9-09b0-47e0-8913-977e083d124e	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 10:55:14	-	silly_euler	-	79d28f0317858763920852df12538bdc	ed9e9c5b-a150-4883-bc23-6fa3c8183b1b	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 10:56:23	12.7s	elegant_curie	ERR	4c2e41b0db986b7b2a6f1ede7977e07f	bde30004-e6b0-4911-a7e8-dc565ba4e88e	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 10:57:39	20.8s	disturbed_edison	ERR	4c2e41b0db986b7b2a6f1ede7977e07f	eb9a3941-c8b9-4234-801a-c917af41e22a	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 11:06:09	18.2s	deadly_mccarthy	ERR	4c2e41b0db986b7b2a6f1ede7977e07f	68c1a202-3dc9-48f7-a28f-5e46570660c2	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 11:10:28	-	admiring_goldwasser	-	efacb02291770e67eeb6204ae448ae64	616e0f09-d3b2-4eb7-93b3-02669b03f208	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 11:10:46	25.4s	tiny_lamarr	ERR	4c2e41b0db986b7b2a6f1ede7977e07f	3cc1b679-a64a-4f64-8874-2bb98f8c49fa	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 11:13:44	4m	festering_torricelli	ERR	79a3c17de76f2c13d2381f39efc0cb6e	9c5f1317-4005-4ed2-8d3d-3561d572cf46	nextflow run main.nf --run_id R01050625 -profile docker
+2025-06-05 11:19:48	14m 11s	high_ampere	ERR	79a3c17de76f2c13d2381f39efc0cb6e	9c5f1317-4005-4ed2-8d3d-3561d572cf46	nextflow run main.nf --run_id R01050625 -profile docker -resume
+2025-06-05 12:11:29	20.3s	mighty_khorana	ERR	79a3c17de76f2c13d2381f39efc0cb6e	9c5f1317-4005-4ed2-8d3d-3561d572cf46	nextflow run main.nf --run_id R01050625 -profile docker -resume
+2025-06-07 12:20:24	-	zen_wing	-	1ccc35b0303c9f7d5f7d224a51571c98	646979f5-b633-40a3-a95f-fb054ef457d6	nextflow run main.nf -profile docker
