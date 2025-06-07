@@ -123,11 +123,15 @@ chmod +x download_krakendb.sh
 
 ### 4 · Download the classifier
 
+First, create the folder databases:
+```bash
+mkdir databases
+```
 For running qiime2 and obtaining the feature table, the classifier has to be downloaded, for that you can use the following link:
 
 https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza
 
-Place the downloaded database in a folder called databases/ in the main project folder.
+Place the downloaded database in the new folder in the main project folder.
 
 ### 5 · Run the pipeline
 
