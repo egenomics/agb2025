@@ -18,8 +18,8 @@ params.denoiser = "dada2" // Options: 'dada2', 'deblur'
 params.classifier_db = "group2_B/classifier/silva138_noEuk_AB_classifier.qza"
 params.metadata = "group2_B/metadata/metadata.tsv"
 
-params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on the demux report!!!!!!
-params.trunc_len_r = 180 // DADA2: Reverse read truncation length
+// params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on the demux report!!!!!!
+// params.trunc_len_r = 180 // DADA2: Reverse read truncation length
 
 
 
@@ -162,8 +162,6 @@ process DENOISE_DADA2 {
         --i-demultiplexed-seqs ${demux_qza} \
         --p-trim-left-f 0 \
         --p-trim-left-r 0 \
-        --p-trunc-len-f ${params.trunc_len_f} \
-        --p-trunc-len-r ${params.trunc_len_r} \
         --o-table table.qza \
         --o-representative-sequences rep-seqs.qza \
         --o-denoising-stats denoising-stats.qza \
