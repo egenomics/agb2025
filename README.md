@@ -134,7 +134,10 @@ https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifi
 Place the downloaded database in the new folder in the main project folder.
 
 ### 5 · Run the pipeline
-
+In this step, make sure you have run the following script found in the previous steps:
+```bash
+./create_run.sh
+```
 #### Run the pipeline using the previously created run folder
 After executing `./create_run.sh`, a `runs/<run_id>/` folder will be created. Copy the `run_id` and use it to run the pipeline.
 
