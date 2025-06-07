@@ -55,10 +55,10 @@ process classify_quality {
     script:
     """
     python3 -c "
-import pandas as pd
-df = pd.read_csv('${sample_metadata_csv}')
-df['quality_flag'] = df['%GC'].apply(lambda x: 'FAIL' if x < 40 else 'PASS')  # adjust logic
-df.to_csv('sample_metadata_classified.csv', index=False)
+    import pandas as pd
+    df = pd.read_csv('${sample_metadata_csv}')
+    df['quality_flag'] = df['%GC'].apply(lambda x: 'FAIL' if x < 40 else 'PASS') 
+    df.to_csv('sample_metadata_classified.csv', index=False)
 "
     """
 }
