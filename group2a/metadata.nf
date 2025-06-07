@@ -39,7 +39,7 @@ process merge_metadata {
     fi
 
     # Merge on common columns (adjust as needed)
-    csvjoin -c Sample_ID,Sample metadata.csv multiqc_qc_clean.csv > sample_metadata.csv
+    csvjoin -c "Sample ID",Sample metadata.csv multiqc_qc_clean.csv > sample_metadata.csv
     """
 }
 
@@ -63,24 +63,21 @@ df.to_csv('sample_metadata_classified.csv', index=False)
     """
 }
 
-
 workflow {
 
     if (params.run_id == null) {
-        error " Missing required parameter: --run_id"
+        error "Missing required parameter: --run_id"
     }
 
-    // Define paths
-    def metadata_tsv_path = "runs/${params.run_id}/metadata/sample_metadata.tsv"
+    def metadata_tsv_path = "../runs/${params.run_id}/metadata/sample_metadata.tsv"
     def multiqc_path      = "multiqc_data/multiqc_fastqc.txt"
 
-    // Channels
     metadata_sample_ch = Channel.fromPath(metadata_tsv_path)
     multiqc_fastqc_ch  = Channel.fromPath(multiqc_path)
 
-    // Processes
-    merge_metadata(metadata_sample_ch, multiqc_fastqc_ch)
+    sample_metadata_ch = merge_metadata(metadata_sample_ch, multiqc_fastqc_ch)
 
-    classify_quality("sample_metadata.csv")
+    classify_quality(sample_metadata_ch)
 }
+
 
