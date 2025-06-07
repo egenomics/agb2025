@@ -18,8 +18,8 @@ params.denoiser = "dada2" // Options: 'dada2', 'deblur'
 params.classifier_db = "group2_B/classifier/silva138_noEuk_AB_classifier.qza"
 params.metadata = "group2_B/metadata/metadata.tsv"
 
-params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on the demux report!!!!!!
-params.trunc_len_r = 180 // DADA2: Reverse read truncation length
+// params.trunc_len_f = 240 // DADA2: Forward read truncation length ### depends on the demux report!!!!!!
+// params.trunc_len_r = 180 // DADA2: Reverse read truncation length
 
 
 
