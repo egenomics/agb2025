@@ -1,0 +1,83 @@
+MICROBIOME PIPELINE BENCHMARKING SUMMARY
+Genus-Level Validation Results
+============================================================
+
+Abundance Correlation:
+----------------------------------------
+  Mean Pearson r: 0.8546
+  Median Pearson r: 0.8960
+  Samples with good correlation (r>0.7): 23
+  Samples with excellent correlation (r>0.9): 11
+  Mean Spearman r: 0.9256
+
+Detection Performance:
+----------------------------------------
+  Mean detection rate: 0.7180
+  Mean genera detected: 31.5926
+  Mean genera in truth: 44.0000
+  Mean genera in pipeline: 43.7407
+
+Error Metrics:
+----------------------------------------
+  Mean RMSE: 0.0146
+  Mean MAE: 0.0061
+  Mean relative error: 0.2232
+
+Diversity Metrics:
+----------------------------------------
+  Shannon correlation: 0.6896
+  Shannon mean relative error: 0.0187
+  Simpson correlation: 0.6811
+  Simpson mean relative error: 0.0083
+  Richness correlation: nan
+  Richness mean relative error: 0.0412
+  Evenness correlation: 0.6830
+  Evenness mean relative error: 0.0209
+
+Performance by Condition:
+----------------------------------------
+  no_gc_bias (n=3):
+    Abundance correlation: 0.8449
+    Detection rate: 0.7273
+    Shannon error: 0.0204
+  depth_0.25x (n=2):
+    Abundance correlation: 0.6896
+    Detection rate: 0.6023
+    Shannon error: 0.0267
+  standard (n=8):
+    Abundance correlation: 0.9370
+    Detection rate: 0.7244
+    Shannon error: 0.0168
+  miseq_28 (n=2):
+    Abundance correlation: 0.9154
+    Detection rate: 0.7386
+    Shannon error: 0.0219
+  depth_5x (n=2):
+    Abundance correlation: 0.7597
+    Detection rate: 0.7500
+    Shannon error: 0.0221
+  miseq_standard (n=2):
+    Abundance correlation: 0.9284
+    Detection rate: 0.7273
+    Shannon error: 0.0127
+  high_quality (n=2):
+    Abundance correlation: 0.8893
+    Detection rate: 0.7386
+    Shannon error: 0.0167
+  miseq_24 (n=2):
+    Abundance correlation: 0.9257
+    Detection rate: 0.7273
+    Shannon error: 0.0131
+  depth_0.5x (n=2):
+    Abundance correlation: 0.6814
+    Detection rate: 0.6705
+    Shannon error: 0.0354
+  depth_2x (n=2):
+    Abundance correlation: 0.7324
+    Detection rate: 0.7500
+    Shannon error: 0.0057
+
+KEY INSIGHTS:
+----------------------------------------
+EXCELLENT abundance correlation (r > 0.8)
+GOOD genus detection rate (60-80%)

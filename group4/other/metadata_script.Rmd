@@ -1,0 +1,38 @@
+---
+title: "AGB"
+author: "Alexios Giannoulas"
+date: "2025-04-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The data is collected from the American Gut Project from the study MGYS00001279. 
+
+```{r}
+library(MGnifyR)
+mgnify_study_accession <- mgnify_study_accession <- "MGYS00001279"
+library(vegan)
+library(ggplot2)
+library(phyloseq)
+
+library(MGnifyR)
+
+mg <- MgnifyClient(usecache = T, cache_dir = '/home/jovyan/.mgnify_cache')
+
+```
+```{r}
+analyses_accessions <- mgnify_analyses_from_studies(mg, mgnify_study_accession)
+analyses_accessions
+```
+metadata
+```{r}
+analyses_metadata_df <- mgnify_get_analyses_metadata(mg,analyses_accessions)
+(head(analyses_metadata_df))
+```
+```{r}
+write.csv(analyses_metadata_df, file = "analyses_metadata.csv", row.names = FALSE)
+```
+

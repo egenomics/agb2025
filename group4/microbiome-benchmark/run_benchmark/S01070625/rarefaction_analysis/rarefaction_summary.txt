@@ -1,0 +1,3 @@
+Rarefaction Threshold Analysis
+Selected threshold: 5391
+Samples retained: 27/30

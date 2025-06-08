@@ -1,0 +1,24 @@
+QIIME 2 Analysis Summary
+========================
+Date: Sat Jun  7 21:47:08 UTC 2025
+Denoiser used: dada2
+Auto rarefaction: true
+Rarefaction method: null
+
+Number of samples: 0
+Number of features (ASVs/OTUs): 3788
+Number of representative sequences: 3788
+
+Rarefaction Analysis:
+--------------------
+Rarefaction Threshold Analysis
+Selected threshold: 5391
+Samples retained: 27/30
+
+Output files:
+- feature_table.tsv: Feature abundance table
+- representative_sequences.fasta: Representative sequences
+- taxonomy.tsv: Taxonomic classifications
+- phylogenetic_tree.nwk: Phylogenetic tree in Newick format
+- feature_table_with_taxonomy.tsv: Combined feature table with taxonomy
+

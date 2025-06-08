@@ -35,3 +35,6 @@
 2025-05-29 11:52:39	33.9s	chaotic_jennings	ERR	44678b1c003febdf0f1c06df0e1b60d3	9b1f41ad-67fc-44e7-9d0e-7611b46a83c9	nextflow run main.nf
 2025-05-29 11:55:01	34.2s	elated_faggin	ERR	e36a117f639ba506ef6bc0f7453c41ec	517ee723-391d-4f49-8f6a-5f6cea1a1b52	nextflow run main.nf
 2025-05-29 11:56:03	36.4s	hopeful_rubens	OK	01bbfd96f7d302bd8b82f29c5f4b203d	82ef2d06-409a-43c1-8427-36c47b51ff26	nextflow run main.nf
+2025-06-07 22:19:42	19m 22s	goofy_ride	ERR	2cb46d6b83b0cd598a080127a523d6ec	2ba2e78e-3ef0-44a6-b374-0903e83d43ba	nextflow run main.nf --run_id S01070625 -profile docker
+2025-06-07 23:07:13	37m 20s	tiny_church	ERR	2cb46d6b83b0cd598a080127a523d6ec	2ba2e78e-3ef0-44a6-b374-0903e83d43ba	nextflow run main.nf --run_id S01070625 -profile docker -resume
+2025-06-07 23:45:44	1m 25s	adoring_wilson	OK	2cb46d6b83b0cd598a080127a523d6ec	2ba2e78e-3ef0-44a6-b374-0903e83d43ba	nextflow run main.nf --run_id S01070625 -profile docker -resume --auto_rarefaction true
