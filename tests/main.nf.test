@@ -1,0 +1,230 @@
+nextflow_pipeline {
+
+    name "Test Workflow main.nf"
+    script "main.nf"
+
+    test("Should handle samples with very low read counts") {
+        when {
+            params {
+                run_id = "stress_test_low_reads"
+                outdir = "results/stress_test_low_reads"
+                metadata = "/home/maider/Documents/AGB/validation/stress_tests/metadata/low_reads_metadata.tsv"
+                classifier_db = "/home/maider/Documents/AGB/validation/databases/silva-138-99-nb-classifier.qza"
+                kraken2_db = "/home/maider/Documents/AGB/validation/k2_Human_20230629"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("results/stress_test_low_reads/denoised/feature_table.qza").exists()
+            assert file("results/stress_test_low_reads/taxa/taxa_barplot.qzv").exists()
+            assert stdout.contains("Denoising completed")
+        }
+    }
+
+    test("Should scale to high number of samples (100+ samples)") {
+        when {
+            params {
+                run_id = "stress_test_many_samples"
+                outdir = "results/stress_test_many_samples"
+                metadata = "stress_tests/metadata/many_samples_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("results/stress_test_many_samples/denoised/feature_table.qza").exists()
+            assert stdout.contains("Processed 100 samples")
+        }
+    }
+
+    test("Should handle high read depth samples without memory issues") {
+        when {
+            params {
+                run_id = "stress_test_high_depth"
+                outdir = "results/stress_test_high_depth"
+                metadata = "stress_tests/metadata/high_depth_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("results/stress_test_high_depth/denoised/feature_table.qza").exists()
+            assert stdout.contains("Memory usage")
+        }
+    }
+
+    test("Should handle mixed quality samples in same run") {
+        when {
+            params {
+                run_id = "stress_test_mixed_quality"
+                outdir = "results/stress_test_mixed_quality"
+                metadata = "stress_tests/metadata/mixed_quality_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("results/stress_test_mixed_quality/qc_reports/raw").exists()
+            assert stdout.contains("Quality summary")
+        }
+    }
+
+    test("Should complete successfully with deblur denoiser") {
+        when {
+            params {
+                run_id = "stress_test_deblur"
+                outdir = "results/stress_test_deblur"
+                metadata = "stress_tests/metadata/deblur_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "deblur"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("results/stress_test_deblur/denoised/feature_table.qza").exists()
+            assert stdout.contains("Deblur finished")
+        }
+    }
+
+    test("Should fail gracefully with corrupted input files") {
+        when {
+            params {
+                run_id = "stress_test_corrupted"
+                outdir = "results/stress_test_corrupted"
+                metadata = "stress_tests/metadata/corrupted_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert !workflow.success
+            assert stderr.contains("FASTQ format error")
+        }
+    }
+
+    test("Should handle limited memory gracefully") {
+        when {
+            params {
+                run_id = "stress_test_memory"
+                outdir = "results/stress_test_memory"
+                metadata = "stress_tests/metadata/limited_memory_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert stdout.contains("memory usage")
+        }
+    }
+
+    test("Should handle single sample analysis") {
+        when {
+            params {
+                run_id = "stress_test_single_sample"
+                outdir = "results/stress_test_single_sample"
+                metadata = "stress_tests/metadata/single_sample_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("results/stress_test_single_sample/denoised/feature_table.qza").exists()
+            assert stdout.contains("Processed 1 sample")
+        }
+    }
+
+    test("Should handle maximum realistic dataset size") {
+        when {
+            params {
+                run_id = "stress_test_max_dataset"
+                outdir = "results/stress_test_max_dataset"
+                metadata = "stress_tests/metadata/max_dataset_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert stdout.contains("Processed 500+ samples")
+        }
+    }
+
+    test("Should handle RNA sequences appropriately") {
+        when {
+            params {
+                run_id = "stress_test_rna_seq"
+                outdir = "results/stress_test_rna_seq"
+                metadata = "stress_tests/metadata/rna_seq_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert file("results/stress_test_rna_seq/classification/sample1_report.tsv").text.contains("Unclassified")
+        }
+    }
+
+    test("Should validate input file formats correctly") {
+        when {
+            params {
+                run_id = "stress_test_file_validation"
+                outdir = "results/stress_test_file_validation"
+                metadata = "stress_tests/metadata/format_validation_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert stdout.contains("Input validation passed")
+        }
+    }
+
+    test("Should handle large-scale parallel processing") {
+        when {
+            params {
+                run_id = "stress_test_parallel_processing"
+                outdir = "results/stress_test_parallel_processing"
+                metadata = "stress_tests/metadata/parallel_processing_metadata.tsv"
+                classifier_db = "stress_tests/databases/mock_classifier.qza"
+                kraken2_db = "stress_tests/databases/mock_kraken2_db"
+                denoiser = "dada2"
+                profile = "docker"
+            }
+        }
+        then {
+            assert workflow.success
+            assert stdout.contains("Parallel processing completed")
+            assert file("results/stress_test_parallel_processing/denoised/feature_table.qza").exists()
+        }
+    }
+
+}
