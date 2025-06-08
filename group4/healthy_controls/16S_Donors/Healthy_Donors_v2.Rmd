@@ -1,0 +1,595 @@
+---
+title: "16S Biome Donors Study Descriptive Analysis"
+author: "Anna Korda"
+date: "2025-05-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## **A 16S study with Healthy Donor Samples**
+
+This study (<https://www.ebi.ac.uk/ena/browser/view/PRJEB41316>) profiles the gut microbiome of carefully screened stool donors from a universal stool bank, using 16S rRNA sequencing on 200 samples from 86 donors. With **detailed lifestyle metadata and strict donor selection**, it offers a rare and **valuable reference for defining healthy gut microbiome baselines**. We used their official pipeline from OpenBiome’s Github <https://github.com/openbiome/donors-16s/tree/v1.1>, running the full Snakemake workflow and performing additional analysis to identify the baseline healthy control samples for our pipeline creation.
+
+The objective is to conduct a **descriptive analysis of the donor dataset by calculating diversity metrics and exploring their distribution.** **Based on this exploration, we may apply filtering criteria to define a final set of healthy control samples.** The resulting distribution will serve as a reference framework for assessing other samples.
+
+\*This study was not available in MGnify
+
+```{r libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(vegan)
+library(compositions)  
+library(cowplot)
+library(robustbase)   
+library(gridExtra)
+library(SummarizedExperiment)
+library(phyloseq)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(tibble)
+```
+
+We collected a couple of sample metadata files, like `metadata.csv`, `donor_health_data.xlsx`, `exclusion_criteria_comparison.xlsx` which were given by the researchers of the study and `technical_metadata_1.tsv` which were retrieved from the [ENA Browser Accession](https://www.ebi.ac.uk/ena/browser/view/PRJEB41316?show=reads) of this study. As a first step, our goal is to merge all the information of these files into **a single dataframe,** and also save them as `final_metadata.csv`
+
+```{r merge-metadata}
+# Load metadata
+tech <- read_tsv("technical_metadata.tsv", col_types = cols(.default = "c"))
+sample_map <- read_csv("metadata.csv", col_types = cols(.default = "c"))
+donor_health <- read_excel("donor_health_data.xlsx")
+
+# Clean column names and whitespace
+colnames(donor_health) <- trimws(colnames(donor_health))
+colnames(tech) <- trimws(colnames(tech))
+colnames(sample_map) <- trimws(colnames(sample_map))
+
+# Clean key columns
+tech$sample_alias <- trimws(tech$sample_alias)
+sample_map$sample_id <- trimws(sample_map$sample_id)
+sample_map$donor <- trimws(sample_map$donor)
+donor_health$`Publication Donor Code` <- trimws(donor_health$`Publication Donor Code`)
+
+
+# Merge
+sample_metadata <- sample_map %>%
+  left_join(tech, by = c("sample_id" = "sample_alias")) %>%
+  select(-library_name, -study_alias, -experiment_alias,
+         -fastq_md5, -fastq_ftp, -fastq_galaxy,
+         -submitted_aspera, -broker_name) %>%
+  left_join(donor_health, by = c("donor" = "Publication Donor Code"))
+
+# SAFELY rename outside the pipe
+colnames(sample_metadata)[colnames(sample_metadata) == "Donor age"] <- "age"
+colnames(sample_metadata)[colnames(sample_metadata) == "Donor Sex"] <- "sex"
+colnames(sample_metadata)[colnames(sample_metadata) == "Height (in)"] <- "height_in"
+colnames(sample_metadata)[colnames(sample_metadata) == "Height (cm)"] <- "height_cm"
+colnames(sample_metadata)[colnames(sample_metadata) == "Weight (lbs)"] <- "weight_lbs"
+colnames(sample_metadata)[colnames(sample_metadata) == "Weight (kgs)"] <- "weight_kg"
+colnames(sample_metadata)[colnames(sample_metadata) == "Donor Waist circumference (in)"] <- "waist_circumference_in"
+colnames(sample_metadata)[colnames(sample_metadata) == "Donor BMI"] <- "bmi"
+colnames(sample_metadata)[colnames(sample_metadata) == "List of medications taken by donor (If any)"] <- "medications"
+colnames(sample_metadata)[colnames(sample_metadata) == "List of dietary supplements taken by donor (if any)"] <- "supplements"
+colnames(sample_metadata)[colnames(sample_metadata) == "List of probiotics taken by donor (if any)"] <- "probiotics"
+colnames(sample_metadata)[colnames(sample_metadata) == "Information on donor's normal diet, including foods avoided (if any)"] <- "diet_info"
+colnames(sample_metadata)[colnames(sample_metadata) == "Donor's known allergies (if any)"] <- "allergies"
+colnames(sample_metadata)[colnames(sample_metadata) == "Donor's average weekly alcohol usage (if known)"] <- "alcohol_usage"
+
+
+sample_metadata <- sample_metadata %>%
+  mutate(across(where(is.character), ~ na_if(., "N/A")))
+
+```
+
+```{r taxonomy, message=FALSE, warning=FALSE}
+#Load taxonomy file
+taxonomy <- read_tsv("taxonomy.tsv")
+
+taxonomy_split <- taxonomy %>%
+  separate(Taxon, into = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
+           sep = "; ", fill = "right")
+
+
+# Keep Feature ID as rownames and keep Confidence
+taxonomy_rowdata <- taxonomy_split %>%
+  column_to_rownames("Feature ID") %>%
+  as.data.frame()
+
+otu_table <- read_tsv("otu_table.tsv", skip = 1)  # Skip the comment line
+
+otu_matrix <- otu_table %>%
+  column_to_rownames("#OTU ID") %>%
+  as.matrix()
+
+# match sample metadata
+sample_metadata_matched <- sample_metadata %>%
+  filter(sample_id %in% colnames(otu_matrix)) %>%
+  column_to_rownames("sample_id") %>%
+  .[colnames(otu_matrix), ]
+
+# match taxonomy-otu
+taxonomy_rowdata_matched <- taxonomy_rowdata[rownames(otu_matrix), ]
+
+#Build summarize experiment object
+
+donors_se <- SummarizedExperiment(
+  assays = list(counts = otu_matrix),
+  colData = sample_metadata_matched,
+  rowData = taxonomy_rowdata_matched
+)
+
+#Add some object metadata
+metadata(donors_se)$source <- "OpenBiome donor dataset (2021 release)"
+metadata(donors_se)$classifier_version <- "QIIME2-trained SILVA classifier"
+metadata(donors_se)$rep_seqs_filtered <- FALSE
+
+
+#Save the SummarizedExperimentObject
+saveRDS(donors_se, "openbiome_se_full.rds")
+
+```
+
+Summary of the object we created for the whole dataset
+
+```{r summary-donors-se, warning=FALSE, message=FALSE, echo=FALSE}
+# Create summary table for donors_se
+se_summary <- data.frame(
+  Element = c(
+    "Features (OTUs/ASVs)", 
+    "Samples", 
+    "Assay(s)", 
+    "Taxonomic columns", 
+    "Sample metadata columns", 
+    "Metadata entries"
+  ),
+  Value = c(
+    nrow(donors_se),
+    ncol(donors_se),
+    paste(assayNames(donors_se), collapse = ", "),
+    ncol(rowData(donors_se)),
+    ncol(colData(donors_se)),
+    length(metadata(donors_se))
+  )
+)
+
+# Display the table
+knitr::kable(se_summary, caption = "Table: Summary of `donors_se` object")
+
+```
+
+## Technical/Quality Check
+
+To be done and revised\*\*
+
+Now we will explore our SummarizedExperimentObject to see what is missing and what is not
+
+```{r}
+health_vars <- c(
+  "age", "sex", "height_in", "height_cm", "weight_lbs", "weight_kg",
+  "waist_circumference_in", "bmi", "medications", "supplements", "probiotics",
+  "diet_info", "allergies", "alcohol_usage"
+)
+
+coldata <- as.data.frame(colData(donors_se))
+
+health_na_summary <- data.frame(
+  Variable = health_vars,
+  Total = nrow(coldata),
+  Not_Reported = sapply(coldata[health_vars], function(x) sum(is.na(x))),
+  Reported = sapply(coldata[health_vars], function(x) sum(!is.na(x)))
+) %>%
+  mutate(Not_Reported_Percent = round((Not_Reported / Total) * 100, 1)) %>%
+  arrange(desc(Not_Reported_Percent))
+
+kable(health_na_summary, caption = "Summary of Donor Health Metadata Availability")
+
+
+
+```
+
+```{r}
+coldata %>%
+  filter(is.na(bmi)) %>%
+  rownames()
+
+```
+
+Now we can take a look at the criteria taken into account for this study in order to decide if we need to apply further filtering or not.
+
+```{r warning=FALSE, message=FALSE }
+
+# Load the Excel file
+criteria <- read_excel("exclusion_criteria_comparison.xlsx", sheet = 1)
+
+# Rename columns for clarity
+colnames(criteria)[1:2] <- c("Criterion", "OpenBiome")
+
+# Define target values to match
+target_values <- c("X", "> 30", "serological liver panel", "Only asthma / allergies")
+
+# Filter based on OpenBiome criteria
+openbiome_filtered <- criteria %>%
+  filter(OpenBiome %in% target_values) %>%
+  select(Criterion, OpenBiome)
+
+# Print as HTML table
+kable(openbiome_filtered, caption = "OpenBiome Exclusion Criteria")
+```
+
+## **First Insights**
+
+**Based on the exclusion criteria already applied by OpenBiome, which are comprehensive and stringent** (e.g., BMI \> 30, active smoking, serological liver panel, medication use, etc.), we believe that **applying additional overly strict filters may not be necessary.** Instead, a more **minimal and transparent filtering strategy could be applied to retain a sufficient number of healthy samples while maintaining confidence in their health status (sample063)**.
+
+Specifically, we propose to:
+
+-   **Remove the single sample with missing BMI since this is a core variable for defining health status.**
+
+-   **Optionally, exclude samples with reported medications, as a precaution to avoid potential confounders and since they are not a lot.**
+
+This approach strikes a balance between caution and sample retention. It can e**asily be revised in the future based on specific analytical goals.** Using this filtered set of plausibly healthy donors, we can now proceed to compute alpha diversity and explore its distribution across these samples, which will serve as a baseline for comparison.
+
+## Exploratory Analysis of the Dataset
+
+```{r}
+# Clean and format colData
+coldata <- as.data.frame(colData(donors_se)) %>%
+  filter(!is.na(bmi), !is.na(sex), !is.na(age)) %>%
+  mutate(
+    sex = as.character(sex),
+    age = as.numeric(age),
+    bmi = as.numeric(bmi)
+  )
+
+# 1. Sex distribution
+sex_dist <- coldata %>%
+  group_by(sex) %>%
+  summarise(n = n()) %>%
+  mutate(Percent = round(n / sum(n) * 100, 1),
+         Variable = "Sex", Level = sex) %>%
+  select(Variable, Level, n, Percent)
+
+# 2. Age group distribution
+age_dist <- coldata %>%
+  mutate(age_group = cut(age, breaks = c(17, 30, 45, 60, Inf),
+                         labels = c("18–30", "31–45", "46–60", "61+"),
+                         right = TRUE)) %>%
+  group_by(age_group) %>%
+  summarise(n = n()) %>%
+  mutate(Percent = round(n / sum(n) * 100, 1),
+         Variable = "Age Group", Level = as.character(age_group)) %>%
+  select(Variable, Level, n, Percent)
+
+# 3. BMI category distribution
+bmi_dist <- coldata %>%
+  mutate(bmi_group = cut(bmi, breaks = c(-Inf, 18.5, 25, 30, Inf),
+                         labels = c("Underweight", "Normal", "Overweight", "Obese"),
+                         right = FALSE)) %>%
+  group_by(bmi_group) %>%
+  summarise(n = n()) %>%
+  mutate(Percent = round(n / sum(n) * 100, 1),
+         Variable = "BMI Category", Level = as.character(bmi_group)) %>%
+  select(Variable, Level, n, Percent)
+
+# Combine all into one table
+combined_summary <- bind_rows(sex_dist, age_dist, bmi_dist)
+
+# Display in a single knitr table
+kable(combined_summary, caption = "Combined Distribution of Donor Health Variables (%)")
+
+```
+
+```{r out.width="700px"}
+# Plot 1: Sex
+ggplot(sex_dist, aes(x = Level, y = Percent, fill = Level)) +
+  geom_col() +
+  labs(title = "Sex Distribution", x = "", y = "%") +
+  theme_minimal()
+
+# Plot 2: Age
+ggplot(age_dist, aes(x = Level, y = Percent, fill = Level)) +
+  geom_col() +
+  labs(title = "Age Group Distribution", x = "Age Group", y = "%") +
+  theme_minimal()
+
+# Plot 3: BMI
+ggplot(bmi_dist, aes(x = Level, y = Percent, fill = Level)) +
+  geom_col() +
+  labs(title = "BMI Category Distribution", x = "BMI Group", y = "%") +
+  theme_minimal() 
+
+
+```
+
+### Observations
+
+#### BMI
+
+According to [WHO - Obesity and Overweight Sheet](https://www.who.int/news-room/fact-sheets/detail/obesity-and-overweight) Body Mass Index (BMI) is used to classify individuals based on their body weight relative to height. The standard categories are as follows:
+
+-   **Underweight**: A BMI of less than 18.5 indicates underweight status, suggesting insufficient body weight which may be associated with malnutrition or other health risks.
+
+-   **Normal weight**: A BMI ranging from **18.5 to 24.9** is considered healthy and is associated with the lowest risk for weight-related health problems.
+
+-   **Overweight**: A BMI between **25 and 29.9** indicates excess body weight, which may increase the risk of cardiovascular disease, diabetes, and other conditions.
+
+-   **Obese**: A BMI of **30 or more** falls in the obesity range and is associated with significantly higher risks for chronic illnesses including type 2 diabetes, hypertension, and metabolic syndrome.
+
+**We identified 2 samples with BMI values in the obese range (≥ 30)**, which we did not exclude from the healthy reference set because if they are generally healthy it could just be that their BMI above 30 is not pointing out to obesity.
+
+While **overweight (BMI 25–29.9)** and **underweight (BMI \< 18.5)** are also not considered ideal from a clinical perspective, we adopted a more flexible approach for these groups as well. If such individuals show no concerning signs in other available health-related variables (e.g., no medications, normal age, no dietary restrictions or chronic conditions), they are retained in the dataset. This allows us to maintain sample diversity.
+
+#### Sex
+
+The sex distribution in our filtered dataset includes approximately **60% male** and **40% female** donors. While not perfectly balanced, this proportion is reasonably close to parity and does not raise immediate concerns for bias in exploratory analyses.
+
+Unless the research question specifically focuses on **sex-related microbiome differences**, or unless downstream analyses show strong sex-associated effects, this level of imbalance is generally acceptable. No indication was given during class that such a distribution would invalidate the dataset. However, we remain aware that sex can influence gut microbiota composition (e.g., via hormonal or metabolic pathways), and we can stratify or adjust for sex in future analyses if needed.
+
+#### Age
+
+The age distribution in our healthy donor set is skewed toward younger individuals, with approximately 74% of samples in the 18–30 age group and the remaining 26% in the 31–45 range. This is not considered problematic; in fact, younger donors are often **preferred** in gut microbiome research and therapeutic applications.
+
+This preference is based on the assumption that younger individuals are less likely to present with age-related chronic conditions, systemic inflammation, or long-term medication use — all factors that can affect microbiome composition. Therefore, this distribution may actually reinforce the biological plausibility of our selected reference set.
+
+#### Medications
+
+Let's review what medications have some samples reported:
+
+```{r}
+coldata <- as.data.frame(colData(donors_se)) %>%
+  tibble::rownames_to_column("sample_id")
+medicated_samples <- coldata %>%
+  filter(!is.na(medications) & medications != "") %>%
+  select(sample_id, sex, medications)
+
+knitr::kable(medicated_samples, caption = "Samples with Reported Medications by Sex")
+
+
+```
+
+Most reported medications were **hormonal contraceptives**, which are common and were retained. One donor reported **Accutane**, a systemic acne treatment with potential gut effects, we suggest this one sample to be excluded. Other cases involved **occasional ibuprofen**, **antihistamines**, and **topical treatments**, which are unlikely to affect the gut microbiome and were **retained**.
+
+#### Allergies
+
+Let's now review the allergies that the donors reported:
+
+```{r}
+# Make sure sample_id is included
+coldata <- as.data.frame(colData(donors_se)) %>%
+  tibble::rownames_to_column("sample_id")
+
+# Filter samples with reported allergies
+allergy_samples <- coldata %>%
+  filter(!is.na(allergies) & allergies != "") %>%
+  select(sample_id, allergies)
+
+# Display the table
+knitr::kable(allergy_samples, caption = "Samples with Reported Allergies")
+
+
+```
+
+**Most reported allergies were environmental** (e.g., pollen, dust, cats) or to **common medications.** These are not exclusionary in microbiome reference studies. **Two samples reported asthma**, which may be considered borderline based on immune involvement, but were retained unless further signs of bad overall health were found.
+
+### Final Suggestion for Filtering
+
+To maintain a high-quality reference set while retaining as many plausible healthy samples as possible, we followed a conservative but practical filtering approach. As stated in the original study:
+
+> *“Stool donors providing the material are rigorously screened for diseases and disorders with a potential microbiome etiology, and they are likely healthier than the controls in most microbiome datasets.”*
+
+Based on this, we propose the following exclusion:
+
+-   The **1 sample with no reported BMI**, since BMI is a core variable for health assessment.
+
+All other samples are retained, including those with reported hormonal birth control, common allergies, or occasional NSAID use, as these are not expected to substantially alter microbiome composition.
+
+With this **refined cohort**, we proceed to estimate **alpha diversity metrics** to characterize the microbial richness and evenness within this healthy donor reference set.
+
+```{r}
+# Extract metadata
+coldata <- as.data.frame(colData(donors_se)) %>%
+  tibble::rownames_to_column("sample_id") %>%
+  mutate(bmi = as.numeric(bmi),
+         medications = tolower(medications))
+
+# Identify only samples with missing BMI
+excluded_samples <- coldata %>%
+  filter(is.na(bmi)) %>%
+  pull(sample_id)
+
+# Subset donors_se to only include samples with reported BMI
+donors_se_filtered <- donors_se[, !colnames(donors_se) %in% excluded_samples]
+
+```
+
+## Alpha Diversity
+
+### Rarefaction
+
+```{r}
+
+# Assuming you have sample_depths already:
+sample_depths <- rowSums(t(assays(donors_se_filtered)$counts))
+
+# Create a vector of thresholds to test
+thresholds <- c(5000, 10000, 15000, 20000, 50000)
+
+# Calculate number of samples above each threshold
+threshold_df <- data.frame(
+  Threshold = thresholds,
+  Retained = sapply(thresholds, function(t) sum(sample_depths >= t))
+) %>%
+  mutate(
+    Total = length(sample_depths),
+    Removed = Total - Retained,
+    Retained_Percent = round(Retained / Total * 100, 1)
+  )
+
+# Display the summary
+knitr::kable(threshold_df, caption = "Sample Retention by Rarefaction Threshold")
+
+```
+
+**Outlier Removal Based on ASV Richness** To ensure the reliability of diversity estimates, we visualized sample richness (i.e., number of observed ASVs) across all samples using a boxplot. A small subset of samples exhibited abnormally high richness, far exceeding the upper quartile (e.g., \>2000 ASVs), which strongly suggests possible technical artifacts such as cross-contamination, index hopping, or sequencing noise. These extreme outliers were excluded from further rarefaction and diversity analyses to avoid skewing overall patterns.
+
+```{r}
+# Step 1: Extract the OTU matrix
+otu_mat <- assays(donors_se_filtered)$counts
+
+# Step 2: Transpose so samples are rows
+otu_t <- t(otu_mat)
+
+# Step 3: Calculate observed richness (number of ASVs) per sample
+sample_richness <- specnumber(otu_t)
+
+# Step 4: Visualize with a boxplot
+boxplot(
+  sample_richness,
+  main = "Sample Richness (Observed ASVs)",
+  ylab = "# Observed ASVs"
+)
+abline(h = 2000, col = "red", lty = 2)  # add threshold line
+
+```
+
+```{r}
+# Step 5: Filter out high-richness outliers
+high_richness_samples <- names(sample_richness[sample_richness > 2000])
+otu_t_filtered <- otu_t[sample_richness <= 2000, ]
+
+# Log removed samples and their names
+cat("Removed", length(high_richness_samples), "samples with >2000 ASVs:\n")
+cat(paste(high_richness_samples, collapse = ", "), "\n")
+
+
+```
+
+```{r}
+library(vegan)
+options(scipen = 999)
+
+# Plot rarefaction curves using filtered OTU matrix (samples as rows)
+rarecurve(
+  otu_t_filtered,           # after ASV outlier removal
+  step = 100,
+  col = rainbow(nrow(otu_t_filtered)),
+  label = FALSE,
+  xlab = "Library Size",
+  ylab = "# of Observed Sequence Variants",
+  cex = 0.6
+)
+
+# Add red vertical line at 5,000
+abline(v = 10000, col = "red", lwd = 2, lty = 2)
+
+
+```
+
+To standardize sequencing depth across samples and ensure accurate estimation of alpha diversity metrics, we applied **rarefaction**. After visualizing the distribution of sequencing depths, we selected a threshold of **5¡10,000 reads**. This level was chosen because it allowed us to **retain nearly 80% of the samples**, minimizing data loss while still ensuring sufficient sequencing coverage for reliable diversity estimation.
+
+Although higher thresholds are sometimes used in microbiome studies and were initially considered in our analysis, **we opted to explore a the standard threshold of 10000 reads to better understand how reduced depth might impact diversity metrics.**
+
+```{r}
+# Step 1: Filter for samples with at least 10,000 reads
+sample_depths_filtered <- rowSums(otu_t_filtered)
+otu_t_filtered_depth <- otu_t_filtered[sample_depths_filtered >= 10000, ]
+
+# Step 2: Rarefy to exactly 10,000 reads
+set.seed(42)  # for reproducibility
+otu_rarefied <- rrarefy(otu_t_filtered_depth, sample = 10000)
+
+# Step 3: Transpose back (samples as columns, OTUs as rows)
+otu_rarefied <- t(otu_rarefied)
+
+```
+
+```{r}
+# Compute metrics from rarefied OTU table (samples as columns, so transpose)
+alpha_df <- data.frame(
+  sample_id = colnames(otu_rarefied),
+  shannon = diversity(t(otu_rarefied), index = "shannon"),
+  simpson = diversity(t(otu_rarefied), index = "simpson"),
+  invsimpson = diversity(t(otu_rarefied), index = "invsimpson"),
+  observed = specnumber(t(otu_rarefied))
+) %>%
+  mutate(
+    evenness = shannon / log(observed)
+  )
+
+```
+
+### Metrics
+
+```{r}
+# Extract and sort Shannon diversity values
+shannon <- alpha_df$shannon
+names(shannon) <- alpha_df$sample_id
+shannon <- sort(shannon)
+
+# Plot sorted Shannon index as vertical bars
+plot(
+  shannon,
+  type = "h",                        # vertical lines
+  lwd = 2,
+  col = "steelblue",
+  ylab = "Shannon Diversity",
+  xlab = "",
+  main = "Alpha Diversity (Shannon Index, Rarefied to 10,000)",
+  xaxt = "n"                         # remove default x-axis
+)
+
+# Add sample names rotated for readability
+axis(1, at = 1:length(shannon), labels = names(shannon), las = 2, cex.axis = 0.6)
+
+# Add horizontal red threshold line at Shannon = 3
+abline(h = 3, col = "orange", lwd = 2, lty = 2)
+
+# Add horizontal red threshold line at Shannon = 3.5
+abline(h = 3.5, col = "yellow", lwd = 2, lty = 2)
+
+# Add horizontal red threshold line at Shannon = 4
+abline(h = 4, col = "green", lwd = 2, lty = 2)
+```
+
+```{r}
+quantile(alpha_df$shannon, probs = c(0, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1))
+
+```
+
+### Initial Comments
+
+After applying rarefaction at a depth of 5,000 reads, we observed that most samples in our dataset retained meaningful microbial diversity, with a **median Shannon index of 3.76** and a range from **2.36 to 4.42**. Importantly, the **10th percentile of samples** had Shannon diversity **above 3.0**, reinforcing that a large majority of our dataset meets or exceeds thresholds "typically" associated with gut health.
+
+To contextualize this, we compared our values with those reported in two major studies:
+
+-   The [**Global Human Gut Microbiome Compendium** (Cell, 2024)](https://www.sciencedirect.com/science/article/pii/S0092867424014302) analyzing over 150,000 samples globally, reported a **median Shannon index of 2.33**, with **considerable variability across regions and populations.** However, this dataset was **not restricted to healthy individuals**, which likely accounts for the lower central tendency.
+
+-   The [**Nature Communications study** (Manor et al., 2020)](https://pmc.ncbi.nlm.nih.gov/articles/PMC7562722/) based on \~3,400 self-reported healthy U.S. adults, reported Shannon diversity values ranging from **\~2 to 5.5**, with a **visually estimated median around 4.0** at a **rarefaction depth of 50,000 reads.** Notably, their cohort included individuals with a **mean BMI of 27 ± 6**, meaning it likely included **obese individuals.**
+
+Compared to both datasets, our **median diversity (\~3.76)** places us below the estimated median of the Nature study and well above the global median. This is particularly notable given our lower rarefaction depth (5,000 reads vs. their 50,000), which would generally lead to more conservative diversity estimates.
+
+Samples excluded because of missing data and extreme observed ASV values are **sample063, sample099, sample106.**
+
+```{r}
+# Convert colData to a tibble with sample_id as a column
+sample_metadata <- as.data.frame(colData(donors_se)) %>%
+  tibble::rownames_to_column("sample_id")
+
+# Exclude specific samples
+excluded <- c("sample063", "sample099", "sample106")
+sample_metadata_filtered <- sample_metadata %>%
+  filter(!sample_id %in% excluded)
+
+# Create useful download URLs (optional but helpful for retrieval)
+sample_metadata_filtered <- sample_metadata_filtered %>%
+  mutate(
+    sample_url = paste0("https://www.ebi.ac.uk/ena/browser/view/", sample_accession),
+    experiment_url = paste0("https://www.ebi.ac.uk/ena/browser/view/", experiment_accession),
+    run_url = paste0("https://www.ebi.ac.uk/ena/browser/view/", run_accession)
+  )
+
+# Write to CSV
+write.csv(sample_metadata_filtered, "sample_metadata_links.csv", row.names = FALSE)
+
+```
