@@ -104,7 +104,7 @@ The scatter plots show genus-level abundance correlations between pipeline outpu
 
 ### Diversity Metrics Validation
 
-![Diversity Metrics Validation](images/diversity_metrics_comparison.png)
+![Diversity Metrics Validation](images/diversity_comparison.png)
 
 Alpha diversity metrics comparison reveals strong pipeline performance:
 
