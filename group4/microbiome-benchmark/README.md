@@ -78,6 +78,120 @@ microbiome-benchmarking/
 - **`run_benchmark/S01070625/`**: Example of pipeline output structure for validation
 - **`genus_benchmark_v15.py`**: Analysis script for comparing pipeline results to ground truth
 
+## Benchmarking Results
+
+### Validation Performance Overview
+
+We validated our microbiome analysis pipeline using the synthetic dataset, achieving excellent performance across multiple metrics:
+
+**Overall Performance Summary:**
+- **Abundance Correlation**: 85.5% mean Pearson correlation
+- **Genus Detection Rate**: 71.8% (detecting 32/44 genera on average)
+- **Shannon Diversity Error**: Only 1.9% relative error
+- **Samples with Excellent Correlation (r>0.9)**: 11 out of 27 samples
+- **Samples with Good Correlation (r>0.7)**: 23 out of 27 samples
+
+### Individual Sample Performance
+
+![Individual Sample Correlations](images/abundance_correlations.png)
+
+The scatter plots show genus-level abundance correlations between pipeline output and ground truth for each sample. Key observations:
+
+- **Standard samples** show consistently excellent correlations (r>0.9)
+- **High-depth samples** (2x, 5x) maintain strong performance
+- **Low-depth samples** (0.25x, 0.5x) show reduced but acceptable performance
+- **MiSeq variants** demonstrate robust performance across different sequencing protocols
+
+### Diversity Metrics Validation
+
+![Diversity Metrics Validation](images/diversity_metrics_comparison.png)
+
+Alpha diversity metrics comparison reveals strong pipeline performance:
+
+- **Shannon Diversity (r=0.690)**: Good correlation with realistic biological scatter
+- **Simpson Diversity (r=0.681)**: Excellent tight clustering around 1:1 line
+- **Richness (r=nan)**: Consistent detection across samples (stable performance)
+- **Evenness (r=0.683)**: Good preservation of community structure patterns
+
+The diversity metrics demonstrate that our pipeline maintains ecological relationships between samples, making it suitable for downstream community ecology analyses.
+
+### Performance Across Experimental Conditions
+
+![Performance by Condition](images/performance_by_condition.png)
+
+Comprehensive analysis across synthetic experimental conditions shows:
+
+#### Excellent Performers (r > 0.9):
+- **Standard samples**: Mean r=0.937 (highly reproducible)
+- **MiSeq variants** (standard, 24, 28): r=0.91-0.93 (platform robust)
+- **High quality samples**: r=0.889 (excellent on high-quality data)
+
+#### Good Performers (r > 0.8):
+- **No GC bias samples**: r=0.845 (shows GC bias correction helps)
+
+#### Challenging Conditions (r < 0.8):
+- **Depth 0.25x & 0.5x**: r=0.68-0.69 (expected with low coverage)
+- **Depth 5x**: r=0.760 (potential oversaturation effects)
+- **Basic error samples**: Complete failure (0% detection)
+
+#### Key Insights:
+
+1. **Platform Robustness**: Excellent performance across different MiSeq variants (24, 28, standard)
+2. **Depth Sensitivity**: Performance degrades gracefully with very low coverage
+3. **Quality Dependence**: High-quality samples show superior results
+4. **Error Model Impact**: Basic error samples failed completely, suggesting pipeline expects realistic error patterns
+
+### Detection Rate Analysis
+
+- **Consistent detection**: 70-75% across most conditions
+- **Best detection**: Depth 2x and 5x samples (75%)
+- **Lowest detection**: Depth 0.25x samples (60%)
+- **Platform independence**: Similar detection rates across MiSeq variants
+
+### Diversity Error Analysis
+
+Shannon diversity errors remain consistently low (<3%) across all successful conditions:
+- **Lowest errors**: High quality and MiSeq variant samples (<1.5%)
+- **Highest errors**: Low depth samples (3-5%)
+- **Standard samples**: Excellent consistency (1.7% error)
+
+## Performance Interpretation
+
+### Biological Relevance
+
+These results demonstrate that our pipeline:
+
+1. **Preserves biological signal** in high-quality, standard-depth samples
+2. **Maintains ecological relationships** between samples for community analyses
+3. **Handles platform variation** effectively across different sequencing protocols
+4. **Degrades gracefully** under challenging conditions (low depth, poor quality)
+
+### Recommended Use Cases
+
+Based on benchmarking results, the pipeline is recommended for:
+
+**Standard 16S amplicon analysis** (100K+ reads per sample)
+**Community diversity studies** (excellent diversity metric preservation)
+**Multi-platform studies** (robust across MiSeq variants)
+**Comparative microbiome analysis** (high correlation accuracy)
+
+**Use with caution for:**
+- Very low-depth samples (<50K reads)
+- Samples with severe sequencing artifacts
+- Studies requiring detection of very rare taxa
+
+## Files Generated
+
+All benchmarking results are available in `benchmarking_results/`:
+
+- `benchmarking_summary.txt`: Comprehensive performance metrics
+- `detailed_metrics.csv`: Per-sample detailed statistics
+- `individual_sample_correlations.png`: Sample-by-sample correlation plots
+- `diversity_metrics_validation.png`: Alpha diversity validation
+- `condition_performance_analysis.png`: Performance across experimental conditions
+
+---
+
 ## Features
 
 ### Realistic Synthetic Data Generation
@@ -173,118 +287,6 @@ Compare your pipeline outputs against the corresponding ground truth files:
 # Your ASV table ↔ {sample_name}_ground_truth_asvs.csv
 # Your diversity metrics ↔ {sample_name}_ground_truth.json
 ```
-
-## Benchmarking Results
-
-### Validation Performance Overview
-
-We validated our microbiome analysis pipeline using the synthetic dataset, achieving excellent performance across multiple metrics:
-
-**Overall Performance Summary:**
-- **Abundance Correlation**: 85.5% mean Pearson correlation
-- **Genus Detection Rate**: 71.8% (detecting 32/44 genera on average)
-- **Shannon Diversity Error**: Only 1.9% relative error
-- **Samples with Excellent Correlation (r>0.9)**: 11 out of 27 samples
-- **Samples with Good Correlation (r>0.7)**: 23 out of 27 samples
-
-### Individual Sample Performance
-
-![Individual Sample Correlations](images/individual_sample_correlations.png)
-
-The scatter plots show genus-level abundance correlations between pipeline output and ground truth for each sample. Key observations:
-
-- **Standard samples** show consistently excellent correlations (r>0.9)
-- **High-depth samples** (2x, 5x) maintain strong performance
-- **Low-depth samples** (0.25x, 0.5x) show reduced but acceptable performance
-- **MiSeq variants** demonstrate robust performance across different sequencing protocols
-
-### Diversity Metrics Validation
-
-![Diversity Metrics Validation](images/diversity_metrics_validation.png)
-
-Alpha diversity metrics comparison reveals strong pipeline performance:
-
-- **Shannon Diversity (r=0.690)**: Good correlation with realistic biological scatter
-- **Simpson Diversity (r=0.681)**: Excellent tight clustering around 1:1 line
-- **Richness (r=nan)**: Consistent detection across samples (stable performance)
-- **Evenness (r=0.683)**: Good preservation of community structure patterns
-
-The diversity metrics demonstrate that our pipeline maintains ecological relationships between samples, making it suitable for downstream community ecology analyses.
-
-### Performance Across Experimental Conditions
-
-![Performance by Condition](images/condition_performance_analysis.png)
-
-Comprehensive analysis across synthetic experimental conditions shows:
-
-#### Excellent Performers (r > 0.9):
-- **Standard samples**: Mean r=0.937 (highly reproducible)
-- **MiSeq variants** (standard, 24, 28): r=0.91-0.93 (platform robust)
-- **High quality samples**: r=0.889 (excellent on high-quality data)
-
-#### Good Performers (r > 0.8):
-- **No GC bias samples**: r=0.845 (shows GC bias correction helps)
-
-#### Challenging Conditions (r < 0.8):
-- **Depth 0.25x & 0.5x**: r=0.68-0.69 (expected with low coverage)
-- **Depth 5x**: r=0.760 (potential oversaturation effects)
-- **Basic error samples**: Complete failure (0% detection)
-
-#### Key Insights:
-
-1. **Platform Robustness**: Excellent performance across different MiSeq variants (24, 28, standard)
-2. **Depth Sensitivity**: Performance degrades gracefully with very low coverage
-3. **Quality Dependence**: High-quality samples show superior results
-4. **Error Model Impact**: Basic error samples failed completely, suggesting pipeline expects realistic error patterns
-
-### Detection Rate Analysis
-
-- **Consistent detection**: 70-75% across most conditions
-- **Best detection**: Depth 2x and 5x samples (75%)
-- **Lowest detection**: Depth 0.25x samples (60%)
-- **Platform independence**: Similar detection rates across MiSeq variants
-
-### Diversity Error Analysis
-
-Shannon diversity errors remain consistently low (<3%) across all successful conditions:
-- **Lowest errors**: High quality and MiSeq variant samples (<1.5%)
-- **Highest errors**: Low depth samples (3-5%)
-- **Standard samples**: Excellent consistency (1.7% error)
-
-## Performance Interpretation
-
-### Biological Relevance
-
-These results demonstrate that our pipeline:
-
-1. **Preserves biological signal** in high-quality, standard-depth samples
-2. **Maintains ecological relationships** between samples for community analyses
-3. **Handles platform variation** effectively across different sequencing protocols
-4. **Degrades gracefully** under challenging conditions (low depth, poor quality)
-
-### Recommended Use Cases
-
-Based on benchmarking results, the pipeline is recommended for:
-
-**Standard 16S amplicon analysis** (100K+ reads per sample)
-**Community diversity studies** (excellent diversity metric preservation)
-**Multi-platform studies** (robust across MiSeq variants)
-**Comparative microbiome analysis** (high correlation accuracy)
-
-**Use with caution for:**
-- Very low-depth samples (<50K reads)
-- Samples with severe sequencing artifacts
-- Studies requiring detection of very rare taxa
-
-## Files Generated
-
-All benchmarking results are available in `benchmarking_results/`:
-
-- `benchmarking_summary.txt`: Comprehensive performance metrics
-- `detailed_metrics.csv`: Per-sample detailed statistics
-- `individual_sample_correlations.png`: Sample-by-sample correlation plots
-- `diversity_metrics_validation.png`: Alpha diversity validation
-- `condition_performance_analysis.png`: Performance across experimental conditions
 
 ## Sample Groups
 
