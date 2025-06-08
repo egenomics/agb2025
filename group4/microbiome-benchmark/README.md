@@ -82,7 +82,7 @@ microbiome-benchmarking/
 
 ### Validation Performance Overview
 
-We validated our microbiome analysis pipeline using the synthetic dataset, achieving excellent performance across multiple metrics:
+We validated our microbiome analysis pipeline using the synthetic dataset, achieving good performance across multiple metrics:
 
 **Overall Performance Summary:**
 - **Abundance Correlation**: 85.5% mean Pearson correlation
