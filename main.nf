@@ -23,6 +23,7 @@ include { ALPHA_DIVERSITY } from './modules/local/alpha_diversity.nf'
 include { EXPORT_ALPHAPLOT } from './modules/local/export_alphaplot.nf'
 include { CREATE_RESULTS_SUMMARY } from './modules/local/create_results_summary.nf'
 include { SUGGEST_TRUNCATION_LENGTHS } from './modules/local/suggest_truncation_lengths.nf'
+include { SUMMARIZE_DEMUX } from './modules/local/summarize_demux.nf'
 
 
 workflow {
@@ -93,10 +94,13 @@ workflow {
     // 2.1. Import reads
     IMPORT_READS( all_trimmed_files )
 
-    // 2.2. Generate Truncation suggestion report
-    SUGGEST_TRUNCATION_LENGTHS( IMPORT_READS.out.demux_qzv )
+    // 2.2. Summarize Demux artifact
+    SUMMARIZE_DEMUX( IMPORT_READS.out.demux_qza )
 
-    // 2.3. Denoise
+    // 2.3. Generate Truncation suggestion report
+    SUGGEST_TRUNCATION_LENGTHS( SUMMARIZE_DEMUX.out.demux_qzv )
+
+    // 2.4. Denoise
     // Let the user know if they are using default truncation values
     if (params.trunc_len_f == 0 || params.trunc_len_r == 0) {
         SUGGEST_TRUNCATION_LENGTHS.out.view()
@@ -106,28 +110,28 @@ workflow {
     ch_denoised_table = DENOISE_DADA2.out.table
     ch_denoised_reps =  DENOISE_DADA2.out.rep_seqs
 
-    // 2.4. Feature Table Summaries
+    // 2.5. Feature Table Summaries
     SUMMARIZE_TABLE( ch_denoised_table, ch_metadata)
     SUMMARIZE_SEQS( ch_denoised_reps )
 
-    // 2.5. Export Feature Table to TSV
+    // 2.6. Export Feature Table to TSV
     EXPORT_FEATURE_TABLE( ch_denoised_table )
 
-    // 2.6. Export Representative Sequences to FASTA
+    // 2.7. Export Representative Sequences to FASTA
     EXPORT_REP_SEQS( ch_denoised_reps )
 
-    // 2.7. Taxonomic Classification
+    // 2.8. Taxonomic Classification
     CLASSIFY_TAXONOMY( ch_denoised_reps, ch_classifier )
 
-    // 2.8. Export Taxonomy to TSV
+    // 2.9. Export Taxonomy to TSV
     EXPORT_TAXONOMY( CLASSIFY_TAXONOMY.out.taxonomy )
 
-    // 2.9. Phylogenetic Tree Construction
+    // 2.10. Phylogenetic Tree Construction
     BUILD_TREE( ch_denoised_reps )
 
     EXPORT_TREE( BUILD_TREE.out.rooted_tree )
 
-    // 2.10. Calculate rarefaction threshold first
+    // 2.11. Calculate rarefaction threshold first
     def threshold_channel
     if (params.auto_rarefaction) {
         RAREFACTION_THRESHOLD(ch_denoised_table, ch_metadata)
@@ -136,7 +140,7 @@ workflow {
         threshold_channel = Channel.value(params.sampling_depth)
     }
 
-    // 2.11. Run alpha diversity only after threshold is calculated
+    // 2.12. Run alpha diversity only after threshold is calculated
     ALPHA_DIVERSITY(
         ch_denoised_table,
         BUILD_TREE.out.rooted_tree,
@@ -153,12 +157,12 @@ workflow {
         ch_rarefaction_summary = Channel.empty()
     }
 
-    // 2.12. Export alpha visualization to a plot
+    // 2.13. Export alpha visualization to a plot
     EXPORT_ALPHAPLOT(
         ALPHA_DIVERSITY.out[1]  // This should be the .qzv file from alpha diversity
     )
 
-    // 2.13. Create Final Results Summary
+    // 2.14. Create Final Results Summary
     CREATE_RESULTS_SUMMARY(
         EXPORT_FEATURE_TABLE.out.feature_table_tsv,
         EXPORT_REP_SEQS.out.rep_seqs_fasta,
