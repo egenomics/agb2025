@@ -23,7 +23,7 @@ process CREATE_RESULTS_SUMMARY {
     echo "Denoiser used: ${params.denoiser}" >> analysis_summary.txt
     echo "Auto rarefaction: ${params.auto_rarefaction}" >> analysis_summary.txt
     if [ "${params.auto_rarefaction}" = "true" ]; then
-        echo "Rarefaction method: ${params.rarefaction_method}" >> analysis_summary.txt
+        echo "Rarefaction threshold: ${params.auto_rarefaction}" >> analysis_summary.txt
     else
         echo "Manual sampling depth: ${params.sampling_depth}" >> analysis_summary.txt
     fi    

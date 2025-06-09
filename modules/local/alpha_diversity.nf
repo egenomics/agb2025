@@ -1,6 +1,6 @@
 process ALPHA_DIVERSITY {
     label 'qiime2'
-    publishDir "${params.outdir}/artifacts/06_alpha_diversity", mode: 'copy'
+    publishDir "${params.outdir}/qiime_output/artifacts/06_alpha_diversity", mode: 'copy'
     
     input:
     path(table_qza)
