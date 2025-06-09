@@ -12,7 +12,9 @@ settings.json
 outputs/
 raw_data/
 test_data/
+databases/k2_Human_20230629.tar.gz
 k2_Human_20230629.tar.gz
 runs/
+databases/k2_Human_20230629/
 k2_Human_20230629/
 databases/silva-138-99-nb-classifier.qza

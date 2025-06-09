@@ -9,13 +9,13 @@ TMP_FILENAME="${DB_FILENAME}.part"
 EXTRACTED_DIR="databases/k2_Human_20230629"
 DB_URL="https://zenodo.org/records/8339700/files/k2_Human_20230629.tar.gz?download=1"
 
-if [[ -f "$DB_FILENAME" ]]; then
-  echo "[INFO] File '$DB_FILENAME' already exists. Skipping download."
+if [[ -d "$EXTRACTED_DIR" ]]; then
+  echo "[INFO] Directory '$EXTRACTED_DIR' already exists. Skipping download."
 else
   echo "[INFO] Downloading Kraken2 DB..."
 
   # Download to a temporary file
-  wget --quiet --show-progress \
+  wget --continue --quiet --show-progress \
        --no-check-certificate \
        --output-document="$TMP_FILENAME" \
        "$DB_URL"
@@ -37,12 +37,14 @@ else
   echo "[INFO] Removed compressed file '$DB_FILENAME' after extraction."
 fi
 
-
-# Make sure the databases folder exists
-mkdir -p databases
-
-# Download the classifier into databases/
-wget -O databases/silva-138-99-nb-classifier.qza \
-  https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza
+# Check if the classifier file already exists; if not, download it
+CLASSIFIER="databases/silva-138-99-nb-classifier.qza"
+if [[ -f "$CLASSIFIER" ]]; then
+  echo "[INFO] Classifier '$CLASSIFIER' already exists. Skipping download."
+else
+  echo "[INFO] Downloading classifier..."
+  wget -O "$CLASSIFIER" \
+    https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza
+fi
 
 
