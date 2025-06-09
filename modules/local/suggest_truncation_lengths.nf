@@ -14,6 +14,8 @@ process SUGGEST_TRUNCATION_LENGTHS {
     import csv
     from pathlib import Path
 
+    demux_qzv = '${demux_qzv}'
+
     # --- Configuration ---
     # The quality score threshold. We use the 25th percentile (lower quartile).
     # If the quality of 25% of reads at a position drops below this, we suggest truncating before it.
