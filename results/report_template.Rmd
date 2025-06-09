@@ -1,0 +1,173 @@
+
+---
+title: "`r params$report_title`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+  pdf_document:
+    toc: true
+    number_sections: true
+params:
+  report_title: "Microbiome Analysis Report"
+  report_comments: ""
+  selected_sections: ["summary", "alpha", "beta"]
+  alpha_plot: ""
+  beta_plot: ""
+  phylo_plot: ""
+  parallel_plot: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, 
+  message = FALSE, 
+  warning = FALSE,
+  fig.width = 10,
+  fig.height = 6,
+  dpi = 300
+)
+
+# Load required libraries
+library(ggplot2)
+library(knitr)
+
+# Helper function to check if file exists and is not empty
+file_exists_and_valid <- function(filepath) {
+  if (is.null(filepath) || filepath == "" || is.na(filepath)) {
+    return(FALSE)
+  }
+  file.exists(filepath) && file.info(filepath)$size > 0
+}
+```
+
+---
+
+**Report Generated:** `r Sys.time()`
+
+```{r comments, results='asis'}
+if (!is.null(params$report_comments) && params$report_comments != "") {
+  cat("\n**Comments:** ", params$report_comments, "\n\n")
+}
+```
+
+---
+
+```{r summary, results='asis', eval=("summary" %in% params$selected_sections)}
+cat("# Summary\n\n")
+cat("This report contains microbiome diversity analysis results including:\n\n")
+
+if ("alpha" %in% params$selected_sections) {
+  cat("- **Alpha Diversity Analysis:** Species richness and evenness within samples\n")
+}
+if ("beta" %in% params$selected_sections) {
+  cat("- **Beta Diversity Analysis:** Community composition differences between samples\n")
+}
+if ("phylo" %in% params$selected_sections) {
+  cat("- **Phylogenetic Analysis:** Evolutionary relationships between species\n")
+}
+if ("parallel" %in% params$selected_sections) {
+  cat("- **Parallel Plot Analysis:** Multi-dimensional data visualization\n")
+}
+
+cat("\n---\n\n")
+```
+
+```{r alpha-section, results='asis', eval=("alpha" %in% params$selected_sections)}
+cat("# Alpha Diversity Analysis\n\n")
+cat("Alpha diversity measures the species diversity within individual samples, providing insights into the richness and evenness of microbial communities.\n\n")
+```
+
+```{r alpha-plot, eval=("alpha" %in% params$selected_sections)}
+if (file_exists_and_valid(params$alpha_plot)) {
+  knitr::include_graphics(params$alpha_plot)
+} else {
+  # Create a placeholder plot if the file doesn't exist
+  ggplot() + 
+    annotate("text", x = 0, y = 0, 
+             label = "Alpha diversity plot not available", 
+             size = 6, color = "gray50") +
+    theme_void() +
+    theme(
+      plot.background = element_rect(fill = "white", color = "gray80"),
+      panel.background = element_rect(fill = "white")
+    ) +
+    labs(title = "Alpha Diversity Plot Placeholder")
+}
+```
+
+```{r beta-section, results='asis', eval=("beta" %in% params$selected_sections)}
+cat("\n\n# Beta Diversity Analysis\n\n")
+cat("Beta diversity analysis examines the differences in species composition between samples, revealing patterns of community structure and relationships.\n\n")
+```
+
+```{r beta-plot, eval=("beta" %in% params$selected_sections)}
+if (file_exists_and_valid(params$beta_plot)) {
+  knitr::include_graphics(params$beta_plot)
+} else {
+  # Create a placeholder plot if the file doesn't exist  
+  ggplot() + 
+    annotate("text", x = 0, y = 0, 
+             label = "Beta diversity plot not available", 
+             size = 6, color = "gray50") +
+    theme_void() +
+    theme(
+      plot.background = element_rect(fill = "white", color = "gray80"),
+      panel.background = element_rect(fill = "white")
+    ) +
+    labs(title = "Beta Diversity Plot Placeholder")
+}
+```
+
+```{r phylo-section, results='asis', eval=("phylo" %in% params$selected_sections)}
+cat("\n\n# Phylogenetic Analysis\n\n")
+cat("Phylogenetic analysis incorporates evolutionary relationships between species to provide deeper insights into community structure.\n\n")
+```
+
+```{r phylo-plot, eval=("phylo" %in% params$selected_sections)}
+if (file_exists_and_valid(params$phylo_plot)) {
+  knitr::include_graphics(params$phylo_plot)
+} else {
+  ggplot() + 
+    annotate("text", x = 0, y = 0, 
+             label = "Phylogenetic plot not available", 
+             size = 6, color = "gray50") +
+    theme_void() +
+    theme(
+      plot.background = element_rect(fill = "white", color = "gray80"),
+      panel.background = element_rect(fill = "white")
+    ) +
+    labs(title = "Phylogenetic Plot Placeholder")
+}
+```
+
+```{r parallel-section, results='asis', eval=("parallel" %in% params$selected_sections)}
+cat("\n\n# Parallel Plot Analysis\n\n")
+cat("Parallel coordinate plots allow visualization of multi-dimensional relationships in the microbiome data.\n\n")
+```
+
+```{r parallel-plot, eval=("parallel" %in% params$selected_sections)}
+if (file_exists_and_valid(params$parallel_plot)) {
+  knitr::include_graphics(params$parallel_plot)
+} else {
+  ggplot() + 
+    annotate("text", x = 0, y = 0, 
+             label = "Parallel plot not available", 
+             size = 6, color = "gray50") +
+    theme_void() +
+    theme(
+      plot.background = element_rect(fill = "white", color = "gray80"),
+      panel.background = element_rect(fill = "white")
+    ) +
+    labs(title = "Parallel Plot Placeholder")
+}
+```
+
+```{r footer, results='asis'}
+cat("\n\n---\n\n")
+cat("*Report generated using R Shiny microbiome analysis application*\n\n")
+cat("**Generation Time:** ", as.character(Sys.time()), "\n")
+```
+
