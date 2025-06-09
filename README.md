@@ -149,11 +149,11 @@ nextflow run main.nf --run_id <run_id> -profile docker -resume
 ## Custom Python Image for Metadata Merging
 This pipeline uses a custom Docker image (agb2025-python) to merge metadata with MultiQC output using pandas and csvkit.
 
-# Build the Docker Image (once, before running the pipeline)
+### Build the Docker Image (once, before running the pipeline)
 ```bash
 docker build -t agb2025-python -f Dockerfile .
 ```
-# Usage
+### Usage
 The image is used in the process that merges sample_metadata.tsv with multiqc_fastqc.txt. This step will fail unless agb2025-python is built locally beforehand.
 
 
