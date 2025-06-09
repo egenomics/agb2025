@@ -1105,44 +1105,44 @@ ui <- dashboardPage(
                          actionButton("reload_phylo", "Reload Tree", 
                                       class = "btn-warning btn-sm"),
                          
-                         # File upload for abundance/metadata to overlay (keep this)
-                         fileInput("abundance_file", "Upload Abundance Data (optional):",
-                                   accept = c(".csv", ".tsv", ".txt")),
-                         
                          hr(),
                          
+                         h4("Visualisation options", style = "font-weight: bold;"),
                          # Tree display options
                          radioButtons("tree_layout", "Tree Layout:",
                                       choices = c("Rectangular" = "rectangular",
                                                   "Circular" = "circular", 
-                                                  "Fan" = "fan",
                                                   "Unrooted" = "unrooted"),
                                       selected = "rectangular"),
                          
-                         # Color scheme
-                         selectInput("tree_color_palette", "Color Palette:",
-                                     choices = c("Default" = "default",
-                                                 "Viridis" = "viridis",
-                                                 "Set1" = "Set1",
-                                                 "Set2" = "Set2",
-                                                 "Paired" = "Paired",
-                                                 "Dark2" = "Dark2",
-                                                 "Spectral" = "Spectral"),
-                                     selected = "Set1"),
-                         
-                         # Tree appearance options
-                         checkboxInput("show_tip_labels", "Show Tip Labels", value = TRUE),
-                         checkboxInput("show_node_labels", "Show Node Support", value = FALSE),
-                         checkboxInput("show_branch_length", "Show Branch Lengths", value = FALSE),
+                         # Tree display options
+                         checkboxGroupInput("display_options", "Tree Display Options:",
+                                            choices = c("Show Tip Labels" = "show_tip_labels",
+                                                        "Show Node Support" = "show_node_labels", 
+                                                        "Show Branch Lengths" = "show_branch_length"),
+                                            selected = c("show_tip_labels")),
                          
                          # Size controls
                          sliderInput("tree_text_size", "Text Size:",
-                                     min = 0.3, max = 2.0, value = 0.8, step = 0.1),
-                         sliderInput("tree_line_size", "Branch Width:",
-                                     min = 0.3, max = 2.0, value = 0.5, step = 0.1),
+                                     min = 0.4, max = 5.0, value = 2.8, step = 0.2),
                          
-                         # Root the tree option
-                         checkboxInput("root_tree", "Root Tree at Midpoint", value = FALSE),
+                         hr(),
+                         h4("Taxonomic Grouping", style = "font-weight: bold;"),
+                         selectInput("tax_level", "Group by Taxonomic Level:",
+                                     choices = c("None (show all)" = "none",
+                                                 "Kingdom" = "kingdom", 
+                                                 "Phylum" = "phylum",
+                                                 "Class" = "class",
+                                                 "Order" = "order", 
+                                                 "Family" = "family",
+                                                 "Genus" = "genus"),
+                                     selected = "family"),
+                         
+                         sliderInput("min_group_size", "Minimum group size:",
+                                     min = 1, max = 10, value = 2, step = 1),
+                         helpText("Groups with fewer members will be shown individually"),
+                         
+                         checkboxInput("show_group_counts", "Show group counts in labels", value = FALSE),
                          
                          hr(),
                          
@@ -1176,57 +1176,20 @@ ui <- dashboardPage(
                          
                          tabBox(
                            width = 12,
-                           height = "750px",
+                           height = "980px",
                            
                            # Main tree plot
                            tabPanel("Tree Plot",
-                                    div(style = "height: 700px; overflow: auto; text-align: center;",
+                                    div(style = "height: 100%; overflow: auto; text-align: center;",
                                         conditionalPanel(
                                           condition = "output.tree_loaded",
-                                          plotOutput("main_phylo_plot", height = "650px", width = "100%")
+                                          plotOutput("main_phylo_plot", height = "100%", width = "100%")
                                         ),
                                         conditionalPanel(
                                           condition = "!output.tree_loaded",
                                           div(style = "padding: 50px; text-align: center;",
                                               uiOutput("tree_status_message")
                                           )
-                                        )
-                                    )
-                           ),
-                           
-                           # Interactive tree (if using ggtree)
-                           tabPanel("Plotly Interactive",
-                                              div(style = "height: 700px; overflow: auto;",
-                                                  conditionalPanel(
-                                                    condition = "output.tree_loaded",
-                                                    plotlyOutput("plotly_phylo_plot", height = "650px", width = "100%")
-                                                  ),
-                                                  conditionalPanel(
-                                                    condition = "!output.tree_loaded",
-                                                    div(style = "padding: 50px; text-align: center;",
-                                                        h4("Tree file not available", style = "color: #666;"))
-                                                  )
-                                              )
-                                    ),
-                           
-                           # Tree with abundance heatmap (if abundance data provided)
-                           tabPanel("Tree + Abundance",
-                                    div(style = "height: 700px; overflow: auto;",
-                                        conditionalPanel(
-                                          condition = "output.tree_loaded && output.abundance_loaded",
-                                          plotOutput("phylo_abundance_heatmap", height = "650px", width = "100%")
-                                        ),
-                                        conditionalPanel(
-                                          condition = "output.tree_loaded && !output.abundance_loaded",
-                                          div(style = "padding: 50px; text-align: center;",
-                                              h4("Upload abundance data to see tree with heatmap overlay",
-                                                 style = "color: #666;"))
-                                        ),
-                                        conditionalPanel(
-                                          condition = "!output.tree_loaded",
-                                          div(style = "padding: 50px; text-align: center;",
-                                              h4("Tree file not found. Check file path.",
-                                                 style = "color: #666;"))
                                         )
                                     )
                            ),
@@ -4530,32 +4493,188 @@ server <- function(input, output, session) {
   
   
   # ==============================================================================
-  # PHYLOGENETIC TREE TAB - SERVER SECTION
+  # SERVER - PHYLOGENETIC TREE TAB - FIXED VERSION WITH BOTTOM LEGEND
   # ==============================================================================
-
+  
+  # Enhanced function to resolve phylo conflicts
+  resolve_phylo_conflicts <- function() {
+    # Clear any existing phylo class definitions from global environment
+    if (exists("phylo", envir = .GlobalEnv)) {
+      rm("phylo", envir = .GlobalEnv)
+    }
+    
+    # Force detach and reattach ape to ensure clean phylo class
+    if ("package:ape" %in% search()) {
+      tryCatch({
+        detach("package:ape", unload = TRUE, force = TRUE)
+        library(ape, quietly = TRUE)
+        cat("Reloaded ape package to resolve phylo conflicts\n")
+      }, error = function(e) {
+        cat("Could not reload ape package:", e$message, "\n")
+      })
+    }
+    
+    # Explicitly clear the S4 class cache
+    if (exists(".S4_classes_cache", envir = .GlobalEnv)) {
+      .S4_classes_cache <- new.env()
+    }
+    
+    cat("Phylo class conflicts resolved\n")
+  }
+  
+  resolve_phylo_conflicts()
+  
+  extract_node_support <- function(tree) {
+    cat("=== NODE SUPPORT EXTRACTION ===\n")
+    
+    support_values <- NULL
+    support_source <- NULL
+    
+    # Check multiple possible sources for support values
+    if (!is.null(tree$node.label) && length(tree$node.label) > 0) {
+      # Clean and filter node labels
+      clean_labels <- tree$node.label
+      clean_labels <- clean_labels[!is.na(clean_labels)]
+      clean_labels <- clean_labels[clean_labels != ""]
+      clean_labels <- clean_labels[clean_labels != "NA"]
+      
+      # Try to convert to numeric (for bootstrap values stored as strings)
+      numeric_labels <- suppressWarnings(as.numeric(clean_labels))
+      
+      if (length(clean_labels) > 0) {
+        cat("Found node.label with", length(clean_labels), "values\n")
+        cat("Sample values:", head(clean_labels, 3), "\n")
+        
+        # If they're numeric, use them as support values
+        if (any(!is.na(numeric_labels))) {
+          support_values <- tree$node.label
+          support_source <- "node.label"
+          cat("Using node.label as support values\n")
+        }
+      }
+    }
+    
+    # Check for explicit bootstrap/support attributes
+    if (is.null(support_values)) {
+      for (attr_name in c("bootstrap", "support", "posterior", "node.support")) {
+        if (attr_name %in% names(tree) && !is.null(tree[[attr_name]])) {
+          support_values <- tree[[attr_name]]
+          support_source <- attr_name
+          cat("Found support values in", attr_name, "\n")
+          break
+        }
+      }
+    }
+    
+    # Check edge attributes (sometimes support is stored there)
+    if (is.null(support_values) && !is.null(tree$edge.length)) {
+      # Sometimes support values are mixed with branch lengths
+      if (any(tree$edge.length > 1 & tree$edge.length <= 100)) {
+        cat("Potential support values found in edge.length (values > 1)\n")
+      }
+    }
+    
+    cat("Final result - Source:", support_source, "Values found:", !is.null(support_values), "\n")
+    cat("===============================\n")
+    
+    return(list(values = support_values, source = support_source))
+  }
+  
   # Define the tree file path
   PHYLO_TREE_PATH <- "../group2_B/results/qiime_output/relevant_results/phylogenetic_tree.nwk"
+  TAXONOMY_PATH   <- "../group2_B/results/qiime_output/relevant_results/taxonomy.tsv"
   
   # Reactive value to store tree data
   phylo_tree_data <- reactiveValues(
     tree = NULL,
     loaded = FALSE,
     file_exists = FALSE,
-    error_msg = NULL
+    error_msg = NULL,
+    debug_info = ""
   )
+  
+  # Enhanced tree cleaning function
+  clean_phylo_tree <- function(tree) {
+    # Ensure it's a proper ape phylo object
+    if (!inherits(tree, "phylo")) {
+      tree <- ape::as.phylo(tree)
+    }
+    
+    # Force the class to be exactly what ape expects
+    class(tree) <- "phylo"
+    
+    # Ensure edge lengths are numeric and positive
+    if (is.null(tree$edge.length)) {
+      tree$edge.length <- rep(1, nrow(tree$edge))
+    } else {
+      # Convert to numeric and handle any issues
+      tree$edge.length <- as.numeric(tree$edge.length)
+      tree$edge.length[is.na(tree$edge.length)] <- 1
+      tree$edge.length[tree$edge.length <= 0] <- 1
+    }
+    
+    # Ensure edge matrix is integer matrix
+    if (!is.null(tree$edge)) {
+      tree$edge <- matrix(as.integer(tree$edge), ncol = 2)
+    }
+    
+    # Ensure tip labels are character
+    if (!is.null(tree$tip.label)) {
+      tree$tip.label <- as.character(tree$tip.label)
+    }
+    
+    # Validate tree structure
+    if (!ape::is.rooted(tree)) {
+      # For unrooted trees, ensure proper structure
+      n_tips <- ape::Ntip(tree)
+      n_nodes <- ape::Nnode(tree)
+      expected_edges <- 2 * n_tips - 3
+      
+      if (nrow(tree$edge) != expected_edges) {
+        cat("Warning: Tree structure may be invalid for unrooted plotting\n")
+      }
+    }
+    
+    return(tree)
+  }
   
   # Function to load tree automatically
   load_phylo_tree <- function() {
     tryCatch({
       if (file.exists(PHYLO_TREE_PATH)) {
-        # Load tree using ape package
         tree <- ape::read.tree(PHYLO_TREE_PATH)
+        
+        # Clean the tree immediately after loading
+        tree <- clean_phylo_tree(tree)
+        
+        if (file.exists(TAXONOMY_PATH)) {
+          tax_tbl <- read.delim(
+            TAXONOMY_PATH,
+            header = TRUE, sep = "\t",
+            quote = "", comment.char = "",
+            stringsAsFactors = FALSE
+          )
+          tax_vec  <- setNames(tax_tbl$Taxon, tax_tbl$Feature.ID)
+          
+          missing <- !(tree$tip.label %in% names(tax_vec))
+          if (any(missing)) {
+            cat("Warning:", sum(missing),
+                "tip labels without taxonomy; keeping their IDs\n")
+          }
+          tree$tip.label <- ifelse(
+            missing,
+            tree$tip.label,
+            tax_vec[tree$tip.label]
+          )
+        } else {
+          cat("⚠ No taxonomy.tsv found at:", TAXONOMY_PATH, "\n")
+        }
         
         phylo_tree_data$tree <- tree
         phylo_tree_data$loaded <- TRUE
         phylo_tree_data$file_exists <- TRUE
         phylo_tree_data$error_msg <- NULL
-        
+        phylo_tree_data$debug_info <- paste("Tree loaded with", ape::Ntip(tree), "tips")
       } else {
         phylo_tree_data$tree <- NULL
         phylo_tree_data$loaded <- FALSE
@@ -4570,209 +4689,1037 @@ server <- function(input, output, session) {
     })
   }
   
-  # Load tree when app starts
-  observeEvent(TRUE, {
-    load_phylo_tree()
-  }, once = TRUE)
+  # SIMPLIFIED AND ROBUST function to extract taxonomy
+  extract_taxonomy_simple <- function(tip_labels, level) {
+    cat("=== EXTRACT TAXONOMY DEBUG ===\n")
+    cat("Input level:", level, "\n")
+    cat("Number of labels:", length(tip_labels), "\n")
+    
+    if (level == "none" || is.null(tip_labels) || length(tip_labels) == 0) {
+      cat("Returning original labels (level=none or empty input)\n")
+      return(as.character(tip_labels))
+    }
+    
+    # Show sample labels
+    cat("Sample labels:\n")
+    for(i in 1:min(3, length(tip_labels))) {
+      cat(i, ":", tip_labels[i], "\n")
+    }
+    
+    # Simple but effective strategy
+    result <- switch(level,
+                     "kingdom" = extract_by_pattern(tip_labels, c("k__", "D_0__"), 1),
+                     "phylum" = extract_by_pattern(tip_labels, c("p__", "D_1__"), 2),
+                     "class" = extract_by_pattern(tip_labels, c("c__", "D_2__"), 3),
+                     "order" = extract_by_pattern(tip_labels, c("o__", "D_3__"), 4),
+                     "family" = extract_by_pattern(tip_labels, c("f__", "D_4__"), 5),
+                     "genus" = extract_by_pattern(tip_labels, c("g__", "D_5__"), 6),
+                     as.character(tip_labels)  # default
+    )
+    
+    cat("Unique groups found:", length(unique(result)), "\n")
+    cat("Sample results:\n")
+    for(i in 1:min(3, length(result))) {
+      cat(tip_labels[i], " -> ", result[i], "\n")
+    }
+    cat("==============================\n")
+    
+    return(as.character(result))
+  }
   
-  # Reload button functionality
-  observeEvent(input$reload_phylo, {
-    load_phylo_tree()
+  # Helper function to extract by patterns
+  extract_by_pattern <- function(labels, patterns, position) {
+    result <- character(length(labels))
+    
+    for(i in seq_along(labels)) {
+      label <- as.character(labels[i])
+      extracted <- FALSE
+      
+      # Try with specific patterns
+      for(pattern in patterns) {
+        if(grepl(pattern, label)) {
+          parts <- unlist(strsplit(label, ";"))
+          matching_part <- parts[grepl(paste0("^", pattern), parts)]
+          
+          if(length(matching_part) > 0) {
+            clean_name <- gsub(paste0("^", pattern), "", matching_part[1])
+            clean_name <- trimws(clean_name)
+            
+            if(nchar(clean_name) > 0 && !grepl("unidentified|uncultured|unknown", clean_name, ignore.case = TRUE)) {
+              result[i] <- clean_name
+              extracted <- TRUE
+              break
+            }
+          }
+        }
+      }
+      
+      # If nothing found with patterns, use position
+      if(!extracted) {
+        if(grepl(";", label)) {
+          parts <- unlist(strsplit(label, ";"))
+          if(length(parts) >= position && nchar(trimws(parts[position])) > 0) {
+            # Clean any taxonomic prefix
+            clean_part <- gsub("^[a-zA-Z]_*[0-9]*_*", "", parts[position])
+            clean_part <- trimws(clean_part)
+            if(nchar(clean_part) > 0) {
+              result[i] <- clean_part
+              extracted <- TRUE
+            }
+          }
+        }
+      }
+      
+      # Last resort: create generic group
+      if(!extracted) {
+        result[i] <- paste0("Unknown_Group_", i %% 10)
+      }
+    }
+    
+    return(result)
+  }
+  
+  # SIMPLIFIED but EFFECTIVE tree collapse function
+  collapse_tree_simple <- function(tree, tax_level, min_group_size = 2) {
+    cat("=== COLLAPSE TREE DEBUG ===\n")
+    cat("Original tree tips:", ape::Ntip(tree), "\n")
+    cat("Tax level:", tax_level, "\n")
+    cat("Min group size:", min_group_size, "\n")
+    
+    if(is.null(tree) || tax_level == "none") {
+      cat("Returning original tree (null or none)\n")
+      return(tree)
+    }
+    
+    # Clean the tree before processing
+    tree <- clean_phylo_tree(tree)
+    
+    # Extract groups
+    tip_groups <- extract_taxonomy_simple(tree$tip.label, tax_level)
+    
+    if(length(tip_groups) != length(tree$tip.label)) {
+      cat("ERROR: Group extraction failed\n")
+      return(tree)
+    }
+    
+    # Count groups
+    group_counts <- table(tip_groups)
+    cat("Group distribution:\n")
+    print(head(sort(group_counts, decreasing = TRUE), 10))
+    
+    # Find groups to collapse
+    groups_to_collapse <- names(group_counts)[group_counts >= min_group_size]
+    cat("Groups meeting criteria:", length(groups_to_collapse), "\n")
+    
+    if(length(groups_to_collapse) == 0) {
+      cat("No groups meet minimum size - returning original tree\n")
+      return(tree)
+    }
+    
+    # Create new tree
+    new_tree <- tree
+    tips_to_remove <- c()
+    
+    for(group_name in groups_to_collapse) {
+      # Find all tips of this group
+      group_indices <- which(tip_groups == group_name)
+      cat("Group '", group_name, "' has", length(group_indices), "members\n")
+      
+      if(length(group_indices) >= min_group_size) {
+        # Keep the first tip as representative
+        representative <- group_indices[1]
+        
+        # Change its label
+        new_tree$tip.label[representative] <- paste0(group_name, " (n=", length(group_indices), ")")
+        
+        # Mark the rest for removal
+        if(length(group_indices) > 1) {
+          tips_to_remove <- c(tips_to_remove, group_indices[-1])
+        }
+      }
+    }
+    
+    cat("Tips to remove:", length(tips_to_remove), "\n")
+    
+    # Remove duplicate tips
+    if(length(tips_to_remove) > 0) {
+      # Verify we're not removing all tips
+      if(length(tips_to_remove) >= length(new_tree$tip.label)) {
+        cat("ERROR: Would remove all tips - returning original\n")
+        return(tree)
+      }
+      
+      # Remove duplicate tips
+      new_tree <- ape::drop.tip(new_tree, tips_to_remove)
+      # Clean the tree after modifications
+      new_tree <- clean_phylo_tree(new_tree)
+      cat("New tree has", ape::Ntip(new_tree), "tips\n")
+    }
+    
+    cat("==========================\n")
+    return(new_tree)
+  }
+  
+  # Function to get fixed color palette (palette 36)
+  get_color_palette <- function(n_colors) {
+    
+    if (requireNamespace("viridis", quietly = TRUE)) {
+      # Use viridis discrete colors
+      return(viridis::viridis(n_colors, option = "D"))
+    } else {
+      # Fallback: manual viridis-like colors if package not available
+      viridis_colors <- c(
+        "#440154", "#482677", "#3F4A8A", "#31678E", "#26838F", "#1F9D8A", 
+        "#6CCE5A", "#B6DE2B", "#FEE825", "#FFEA46", "#FCFFA4", "#F0F921"
+      )
+      
+      if (n_colors <= length(viridis_colors)) {
+        return(viridis_colors[1:n_colors])
+      } else {
+        return(colorRampPalette(viridis_colors)(n_colors))
+      }
+    }
+  }
+  
+  # REACTIVE for processed tree
+  processed_tree <- reactive({
+    req(phylo_tree_data$loaded, phylo_tree_data$tree)
+    
+    cat("\n=== PROCESSING TREE ===\n")
+    cat("Tax level input:", input$tax_level, "\n")
+    
+    tree <- phylo_tree_data$tree
+    
+    # If no taxonomic level selected, return original
+    if(is.null(input$tax_level) || input$tax_level == "none") {
+      cat("No taxonomic grouping requested\n")
+      phylo_tree_data$debug_info <- "Original tree - no grouping"
+      # Still clean the tree
+      return(clean_phylo_tree(tree))
+    }
+    
+    # Apply collapse
+    min_size <- ifelse(is.null(input$min_group_size), 2, as.numeric(input$min_group_size))
+    
+    cat("Applying collapse with min_size =", min_size, "\n")
+    
+    collapsed_tree <- collapse_tree_simple(tree, input$tax_level, min_size)
+    
+    # Update debug info
+    phylo_tree_data$debug_info <- paste(
+      "Taxonomic level:", input$tax_level,
+      "| Original tips:", ape::Ntip(tree),
+      "| Final tips:", ape::Ntip(collapsed_tree),
+      "| Reduction:", round((1 - ape::Ntip(collapsed_tree)/ape::Ntip(tree)) * 100, 1), "%"
+    )
+    
+    cat("======================\n")
+    return(collapsed_tree)
   })
   
-  # Tree status message
+  
+  # Modified collapse_tree_simple function to respect the group counts option
+  collapse_tree_simple <- function(tree, tax_level, min_group_size = 2, show_counts = TRUE) {
+    cat("=== COLLAPSE TREE DEBUG ===\n")
+    cat("Original tree tips:", ape::Ntip(tree), "\n")
+    cat("Tax level:", tax_level, "\n")
+    cat("Min group size:", min_group_size, "\n")
+    cat("Show group counts:", show_counts, "\n")  # New debug line
+    
+    if(is.null(tree) || tax_level == "none") {
+      cat("Returning original tree (null or none)\n")
+      return(tree)
+    }
+    
+    # Clean the tree before processing
+    tree <- clean_phylo_tree(tree)
+    
+    # Extract groups
+    tip_groups <- extract_taxonomy_simple(tree$tip.label, tax_level)
+    
+    if(length(tip_groups) != length(tree$tip.label)) {
+      cat("ERROR: Group extraction failed\n")
+      return(tree)
+    }
+    
+    # Count groups
+    group_counts <- table(tip_groups)
+    cat("Group distribution:\n")
+    print(head(sort(group_counts, decreasing = TRUE), 10))
+    
+    # Find groups to collapse
+    groups_to_collapse <- names(group_counts)[group_counts >= min_group_size]
+    cat("Groups meeting criteria:", length(groups_to_collapse), "\n")
+    
+    if(length(groups_to_collapse) == 0) {
+      cat("No groups meet minimum size - returning original tree\n")
+      return(tree)
+    }
+    
+    # Create new tree
+    new_tree <- tree
+    tips_to_remove <- c()
+    
+    for(group_name in groups_to_collapse) {
+      # Find all tips of this group
+      group_indices <- which(tip_groups == group_name)
+      cat("Group '", group_name, "' has", length(group_indices), "members\n")
+      
+      if(length(group_indices) >= min_group_size) {
+        # Keep the first tip as representative
+        representative <- group_indices[1]
+        
+        # MODIFIED: Change label based on show_counts option
+        if(show_counts) {
+          new_tree$tip.label[representative] <- paste0(group_name, " (n=", length(group_indices), ")")
+        } else {
+          new_tree$tip.label[representative] <- group_name
+        }
+        
+        # Mark the rest for removal
+        if(length(group_indices) > 1) {
+          tips_to_remove <- c(tips_to_remove, group_indices[-1])
+        }
+      }
+    }
+    
+    cat("Tips to remove:", length(tips_to_remove), "\n")
+    
+    # Remove duplicate tips
+    if(length(tips_to_remove) > 0) {
+      # Verify we're not removing all tips
+      if(length(tips_to_remove) >= length(new_tree$tip.label)) {
+        cat("ERROR: Would remove all tips - returning original\n")
+        return(tree)
+      }
+      
+      # Remove duplicate tips
+      new_tree <- ape::drop.tip(new_tree, tips_to_remove)
+      # Clean the tree after modifications
+      new_tree <- clean_phylo_tree(new_tree)
+      cat("New tree has", ape::Ntip(new_tree), "tips\n")
+    }
+    
+    cat("==========================\n")
+    return(new_tree)
+  }
+  
+  # Modified processed_tree reactive to pass the show_counts parameter
+  processed_tree <- reactive({
+    req(phylo_tree_data$loaded, phylo_tree_data$tree)
+    
+    cat("\n=== PROCESSING TREE ===\n")
+    cat("Tax level input:", input$tax_level, "\n")
+    cat("Midpoint root option:", input$midpoint_root %||% FALSE, "\n")
+    cat("Show group counts:", input$show_group_counts %||% TRUE, "\n")  # New debug line
+    
+    tree <- phylo_tree_data$tree
+    
+    # Apply midpoint rooting if requested
+    if (!is.null(input$midpoint_root) && input$midpoint_root) {
+      cat("Applying midpoint rooting...\n")
+      tree <- midpoint_root_tree(tree)
+    }
+    
+    # If no taxonomic level selected, return tree (possibly rooted)
+    if(is.null(input$tax_level) || input$tax_level == "none") {
+      cat("No taxonomic grouping requested\n")
+      if (!is.null(input$midpoint_root) && input$midpoint_root) {
+        phylo_tree_data$debug_info <- "Tree with midpoint rooting - no grouping"
+      } else {
+        phylo_tree_data$debug_info <- "Original tree - no grouping"
+      }
+      return(clean_phylo_tree(tree))
+    }
+    
+    # Apply collapse with group counts option
+    min_size <- ifelse(is.null(input$min_group_size), 2, as.numeric(input$min_group_size))
+    show_counts <- ifelse(is.null(input$show_group_counts), TRUE, input$show_group_counts)
+    
+    cat("Applying collapse with min_size =", min_size, "and show_counts =", show_counts, "\n")
+    
+    # MODIFIED: Pass the show_counts parameter
+    collapsed_tree <- collapse_tree_simple(tree, input$tax_level, min_size, show_counts)
+    
+    # Update debug info
+    rooting_status <- if (!is.null(input$midpoint_root) && input$midpoint_root) "midpoint-rooted" else "original"
+    counts_status <- if (show_counts) "with counts" else "without counts"
+    
+    phylo_tree_data$debug_info <- paste(
+      "Taxonomic level:", input$tax_level,
+      "| Tree:", rooting_status,
+      "| Labels:", counts_status,
+      "| Original tips:", ape::Ntip(phylo_tree_data$tree),
+      "| Final tips:", ape::Ntip(collapsed_tree),
+      "| Reduction:", round((1 - ape::Ntip(collapsed_tree)/ape::Ntip(phylo_tree_data$tree)) * 100, 1), "%"
+    )
+    
+    cat("======================\n")
+    return(collapsed_tree)
+  })
+  
+  # Add observer to debug the checkbox state
+  observeEvent(input$show_group_counts, {
+    cat("\n*** SHOW GROUP COUNTS CHANGED TO:", input$show_group_counts, "***\n")
+  }, ignoreInit = TRUE)
+  
+  
+  # Updated plotting section with fixed node support functionality
+  output$main_phylo_plot <- renderPlot({
+    
+    tree <- processed_tree()
+    
+    cat("Plotting tree with", ape::Ntip(tree), "tips\n")
+    
+    tryCatch({
+      
+      # Get layout and parameters
+      layout <- input$tree_layout %||% "rectangular"
+      text_sz <- as.numeric(input$tree_text_size %||% 1.2)
+      line_sz <- as.numeric(input$tree_line_size %||% 0.5)
+      
+      # Get display options
+      show_tips <- "show_tip_labels" %in% input$display_options
+      show_nodes <- "show_node_labels" %in% input$display_options
+      show_branches <- "show_branch_length" %in% input$display_options
+      
+      cat("Display options - Tips:", show_tips, "Nodes:", show_nodes, "Branches:", show_branches, "\n")
+      cat("Using layout:", layout, "with viridis palette\n")
+      
+      # Clean tree
+      tree <- clean_phylo_tree(tree)
+      
+      # Check if ggtree is available
+      if (requireNamespace("ggtree", quietly = TRUE)) {
+        
+        # Get taxonomic groups for coloring
+        if (!is.null(input$tax_level) && input$tax_level != "none") {
+          tip_groups <- extract_taxonomy_simple(tree$tip.label, input$tax_level)
+          group_levels <- unique(tip_groups)
+          
+          # Get color palette (viridis)
+          colors <- get_color_palette(length(group_levels))
+          names(colors) <- group_levels
+          
+          # Create metadata data frame
+          meta_df <- data.frame(
+            label = tree$tip.label,
+            grp = tip_groups,
+            stringsAsFactors = FALSE
+          )
+        } else {
+          # No grouping - use single color
+          meta_df <- data.frame(
+            label = tree$tip.label,
+            grp = "All",
+            stringsAsFactors = FALSE
+          )
+          colors <- c("All" = "#440154")  # Dark viridis color
+        }
+        
+        # Create base plot with error handling for circular layout
+        if (layout == "circular") {
+          # Try circular layout with fallback
+          tryCatch({
+            p <- ggtree::ggtree(tree, layout = "circular", size = line_sz) %<+% meta_df
+          }, error = function(e) {
+            cat("Circular layout failed, using fan layout instead:", e$message, "\n")
+            # Fallback to fan layout which is more stable
+            layout <<- "fan"
+            p <<- ggtree::ggtree(tree, layout = "fan", size = line_sz) %<+% meta_df
+          })
+        } else {
+          p <- ggtree::ggtree(tree, layout = layout, size = line_sz) %<+% meta_df
+        }
+        
+        # Add branch length labels if requested
+        if (show_branches && !is.null(tree$edge.length)) {
+          p <- p + ggtree::geom_text2(aes(subset = !isTip, label = round(branch.length, 3)),
+                                      hjust = -0.1, vjust = -0.5, size = text_sz * 0.8, color = "gray50")
+        }
+        
+        # FIXED CIRCULAR LAYOUT HANDLING
+        if (layout == "circular" || layout == "fan") {
+          
+          # Calculate optimal text size based on number of tips (INCREASED SIZES)
+          n_tips <- ape::Ntip(tree)
+          optimal_text_size <- case_when(
+            n_tips <= 20 ~ text_sz * 1.2,   # Increased from 0.9
+            n_tips <= 50 ~ text_sz * 1.0,   # Increased from 0.7
+            n_tips <= 100 ~ text_sz * 0.8,  # Increased from 0.5
+            n_tips <= 200 ~ text_sz * 0.6,  # Increased from 0.4
+            TRUE ~ text_sz * 0.5            # Increased from 0.3
+          )
+          
+          tryCatch({
+            # Create base circular plot
+            p <- ggtree::ggtree(tree, layout = "circular", size = line_sz) %<+% meta_df
+            
+            # Add basic styling first
+            p <- p +
+              scale_color_manual(values = colors, name = input$tax_level %||% "Group") +
+              ggtree::theme_tree() +
+              theme(
+                plot.margin = margin(60, 60, 80, 60),
+                legend.position = "none",
+                panel.background = element_rect(fill = "white", color = NA),
+                plot.background = element_rect(fill = "white", color = NA)
+              )
+            
+            # Add tip labels/points
+            if (show_tips && n_tips <= 100) {
+              tryCatch({
+                p <- p + ggtree::geom_tiplab(
+                  aes(color = grp),
+                  size = optimal_text_size,
+                  hjust = -0.1,
+                  alpha = 0.8
+                )
+              }, error = function(e) {
+                cat("Tip labels failed for circular plot, using points instead\n")
+                p <<- p + ggtree::geom_tippoint(aes(color = grp), size = 2, alpha = 0.7)
+              })
+            } else if (show_tips) {
+              p <- p + ggtree::geom_tippoint(aes(color = grp), size = 1.5, alpha = 0.7)
+            }
+            
+            # SIMPLIFIED BRANCH LENGTH SOLUTION FOR CIRCULAR PLOTS
+            if (show_branches && !is.null(tree$edge.length)) {
+              cat("Adding branch lengths to circular plot...\n")
+              
+              # Method 1: Try the most reliable approach first
+              tryCatch({
+                # Only show branch lengths for major branches to avoid clutter
+                edge_threshold <- quantile(tree$edge.length[tree$edge.length > 0], 0.8, na.rm = TRUE)
+                
+                p <- p + ggtree::geom_text2(
+                  aes(
+                    subset = (!isTip & !is.na(branch.length) & branch.length >= edge_threshold),
+                    label = round(branch.length, 3)
+                  ),
+                  hjust = 0.5,
+                  vjust = -0.3,
+                  size = optimal_text_size * 0.6,    # Increased from 0.4
+                  color = "darkblue",
+                  fontface = "bold",
+                  alpha = 0.9
+                )
+                cat("Branch lengths added successfully using geom_text2 with threshold\n")
+                
+              }, error = function(e1) {
+                cat("geom_text2 failed:", e1$message, "\n")
+                
+                # Method 2: Fallback to showing branch length statistics
+                tryCatch({
+                  branch_stats <- paste(
+                    "Branch lengths: min =", round(min(tree$edge.length[tree$edge.length > 0], na.rm = TRUE), 4),
+                    ", max =", round(max(tree$edge.length, na.rm = TRUE), 4),
+                    ", mean =", round(mean(tree$edge.length, na.rm = TRUE), 4)
+                  )
+                  
+                  p <<- p + labs(
+                    subtitle = branch_stats,
+                    caption = "Individual branch lengths filtered for clarity in circular layout"
+                  ) + theme(
+                    plot.subtitle = element_text(size = 10, color = "darkblue", hjust = 0.5),
+                    plot.caption = element_text(size = 9, color = "gray60", hjust = 0.5)
+                  )
+                  cat("Added branch length summary to plot labels\n")
+                  
+                }, error = function(e2) {
+                  cat("Even summary failed:", e2$message, "\n")
+                })
+              })
+            }
+            
+            # Add node support (simplified)
+            if (show_nodes) {
+              cat("Adding node support to circular plot...\n")
+              
+              support_info <- extract_node_support(tree)
+              support_values <- support_info$values
+              support_source <- support_info$source
+              
+              if (!is.null(support_values) && !is.null(support_source)) {
+                tryCatch({
+                  if (support_source == "node.label") {
+                    p <- p + ggtree::geom_nodelab(
+                      aes(label = label),
+                      subset = (!is.na(label) & label != "" & label != "NA"),
+                      hjust = 0.5,
+                      vjust = 1.2,
+                      size = optimal_text_size * 0.6,
+                      color = "red",
+                      fontface = "bold",
+                      alpha = 0.8
+                    )
+                  } else {
+                    p <- p + ggtree::geom_nodepoint(
+                      color = "red", size = 2, alpha = 0.7
+                    )
+                  }
+                }, error = function(e) {
+                  p <<- p + ggtree::geom_nodepoint(color = "orange", size = 1.5, alpha = 0.6)
+                })
+              } else {
+                p <- p + ggtree::geom_nodepoint(color = "orange", size = 1.5, alpha = 0.6)
+              }
+            }
+            
+            # Print the plot
+            print(p)
+            
+          }, error = function(e) {
+            cat("ggtree circular plot failed, using ape fallback:", e$message, "\n")
+            
+            # ENHANCED APE FALLBACK FOR CIRCULAR PLOTS
+            par(mar = c(2, 2, 4, 2), bg = "white")
+            
+            # Calculate optimal label size for ape (INCREASED SIZES)
+            optimal_text_size_ape <- case_when(
+              n_tips <= 30 ~ text_sz * 1.0,   # Increased from 0.8
+              n_tips <= 60 ~ text_sz * 0.8,   # Increased from 0.6
+              n_tips <= 100 ~ text_sz * 0.6,  # Increased from 0.4
+              TRUE ~ text_sz * 0.5            # Increased from 0.3
+            )
+            
+            # Plot the tree first
+            ape::plot.phylo(
+              tree,
+              type = "fan",
+              cex = optimal_text_size_ape,
+              main = paste("Circular Tree (", n_tips, " tips)"),
+              show.tip.label = show_tips && n_tips <= 50,
+              show.node.label = FALSE,  # We'll add these separately
+              edge.color = "darkblue",
+              edge.width = line_sz * 2,
+              tip.color = "darkred"
+            )
+            
+            # Add branch lengths - this WILL work with ape
+            if (show_branches && !is.null(tree$edge.length)) {
+              cat("Adding branch lengths using ape::edgelabels\n")
+              
+              tryCatch({
+                # Show only longer branches to avoid clutter
+                edge_threshold <- quantile(tree$edge.length[tree$edge.length > 0], 0.7, na.rm = TRUE)
+                long_edges <- which(tree$edge.length >= edge_threshold)
+                
+                if (length(long_edges) > 0 && length(long_edges) <= 30) {
+                  # Show individual branch lengths for reasonable number of edges
+                  ape::edgelabels(
+                    text = round(tree$edge.length[long_edges], 3),
+                    edge = long_edges,
+                    cex = optimal_text_size_ape * 0.7,    # Increased from 0.5
+                    col = "darkblue",
+                    bg = "lightblue",
+                    frame = "rect"
+                  )
+                  cat("Individual branch lengths added successfully\n")
+                } else {
+                  # Show summary statistics
+                  mtext(
+                    paste("Branch lengths: mean =", round(mean(tree$edge.length, na.rm = TRUE), 4),
+                          ", range =", round(min(tree$edge.length[tree$edge.length > 0], na.rm = TRUE), 4),
+                          "to", round(max(tree$edge.length, na.rm = TRUE), 4)),
+                    side = 3, line = 0, cex = optimal_text_size_ape * 0.8, col = "darkblue"
+                  )
+                  cat("Branch length summary added\n")
+                }
+                
+              }, error = function(e) {
+                cat("ape edgelabels failed:", e$message, "\n")
+                # Add basic branch length info as title
+                title(sub = paste("Mean branch length:", round(mean(tree$edge.length, na.rm = TRUE), 4)),
+                      col.sub = "darkblue", cex.sub = 0.8)
+              })
+            }
+            
+            # Add node support if available
+            if (show_nodes) {
+              support_info <- extract_node_support(tree)
+              if (!is.null(support_info$values) && support_info$source == "node.label") {
+                tryCatch({
+                  ape::nodelabels(
+                    tree$node.label,
+                    cex = optimal_text_size_ape * 0.6,
+                    col = "red",
+                    bg = "white",
+                    frame = "circle"
+                  )
+                }, error = function(e) {
+                  ape::nodelabels(pch = 19, cex = 0.8, col = "red")
+                })
+              }
+            }
+            
+            return(NULL)
+          })
+          
+        } else if (layout == "unrooted") {
+          # IMPROVED UNROOTED LAYOUT
+          p <- p +
+            ggtree::geom_tippoint(
+              aes(color = grp),
+              size = 3, 
+              stroke = 0,
+              alpha = 0.8
+            ) +
+            scale_color_manual(values = colors, name = input$tax_level %||% "Group") +
+            ggtree::theme_tree() +
+            coord_equal(clip = "off") +
+            theme(
+              legend.position = "bottom",
+              legend.title = element_text(size = 12),
+              legend.text = element_text(size = 10),
+              plot.margin = margin(40, 40, 60, 40),
+              panel.background = element_rect(fill = "white", color = NA),
+              plot.background = element_rect(fill = "white", color = NA)
+            )
+          
+          # Add tip labels only for small unrooted trees
+          if (show_tips && ape::Ntip(tree) <= 30) {
+            p <- p + ggtree::geom_tiplab(
+              size = text_sz * 0.6, 
+              hjust = -0.1,
+              alpha = 0.8
+            )
+          }
+          
+        } else {
+          # RECTANGULAR LAYOUT (existing code with minor improvements)
+          p <- p +
+            scale_color_manual(values = colors, name = input$tax_level %||% "Group")
+          
+          # Add tip labels if requested
+          if (show_tips) {
+            p <- p +
+              ggtree::geom_tiplab(
+                aes(color = grp),
+                size = text_sz,
+                align = TRUE,
+                linesize = 0.3,
+                linetype = "dotted",
+                offset = 0.002,
+                fontface = "bold"
+              ) +
+              ggplot2::xlim(NA, max(p$data$x, na.rm = TRUE) * 1.3)
+          }
+          
+          # Add styling
+          p <- p +
+            ggplot2::coord_cartesian(clip = "off") +
+            ggtree::theme_tree() +
+            theme(
+              plot.margin = margin(20, 20, 80, 20),
+              legend.position = "none",
+              panel.background = element_rect(fill = "white", color = NA),
+              plot.background = element_rect(fill = "white", color = NA)
+            )
+          
+          # Add subtle branch coloring
+          if (!is.null(input$tax_level) && input$tax_level != "none") {
+            p <- p +
+              ggtree::geom_tree(
+                aes(color = grp),
+                alpha = 0.3,
+                size = line_sz * 0.8
+              )
+          }
+        }
+        
+        # Add node support values (existing code - keeping as is)
+        if (show_nodes) {
+          cat("Attempting to show node support...\n")
+          
+          support_info <- extract_node_support(tree)
+          support_values <- support_info$values
+          support_source <- support_info$source
+          
+          if (!is.null(support_values) && !is.null(support_source)) {
+            cat("Adding node support labels from:", support_source, "\n")
+            
+            tryCatch({
+              if (support_source == "node.label") {
+                # Convert to numeric if they look like numbers
+                numeric_values <- suppressWarnings(as.numeric(support_values))
+                display_values <- ifelse(is.na(numeric_values), support_values, round(numeric_values, 1))
+                
+                p <- p + ggtree::geom_nodelab(
+                  aes(label = label),
+                  subset = (!is.na(label) & label != "" & label != "NA"),
+                  hjust = 1.2, 
+                  vjust = -0.5, 
+                  size = text_sz * 0.8, 
+                  color = "red",
+                  fontface = "bold"
+                )
+              } else {
+                # For other support attributes, we need to manually add them
+                # Create a data frame with node support
+                n_nodes <- ape::Nnode(tree)
+                n_tips <- ape::Ntip(tree)
+                
+                # Support values usually correspond to internal nodes
+                if (length(support_values) == n_nodes) {
+                  # Create node support data
+                  node_support <- data.frame(
+                    node = (n_tips + 1):(n_tips + n_nodes),
+                    support = round(as.numeric(support_values), 1)
+                  )
+                  
+                  # Filter out low/invalid support values
+                  node_support <- node_support[!is.na(node_support$support) & node_support$support > 0, ]
+                  
+                  if (nrow(node_support) > 0) {
+                    p <- p + ggtree::geom_nodelab(
+                      data = node_support,
+                      aes(x = x, y = y, label = support),
+                      hjust = 1.2,
+                      vjust = -0.5,
+                      size = text_sz * 0.6,
+                      color = "red",
+                      fontface = "bold"
+                    )
+                  }
+                }
+              }
+              
+              cat("Node support labels added successfully\n")
+              
+            }, error = function(e) {
+              cat("Failed to add node support labels:", e$message, "\n")
+              
+              # Fallback: add simple text annotations
+              tryCatch({
+                if (support_source == "node.label" && length(support_values) > 0) {
+                  # Simple approach: just show that support exists
+                  p <<- p + ggtree::geom_text2(
+                    aes(subset = !isTip, label = "•"),
+                    hjust = 0.5,
+                    vjust = 0.5,
+                    size = text_sz * 0.8,
+                    color = "red"
+                  )
+                  cat("Added simple node markers as fallback\n")
+                }
+              }, error = function(e2) {
+                cat("Even fallback node support failed:", e2$message, "\n")
+              })
+            })
+          } else {
+            cat("No node support values found in tree\n")
+            
+            # Add a visual indicator that no support was found
+            if (requireNamespace("ggtree", quietly = TRUE)) {
+              tryCatch({
+                p <- p + ggtree::geom_nodepoint(
+                  color = "orange", 
+                  size = 1, 
+                  alpha = 0.6
+                )
+                cat("Added node points to indicate internal nodes\n")
+              }, error = function(e) {
+                cat("Could not add node points:", e$message, "\n")
+              })
+            }
+          }
+        }
+        
+        print(p)
+        
+      } else {
+        # IMPROVED FALLBACK TO APE PLOTTING
+        par(mar = c(1, 1, 2, 1), bg = "white")
+        
+        tree <- clean_phylo_tree(tree)
+        
+        if (layout == "circular") {
+          # Improved circular plot with ape
+          n_tips <- ape::Ntip(tree)
+          
+          # Calculate optimal label size
+          label_cex <- case_when(
+            n_tips <= 30 ~ text_sz * 0.8,
+            n_tips <= 60 ~ text_sz * 0.6,
+            n_tips <= 100 ~ text_sz * 0.4,
+            TRUE ~ text_sz * 0.3
+          )
+          
+          ape::plot.phylo(
+            tree, 
+            type = "fan", 
+            cex = label_cex,
+            main = paste("Circular Phylogenetic Tree (", n_tips, " tips)"),
+            show.tip.label = show_tips && n_tips <= 100,
+            show.node.label = show_nodes,
+            edge.color = "darkblue",
+            edge.width = line_sz * 2,
+            tip.color = "darkred"
+          )
+          
+          if (show_branches && !is.null(tree$edge.length)) {
+            ape::edgelabels(round(tree$edge.length, 3), cex = 0.5, col = "gray50")
+          }
+          
+        } else if (layout == "unrooted") {
+          ape::plot.phylo(
+            tree,
+            type = "unrooted",
+            cex = text_sz * 0.8,
+            show.tip.label = show_tips && ape::Ntip(tree) <= 50,
+            show.node.label = show_nodes,
+            main = paste("Unrooted Phylogenetic Tree (", ape::Ntip(tree), " tips)"),
+            edge.color = "darkblue",
+            edge.width = line_sz * 2
+          )
+          
+          if (show_branches && !is.null(tree$edge.length)) {
+            ape::edgelabels(round(tree$edge.length, 3), cex = 0.6, col = "gray50")
+          }
+          
+        } else {
+          ape::plot.phylo(
+            tree, 
+            cex = text_sz * 0.8,
+            main = paste("Phylogenetic Tree (", ape::Ntip(tree), " tips)"),
+            show.tip.label = show_tips,
+            show.node.label = show_nodes,
+            edge.color = "darkblue",
+            edge.width = line_sz * 2
+          )
+          
+          if (show_branches && !is.null(tree$edge.length)) {
+            ape::edgelabels(round(tree$edge.length, 3), cex = 0.6, col = "gray50")
+          }
+        }
+      }
+      
+    }, error = function(e) {
+      cat("Plot error:", e$message, "\n")
+      
+      # Enhanced error handling
+      par(mar = c(5, 5, 5, 5), bg = "white")
+      plot(1, 1, type = "n",
+           main = "Tree Visualization Error",
+           xlab = "", ylab = "",
+           xlim = c(0, 2), ylim = c(0, 2))
+      
+      text(1, 1.5, paste("Error:", e$message), col = "red", cex = 1)
+      
+      if (grepl("non-numeric|binary operator", e$message)) {
+        text(1, 1.2, "Suggestion: Class conflict detected - try restarting R session",
+             col = "blue", cex = 0.9)
+        text(1, 1.0, "Alternative: Use rectangular layout for more stable visualization",
+             col = "blue", cex = 0.9)
+      } else if (grepl("class", e$message)) {
+        text(1, 1.2, "Suggestion: Package conflict detected",
+             col = "blue", cex = 0.9)
+        text(1, 1.0, "Try: Restart R session or use rectangular layout",
+             col = "blue", cex = 0.9)
+      } else {
+        text(1, 1.2, "Suggestion: Try rectangular layout for more stable visualization",
+             col = "blue", cex = 0.9)
+      }
+      
+      if (!is.null(tree)) {
+        text(1, 0.7, paste("Tree has", ape::Ntip(tree), "tips"),
+             col = "gray", cex = 0.8)
+      }
+    })
+    
+  }, height = 940)
+  
+  # Information output
+  output$phylo_tree_info <- renderUI({
+    if(phylo_tree_data$loaded) {
+      
+      original_tree <- phylo_tree_data$tree
+      current_tree <- processed_tree()
+      
+      tagList(
+        h4("Tree Information"),
+        p(strong("Original Tree:")),
+        p(paste("• Tips:", ape::Ntip(original_tree))),
+        p(paste("• Nodes:", ape::Nnode(original_tree))),
+        
+        if(!is.null(input$tax_level) && input$tax_level != "none") {
+          tagList(
+            hr(),
+            p(strong("Processed Tree:")),
+            p(paste("• Taxonomic level:", input$tax_level)),
+            p(paste("• Current tips:", ape::Ntip(current_tree))),
+            p(paste("• Reduction:", round((1 - ape::Ntip(current_tree)/ape::Ntip(original_tree)) * 100, 1), "%"))
+          )
+        } else {
+          p("• No taxonomic grouping applied")
+        },
+        
+        hr(),
+        p(strong("Debug Info:")),
+        p(phylo_tree_data$debug_info,
+          style = "font-family: monospace; font-size: 0.9em; color: #666;")
+      )
+      
+    } else {
+      p("No tree loaded")
+    }
+  })
+  
+  # Status output
   output$tree_status_message <- renderUI({
-    if (phylo_tree_data$file_exists && phylo_tree_data$loaded) {
-      h4("Tree loaded successfully!", style = "color: #28a745;")
-    } else if (phylo_tree_data$file_exists && !phylo_tree_data$loaded) {
+    if(phylo_tree_data$loaded) {
       div(
-        h4("Error loading tree file", style = "color: #dc3545;"),
+        h4("✓ Tree loaded successfully", style = "color: #28a745;"),
+        p(paste("File:", basename(PHYLO_TREE_PATH)), style = "color: #666;")
+      )
+    } else if(phylo_tree_data$file_exists) {
+      div(
+        h4("⚠ Error loading tree", style = "color: #dc3545;"),
         p(phylo_tree_data$error_msg, style = "color: #666;")
       )
     } else {
       div(
-        h4("Tree file not found", style = "color: #dc3545;"),
-        p(paste("Expected path:", PHYLO_TREE_PATH), style = "color: #666;"),
-        p("Please check if the file exists and the path is correct.", style = "color: #666;")
+        h4("✗ Tree file not found", style = "color: #dc3545;"),
+        p("Check file path and permissions", style = "color: #666;")
       )
     }
   })
   
-  # Tree loaded status (for conditional panels)
+  # Reactive for status
   output$tree_loaded <- reactive({
     phylo_tree_data$loaded
   })
   outputOptions(output, "tree_loaded", suspendWhenHidden = FALSE)
   
-  # Main phylogenetic tree plot
-  output$main_phylo_plot <- renderPlot({
-    req(phylo_tree_data$loaded, phylo_tree_data$tree)
-    
-    tree <- phylo_tree_data$tree
-    
-    # Root tree if requested
-    if (input$root_tree) {
-      tree <- ape::root(tree, outgroup = NULL, resolve.root = TRUE)
-    }
-    
-    # Basic plot using ggtree
-    library(ggtree)
-    library(ggplot2)
-    
-    p <- ggtree(tree, layout = input$tree_layout, 
-                size = input$tree_line_size)
-    
-    # Add tip labels if requested
-    if (input$show_tip_labels) {
-      p <- p + geom_tiplab(size = input$tree_text_size * 3)
-    }
-    
-    # Add node labels if requested
-    if (input$show_node_labels) {
-      p <- p + geom_nodelab(size = input$tree_text_size * 2.5)
-    }
-    
-    # Add branch lengths if requested
-    if (input$show_branch_length) {
-      p <- p + geom_edgelab(size = input$tree_text_size * 2)
-    }
-    
-    # Apply color palette
-    if (input$tree_color_palette != "default") {
-      p <- p + scale_color_brewer(palette = input$tree_color_palette)
-    }
-    
-    p + theme_tree()
+  # Load tree at startup
+  observeEvent(TRUE, {
+    load_phylo_tree()
+  }, once = TRUE)
+  
+  # Reload button with conflict resolution
+  observeEvent(input$reload_phylo, {
+    resolve_phylo_conflicts()  # Resolve conflicts before reloading
+    load_phylo_tree()
   })
   
-  # Interactive tree plot
-  output$plotly_phylo_plot <- renderPlotly({
-    req(phylo_tree_data$loaded, phylo_tree_data$tree)
-    
-    tree <- phylo_tree_data$tree
-    
-    if (input$root_tree) {
-      tree <- ape::root(tree, outgroup = NULL, resolve.root = TRUE)
-    }
-    
-    # Create base plot with explicit text mapping for plotly
-    p <- ggtree(tree, layout = "rectangular", size = 0.8) +
-      geom_tiplab(aes(text = paste("Species:", label)), 
-                  size = input$tree_text_size * 4,
-                  hjust = -0.1) +  # Adjust horizontal position
-      theme_tree() +
-      theme(plot.margin = margin(20, 100, 20, 20))  # Add right margin for labels
-    
-    # Add node points for better visualization
-    p <- p + geom_nodepoint(color = "steelblue", alpha = 0.7, size = 1.5)
-    
-    # Add node labels if requested
-    if (input$show_node_labels && !is.null(tree$node.label)) {
-      p <- p + geom_nodelab(aes(text = paste("Support:", label)), 
-                            size = input$tree_text_size * 3, 
-                            color = "red", nudge_x = 0.002)
-    }
-    
-    # Convert to plotly with proper tooltip configuration
-    gg_plotly <- ggplotly(p, tooltip = "text") %>%
-      layout(
-        title = list(
-          font = list(size = 16)
-        ),
-        showlegend = FALSE,
-        margin = list(l = 50, r = 150, t = 80, b = 50),  # Extra right margin
-        xaxis = list(
-          showgrid = FALSE,
-          zeroline = FALSE,
-          showticklabels = FALSE
-        ),
-        yaxis = list(
-          showgrid = FALSE,
-          zeroline = FALSE,
-          showticklabels = FALSE
-        )
-      ) %>%
-      config(
-        displayModeBar = TRUE,
-        displaylogo = FALSE,
-        modeBarButtonsToAdd = list("pan2d", "zoomIn2d", "zoomOut2d", "resetScale2d"),
-        modeBarButtonsToRemove = list("autoScale2d", "toggleSpikelines"),
-        scrollZoom = TRUE,
-        doubleClick = "reset"
-      )
-    
-    gg_plotly
-  })
-  
-  # Tree information output
-  output$phylo_tree_info <- renderUI({
-    if (phylo_tree_data$loaded && !is.null(phylo_tree_data$tree)) {
-      tree <- phylo_tree_data$tree
-      
-      tagList(
-        p(strong("Tree Statistics:")),
-        p(paste("Number of tips:", ape::Ntip(tree))),
-        p(paste("Number of nodes:", ape::Nnode(tree))),
-        p(paste("Tree length:", round(sum(tree$edge.length, na.rm = TRUE), 4))),
-        p(paste("Is rooted:", ape::is.rooted(tree))),
-        p(paste("Is binary:", ape::is.binary(tree))),
-        if (!is.null(tree$tip.label)) 
-          p(paste("Tips range:", min(nchar(tree$tip.label)), "-", max(nchar(tree$tip.label)), "characters"))
-      )
-    } else {
-      p("No tree data available", style = "color: #666;")
+  # DEBUG: Show changes in taxonomic level
+  observeEvent(input$tax_level, {
+    if(phylo_tree_data$loaded) {
+      cat("\n*** TAX LEVEL CHANGED TO:", input$tax_level, "***\n")
     }
   })
   
-  # Tree summary for the data tab
-  output$tree_summary <- renderText({
-    if (phylo_tree_data$loaded && !is.null(phylo_tree_data$tree)) {
-      capture.output(print(phylo_tree_data$tree))
-    } else {
-      "No tree data available"
+  # DEBUG: Show changes in minimum size
+  observeEvent(input$min_group_size, {
+    if(phylo_tree_data$loaded) {
+      cat("\n*** MIN GROUP SIZE CHANGED TO:", input$min_group_size, "***\n")
     }
   })
   
-  # Tree tips table
-  output$tree_tips_table <- renderDataTable({
-    if (phylo_tree_data$loaded && !is.null(phylo_tree_data$tree)) {
-      tree <- phylo_tree_data$tree
-      if (!is.null(tree$tip.label)) {
-        data.frame(
-          Tip_Number = 1:length(tree$tip.label),
-          Tip_Label = tree$tip.label,
-          stringsAsFactors = FALSE
-        )
-      } else {
-        data.frame(Message = "No tip labels available")
-      }
-    } else {
-      data.frame(Message = "No tree data loaded")
-    }
-  }, options = list(pageLength = 15, scrollY = "400px"))
-  
-  # Download handlers
-  output$download_phylo_plot <- downloadHandler(
-    filename = function() {
-      paste("phylogenetic_tree_", Sys.Date(), ".png", sep = "")
-    },
-    content = function(file) {
-      if (phylo_tree_data$loaded) {
-        ggsave(file, plot = last_plot(), width = 12, height = 8, dpi = 300)
-      }
-    }
-  )
-  
-  output$download_phylo_data <- downloadHandler(
-    filename = function() {
-      paste("phylogenetic_tree_data_", Sys.Date(), ".txt", sep = "")
-    },
-    content = function(file) {
-      if (phylo_tree_data$loaded && !is.null(phylo_tree_data$tree)) {
-        ape::write.tree(phylo_tree_data$tree, file)
-      }
-    }
-  )
+  ########################################################################
+  ########################################################################
+
 
   output$generate_report <- downloadHandler(
     filename = function() {
