@@ -1,13 +1,12 @@
 process IMPORT_READS {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/artifacts/01_imported_reads", mode: 'copy'
-    
+
     input:
-    path(trimmed_files)  // TODOS los archivos trimmeados
+    collect(path(trimmed_reads))
     
     output:
-    path("demux.qza"), emit: demux_qza      // UN solo archivo con todas las muestras
-    path("demux.qzv"), emit: demux_qzv
+    path("demux.qza", emit: demux_qza)
+    path("demux.qzv", emit: demux_qzv)
     
     script:
     """

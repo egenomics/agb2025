@@ -1,6 +1,5 @@
 process EXPORT_REP_SEQS {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/relevant_results", mode: 'copy'
 
     input:
     path(rep_seqs_qza)

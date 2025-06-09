@@ -1,6 +1,5 @@
 process BUILD_TREE {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/artifacts/05_phylogeny", mode: 'copy'
 
     input:
     path(rep_seqs_qza)

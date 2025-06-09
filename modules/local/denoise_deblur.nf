@@ -1,6 +1,5 @@
 process DENOISE_DEBLUR {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/artifacts/02_denoised_deblur", mode: 'copy'
 
     input:
     path(demux_qza)

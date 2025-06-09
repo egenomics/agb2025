@@ -1,6 +1,5 @@
 process SUMMARIZE_TABLE {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/artifacts/03_summaries", mode: 'copy'
 
     input:
     path(table_qza)

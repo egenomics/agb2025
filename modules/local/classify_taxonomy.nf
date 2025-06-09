@@ -1,6 +1,5 @@
 process CLASSIFY_TAXONOMY {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/artifacts/04_taxonomy", mode: 'copy'
 
     input:
     path(rep_seqs_qza)

@@ -23,6 +23,7 @@ include { RAREFACTION_THRESHOLD } from './modules/local/rarefaction_threshold.nf
 include { ALPHA_DIVERSITY } from './modules/local/alpha_diversity.nf'
 include { EXPORT_ALPHAPLOT } from './modules/local/export_alphaplot.nf'
 include { CREATE_RESULTS_SUMMARY } from './modules/local/create_results_summary.nf'
+include { SUGGEST_TRUNCATION_LENGTHS } from './modules/local/suggest_truncation_lengths.nf'
 
 
 workflow {
@@ -93,8 +94,16 @@ workflow {
     // 2.1. Import reads
     IMPORT_READS( all_trimmed_files )
 
-    // 2.2. Denoise
+    // 2.2. Generate Truncation suggestion report
+    SUGGEST_TRUNCATION_LENGTHS( IMPORT_READS.out.demux_qzv )
+
+    // 2.3. Denoise
     if (params.denoiser == 'dada2') {
+        // Let the user know if they are using default truncation values
+        if (params.trunc_len_f == 0 || params.trunc_len_r == 0) {
+            SUGGEST_TRUNCATION_LENGTHS.out.view()
+            error "DADA2 requires truncation lengths. No values for --trunc_len_f or --trunc_len_r were provided. A suggestion report has been generated in the results directory. Please inspect it and re-run with appropriate values."
+        }
         DENOISE_DADA2( IMPORT_READS.out.demux_qza )
         ch_denoised_table = DENOISE_DADA2.out.table
         ch_denoised_reps =  DENOISE_DADA2.out.rep_seqs
@@ -106,27 +115,24 @@ workflow {
         error "Invalid denoiser option: ${params.denoiser}. Choose 'dada2' or 'deblur'."
     }
 
-    // 2.3. Feature Table Summaries
+    // 2.4. Feature Table Summaries
     SUMMARIZE_TABLE( ch_denoised_table, ch_metadata)
     SUMMARIZE_SEQS( ch_denoised_reps )
 
-    // 2.4. Export Feature Table to TSV
+    // 2.5. Export Feature Table to TSV
     EXPORT_FEATURE_TABLE( ch_denoised_table )
 
-    // 2.5. Export Representative Sequences to FASTA
+    // 2.6. Export Representative Sequences to FASTA
     EXPORT_REP_SEQS( ch_denoised_reps )
 
-    // 2.6. Taxonomic Classification
+    // 2.7. Taxonomic Classification
     CLASSIFY_TAXONOMY( ch_denoised_reps, ch_classifier )
 
-    // 2.7. Export Taxonomy to TSV
+    // 2.8. Export Taxonomy to TSV
     EXPORT_TAXONOMY( CLASSIFY_TAXONOMY.out.taxonomy )
 
-    // 2.8. Phylogenetic Tree Construction
+    // 2.9. Phylogenetic Tree Construction
     BUILD_TREE( ch_denoised_reps )
-
-    // 2.9. Export Phylogenetic Tree to Newick format
-    EXPORT_TREE( BUILD_TREE.out.rooted_tree )
 
     // 2.10. Calculate rarefaction threshold first
     def threshold_channel

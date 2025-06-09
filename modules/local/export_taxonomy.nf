@@ -1,6 +1,5 @@
 process EXPORT_TAXONOMY {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/relevant_results", mode: 'copy'
 
     input:
     path(taxonomy_qza)

@@ -1,9 +1,8 @@
 process CREATE_RESULTS_SUMMARY {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/relevant_results", mode: 'copy'
 
     input:
-    path(feature_table_tsv)
+    path feature_table_tsv
     path(rep_seqs_fasta)
     path(taxonomy_tsv)
     path(tree_newick)

@@ -1,9 +1,8 @@
 process RAREFACTION_THRESHOLD {
     label 'qiime2'
-    publishDir "${params.outdir}/rarefaction_analysis", mode: 'copy'
-    
+
     input:
-    path(feature_table_qza)
+    path table_qza
     path(metadata_file)
     
     output:
@@ -41,7 +40,7 @@ process RAREFACTION_THRESHOLD {
                 return df
 
         print("Loading feature table...")
-        feature_table = export_feature_table('${feature_table_qza}')
+        feature_table = export_feature_table('${table_qza}')
         sample_depths = feature_table.sum(axis=0)
         
         print(f"Analyzing {len(sample_depths)} samples")

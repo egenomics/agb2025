@@ -1,9 +1,8 @@
 process EXPORT_TREE {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/relevant_results", mode: 'copy'
 
     input:
-    path(rooted_tree_qza)
+    path(tree_qza)
 
     output:
     path("phylogenetic_tree.nwk", emit: tree_newick)
@@ -11,7 +10,7 @@ process EXPORT_TREE {
     script:
     """
     qiime tools export \
-      --input-path ${rooted_tree_qza} \
+      --input-path ${tree_qza} \
       --output-path exported_tree
     
     mv exported_tree/tree.nwk phylogenetic_tree.nwk

@@ -1,6 +1,5 @@
 process EXPORT_FEATURE_TABLE {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/relevant_results", mode: 'copy'
 
     input:
     path(table_qza)

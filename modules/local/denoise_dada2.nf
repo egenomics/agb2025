@@ -1,6 +1,5 @@
 process DENOISE_DADA2 {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/artifacts/02_denoised_dada2", mode: 'copy'
 
     input:
     path(demux_qza)
@@ -14,8 +13,8 @@ process DENOISE_DADA2 {
     """
     qiime dada2 denoise-paired \
         --i-demultiplexed-seqs ${demux_qza} \
-        --p-trim-left-f 0 \
-        --p-trim-left-r 0 \
+        --p-trim-left-f ${params.trim_left_f} \
+        --p-trim-left-r ${params.trim_left_r} \
         --p-trunc-len-f ${params.trunc_len_f} \
         --p-trunc-len-r ${params.trunc_len_r} \
         --o-table table.qza \

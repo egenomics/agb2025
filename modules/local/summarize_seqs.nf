@@ -1,6 +1,5 @@
 process SUMMARIZE_SEQS {
     label 'qiime2'
-    publishDir "${params.outdir}/qiime_output/artifacts/03_summaries", mode: 'copy'
 
     input:
     path(rep_seqs_qza)
