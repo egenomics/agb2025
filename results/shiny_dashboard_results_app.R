@@ -4774,6 +4774,224 @@ server <- function(input, output, session) {
     }
   )
 
+  output$generate_report <- downloadHandler(
+    filename = function() {
+      paste0("Microbiome_Report_", Sys.Date(), ".", input$report_format)
+    },
+    content = function(file) {
+      
+      alpha_plot_path <- file.path(tempdir(), "alpha_diversity_plot.png")
+      beta_plot_path <- file.path(tempdir(), "beta_diversity_plot.png")
+      parallel_plot_path <- file.path(tempdir(), "parallel_plot.png")
+      
+      try({
+        req(data_store$sample_metadata, data_store$taxonomy_data, input$parallel_vars)
+        
+        taxa_data <- data_store$taxonomy_data %>%
+          group_by(Sample_ID) %>%
+          summarize(Total_Abundance = sum(Abundance), .groups = "drop")
+        
+        combined <- merge(data_store$sample_metadata, taxa_data, by = "Sample_ID")
+        vars <- input$parallel_vars
+        all_vars <- c(vars, "Total_Abundance")
+        
+        plot_data <- combined %>%
+          select(all_of(all_vars)) %>%
+          na.omit() %>%
+          mutate(across(where(is.character), as.factor)) %>%
+          mutate(across(where(is.factor), ~ as.numeric(as.factor(.))))
+        
+        plot_obj <- plot_ly(
+          type = 'parcoords',
+          line = list(
+            color = plot_data$Total_Abundance,
+            colorscale = 'Viridis',
+            showscale = TRUE
+          ),
+          dimensions = lapply(names(plot_data), function(col) {
+            if (is.character(combined[[col]]) || is.factor(combined[[col]])) {
+              f <- factor(combined[[col]])
+              list(
+                label = col,
+                values = as.numeric(f),
+                tickvals = seq_along(levels(f)),
+                ticktext = levels(f)
+              )
+            } else {
+              list(
+                label = col,
+                values = plot_data[[col]]
+              )
+            }
+          })
+        )
+        # Save as temporary HTML and snapshot as PNG
+        html_temp <- tempfile(fileext = ".html")
+        saveWidget(as_widget(plot_obj), file = html_temp, selfcontained = TRUE)
+        webshot2::webshot(url = html_temp, file = parallel_plot_path, vwidth = 1200, vheight = 800)
+        message("✅ Parallel plot saved.")
+      })
+      
+      # === REGENERATE p_alpha ===
+      try({
+        sample_meta <- data_store$sample_metadata
+        control_meta <- data_store$control_sample_metadata
+        
+        sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
+        control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
+        
+        sample_wide <- sample_tax %>%
+          select(Sample_ID, Species, Abundance) %>%
+          pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+        
+        sample_div <- sample_wide %>%
+          column_to_rownames("Sample_ID") %>%
+          as.matrix() %>%
+          {
+            tibble(
+              Sample_ID = rownames(.),
+              Observed = rowSums(. > 0),
+              Shannon = vegan::diversity(., index = "shannon"),
+              Simpson = vegan::diversity(., index = "simpson")
+            )
+          }
+        
+        control_wide <- control_tax %>%
+          select(Sample_ID, Species, Abundance) %>%
+          pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
+        
+        control_div <- control_wide %>%
+          column_to_rownames("Sample_ID") %>%
+          as.matrix() %>%
+          {
+            tibble(
+              Sample_ID = rownames(.),
+              Observed = rowSums(. > 0),
+              Shannon = vegan::diversity(., index = "shannon"),
+              Simpson = vegan::diversity(., index = "simpson"),
+              GroupLabel = "Control"
+            )
+          }
+        
+        diversity_df <- bind_rows(
+          sample_div %>%
+            left_join(sample_meta, by = "Sample_ID") %>%
+            mutate(GroupLabel = if (input$subdivide_samples) .[[input$condition_column]] else "Sample"),
+          control_div
+        )
+        
+        metric_col <- switch(input$alpha_metric,
+                             "Observed OTUs" = "Observed",
+                             "Shannon" = "Shannon",
+                             "Simpson" = "Simpson")
+        
+        p_alpha <- ggplot(diversity_df, aes(x = GroupLabel, y = .data[[metric_col]], fill = GroupLabel)) +
+          geom_boxplot(alpha = 0.6, outlier.shape = NA) +
+          geom_jitter(shape = 21, alpha = 0.6, color = "black", width = 0.2) +
+          labs(title = paste(input$alpha_metric, "Diversity across Groups"),
+               x = "Group", y = paste(input$alpha_metric, "Index")) +
+          theme_minimal() +
+          theme(
+            legend.position = "right",
+            plot.title = element_text(size = 14, hjust = 0.5),
+            axis.title = element_text(size = 12),
+            axis.text = element_text(size = 10),
+            legend.text = element_text(size = 10),
+            legend.title = element_text(size = 11)
+          ) +
+          scale_fill_brewer(palette = input$alpha_color_palette)
+        
+        ggsave(alpha_plot_path, plot = p_alpha, width = 10, height = 6, dpi = 300, bg = "white")
+        message("✅ Alpha plot saved.")
+      })
+      
+      # === REGENERATE p_beta ===
+      try({
+        all_tax <- bind_rows(
+          data_store$taxonomy_data,
+          data_store$control_taxonomy_data
+        ) %>%
+          select(Sample_ID, Species, Abundance) %>%
+          pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
+          column_to_rownames("Sample_ID")
+        
+        dist_method <- switch(input$distance_metric,
+                              "Bray-Curtis" = "bray",
+                              "Euclidean" = "euclidean",
+                              "Jaccard" = "jaccard",
+                              "Canberra" = "canberra",
+                              "Manhattan" = "manhattan",
+                              "Kulczynski" = "kulczynski",
+                              "Chord" = "chord")
+        
+        ord <- ape::pcoa(vegan::vegdist(all_tax, method = dist_method))
+        coords <- ord$vectors[, 1:2]
+        ord_df <- as.data.frame(coords)
+        colnames(ord_df) <- c("Axis1", "Axis2")
+        ord_df$Sample_ID <- rownames(coords)
+        
+        all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
+        ord_df <- left_join(ord_df, all_meta, by = "Sample_ID")
+        
+        ord_df$GroupLabel <- if (input$subdivide_samples) {
+          ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
+                 "Control", ord_df[[input$condition_column]])
+        } else {
+          ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
+        }
+        
+        p_beta <- ggplot(ord_df, aes(x = Axis1, y = Axis2, color = GroupLabel)) +
+          geom_point(size = 3, alpha = 0.8)
+        
+        if (isTRUE(input$show_group_ellipses)) {
+          p_beta <- p_beta +
+            stat_ellipse(aes(group = GroupLabel),
+                         type = "norm", linetype = "dashed",
+                         alpha = 0.6, size = 1, show.legend = FALSE)
+        }
+        
+        p_beta <- p_beta +
+          labs(title = paste0("PCoA on ", input$distance_metric, " Distance"),
+               x = "Axis 1", y = "Axis 2") +
+          theme_minimal() +
+          theme(
+            legend.position = "right",
+            plot.title = element_text(size = 14, hjust = 0.5),
+            axis.title = element_text(size = 12),
+            axis.text = element_text(size = 10),
+            legend.text = element_text(size = 10),
+            legend.title = element_text(size = 11)
+          )
+        
+        ggsave(beta_plot_path, plot = p_beta, width = 10, height = 6, dpi = 300, bg = "white")
+        message("✅ Beta plot saved.")
+      })
+      
+      # === RENDER REPORT ===
+      rmarkdown::render(
+        input = "report_template.Rmd",
+        output_file = file,
+        params = list(
+          report_title = input$report_title,
+          report_comments = input$report_comments,
+          selected_sections = input$report_sections,
+          alpha_plot = alpha_plot_path,
+          beta_plot = beta_plot_path,
+          parallel_plot = parallel_plot_path
+        ),
+        envir = new.env(parent = globalenv())
+      )
+    }
+  )
+  
+  
+  
+  
+  
+  
+  
+  
+  
 }
 
   
