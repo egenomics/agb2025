@@ -2,7 +2,7 @@ process IMPORT_READS {
     label 'qiime2'
 
     input:
-    collect(path(trimmed_reads))
+    path(trimmed_reads)
     
     output:
     path("demux.qza", emit: demux_qza)
