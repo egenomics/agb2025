@@ -38,3 +38,7 @@
 2025-06-07 22:19:42	19m 22s	goofy_ride	ERR	2cb46d6b83b0cd598a080127a523d6ec	2ba2e78e-3ef0-44a6-b374-0903e83d43ba	nextflow run main.nf --run_id S01070625 -profile docker
 2025-06-07 23:07:13	37m 20s	tiny_church	ERR	2cb46d6b83b0cd598a080127a523d6ec	2ba2e78e-3ef0-44a6-b374-0903e83d43ba	nextflow run main.nf --run_id S01070625 -profile docker -resume
 2025-06-07 23:45:44	1m 25s	adoring_wilson	OK	2cb46d6b83b0cd598a080127a523d6ec	2ba2e78e-3ef0-44a6-b374-0903e83d43ba	nextflow run main.nf --run_id S01070625 -profile docker -resume --auto_rarefaction true
+2025-06-09 14:29:36	-	agitated_ochoa	-	47b8bdff523e11bca0108dd6c6ed8d58	d1c2d05b-82a1-4d21-a5cd-ac5a40e800d0	nextflow run main.nf -profile docker --run_id R02070625 -process.memory 8.GB -process.cpus 2
+2025-06-09 14:32:38	-	hopeful_shaw	-	47b8bdff523e11bca0108dd6c6ed8d58	c4ba8788-123a-4ad7-bcef-7c5788ccad12	nextflow run main.nf -profile docker --run_id R02070625 -process.memory 8.GB -process.cpus 2
+2025-06-09 14:32:55	-	silly_gutenberg	-	47b8bdff523e11bca0108dd6c6ed8d58	5923bf5f-6b58-461a-9c8e-eb7ff7e69e5f	nextflow run main.nf -profile docker --run_id R02090625 -process.memory 8.GB -process.cpus 2
+2025-06-09 17:17:03	-	cheeky_kowalevski	-	47b8bdff523e11bca0108dd6c6ed8d58	2d0c0a17-e755-46d2-a4b0-7914793e65dc	nextflow run main.nf -profile docker --run_id R02090625 -process.memory 8.GB -process.cpus 2
