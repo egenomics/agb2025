@@ -10,7 +10,6 @@ include { KRAKEN2_KRAKEN2 as KRAKEN } from './modules/nf-core/kraken2/kraken2/ma
 // QIIME2 modules
 include { IMPORT_READS          } from './modules/local/import_reads.nf'
 include { DENOISE_DADA2         } from './modules/local/denoise_dada2.nf'
-include { DENOISE_DEBLUR        } from './modules/local/denoise_deblur.nf'
 include { CLASSIFY_TAXONOMY     } from './modules/local/classify_taxonomy.nf'
 include { BUILD_TREE            } from './modules/local/build_tree.nf'
 include { SUMMARIZE_SEQS        } from './modules/local/summarize_seqs.nf'
@@ -98,22 +97,14 @@ workflow {
     SUGGEST_TRUNCATION_LENGTHS( IMPORT_READS.out.demux_qzv )
 
     // 2.3. Denoise
-    if (params.denoiser == 'dada2') {
-        // Let the user know if they are using default truncation values
-        if (params.trunc_len_f == 0 || params.trunc_len_r == 0) {
-            SUGGEST_TRUNCATION_LENGTHS.out.view()
-            error "DADA2 requires truncation lengths. No values for --trunc_len_f or --trunc_len_r were provided. A suggestion report has been generated in the results directory. Please inspect it and re-run with appropriate values."
-        }
-        DENOISE_DADA2( IMPORT_READS.out.demux_qza )
-        ch_denoised_table = DENOISE_DADA2.out.table
-        ch_denoised_reps =  DENOISE_DADA2.out.rep_seqs
-    } else if (params.denoiser == 'deblur') {
-        DENOISE_DEBLUR( IMPORT_READS.out.demux_qza )
-        ch_denoised_table = DENOISE_DEBLUR.out.table
-        ch_denoised_reps =DENOISE_DEBLUR.out.rep_seqs
-    } else {
-        error "Invalid denoiser option: ${params.denoiser}. Choose 'dada2' or 'deblur'."
+    // Let the user know if they are using default truncation values
+    if (params.trunc_len_f == 0 || params.trunc_len_r == 0) {
+        SUGGEST_TRUNCATION_LENGTHS.out.view()
+        error "DADA2 requires truncation lengths. No values for --trunc_len_f or --trunc_len_r were provided. A suggestion report has been generated in the results directory. Please inspect it and re-run with appropriate values."
     }
+    DENOISE_DADA2( IMPORT_READS.out.demux_qza )
+    ch_denoised_table = DENOISE_DADA2.out.table
+    ch_denoised_reps =  DENOISE_DADA2.out.rep_seqs
 
     // 2.4. Feature Table Summaries
     SUMMARIZE_TABLE( ch_denoised_table, ch_metadata)
@@ -152,14 +143,14 @@ workflow {
     )
 
     if (params.auto_rarefaction) {
-        RAREFACTION_THRESHOLD.out.summary.view { 
-            "\n=== RAREFACTION THRESHOLD CALCULATED ===\n${it.text}\n========================================\n" 
+        RAREFACTION_THRESHOLD.out.summary.view {
+            "\n=== RAREFACTION THRESHOLD CALCULATED ===\n${it.text}\n========================================\n"
         }
         ch_rarefaction_summary = RAREFACTION_THRESHOLD.out.summary
     } else {
         ch_rarefaction_summary = Channel.empty()
     }
-    
+
     // 2.12. Export alpha visualization to a plot
     EXPORT_ALPHAPLOT(
         ALPHA_DIVERSITY.out[1]  // This should be the .qzv file from alpha diversity
