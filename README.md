@@ -131,7 +131,7 @@ In this step, make sure you have run the following script found in the previous 
 After executing `./create_run.sh`, a `runs/<run_id>/` folder will be created. Copy the `run_id` and use it to run the pipeline.
 
 ```bash
-nextflow run main.nf --run_id <run_id> -profile docker
+nextflow run main.nf --run_id <run_id> -profile docker --auto_rarefaction TRUE
 # i.e. nextflow run main.nf --run_id R01310525 -profile docker
 ```
 
