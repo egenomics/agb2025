@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
+# Download the Kraken2 db
 set -euo pipefail
-
 DB_FILENAME="k2_Human_20230629.tar.gz"
 TMP_FILENAME="${DB_FILENAME}.part"
 EXTRACTED_DIR="k2_Human_20230629"
@@ -31,3 +31,16 @@ else
   tar -xzf "$DB_FILENAME" -C "$EXTRACTED_DIR"
   echo "[INFO] Extraction complete. Database available at '$EXTRACTED_DIR'."
 fi
+
+
+
+# run the script to download the kraken2 database
+./download_krakendb.sh
+
+# Download the classifier
+mkdir databases
+# Download the classifier using wget
+wget -O databases/silva-138-99-nb-classifier.qza \
+https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza
+
+

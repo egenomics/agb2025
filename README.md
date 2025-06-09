@@ -107,31 +107,18 @@ chmod +x create_run.sh
 
 This script is only needed to simulate a real sequencing run during development.
 
-### 3 · Download the Kraken2 db
+### 3 · Setup Installing
 
-To run Kraken2, we need to download a database built from the human library. The script will save the databse in the main project folder with the name k2_Human_20230629.tar.gz. If the file already exists, it will not download anything.
+To run the pipeline (specially Kraken2), we have to download a database built from the human library. The script will save the database in the main project folder with the name k2_Human_20230629.tar.gz. If the file already exists, it will not download anything.
+
+On the other hand, for running qiime2 and obtaining the feature table, a classifier has to be downloaded. By default, the classifier downloaded is: https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza. If you want to change the classifier, further information is in the documentation.
+
+For install this requirement, run this command line:
 
 ```bash
-# make the download script executable
-chmod +x download_krakendb.sh
+chmod +x INSTALLME.sh
+./INSTALLME.sh
 ```
-
-```bash
-# run the script to download the kraken2 database
-./download_krakendb.sh
-```
-
-### 4 · Download the classifier
-
-First, create the folder databases:
-```bash
-mkdir databases
-```
-For running qiime2 and obtaining the feature table, the classifier has to be downloaded, for that you can use the following link:
-
-https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza
-
-Place the downloaded database in the new folder in the main project folder.
 
 ### 5 · Run the pipeline
 In this step, make sure you have run the following script found in the previous steps:
