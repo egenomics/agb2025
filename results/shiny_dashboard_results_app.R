@@ -3819,22 +3819,35 @@ server <- function(input, output, session) {
     
     sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
     control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
+    sample_tax$Abundance <- as.integer(round(sample_tax$Abundance))
+    control_tax$Abundance <- as.integer(round(control_tax$Abundance))
+    
     
     sample_wide <- sample_tax %>%
       select(Sample_ID, Species, Abundance) %>%
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
     
-    sample_div <- sample_wide %>%
+    sample_matrix <- sample_wide %>%
       column_to_rownames("Sample_ID") %>%
-      as.matrix() %>%
-      {
-        tibble(
-          Sample_ID = rownames(.),
-          Observed = rowSums(. > 0),
-          Shannon = vegan::diversity(., index = "shannon"),
-          Simpson = vegan::diversity(., index = "simpson")
-        )
-      }
+      as.matrix()
+    
+    # Automatically choose the rarefaction depth
+    min_depth <- min(rowSums(sample_matrix))
+    if (min_depth < 1) {
+      showNotification("Rarefaction failed: at least one sample has no reads.", type = "error")
+      return(NULL)
+    }
+    
+    # Rarefy to the minimum depth
+    rarefied_sample_matrix <- vegan::rrarefy(sample_matrix, sample = min_depth)
+    
+    sample_div <- tibble(
+      Sample_ID = rownames(rarefied_sample_matrix),
+      Observed = rowSums(rarefied_sample_matrix > 0),
+      Shannon = vegan::diversity(rarefied_sample_matrix, index = "shannon"),
+      Simpson = vegan::diversity(rarefied_sample_matrix, index = "simpson")
+    )
+    
     
     if (input$subdivide_samples) {
       req(input$condition_column)
@@ -3851,18 +3864,26 @@ server <- function(input, output, session) {
       select(Sample_ID, Species, Abundance) %>%
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
     
-    control_div <- control_wide %>%
+    control_matrix <- control_wide %>%
       column_to_rownames("Sample_ID") %>%
-      as.matrix() %>%
-      {
-        tibble(
-          Sample_ID = rownames(.),
-          Observed = rowSums(. > 0),
-          Shannon = vegan::diversity(., index = "shannon"),
-          Simpson = vegan::diversity(., index = "simpson"),
-          GroupLabel = "Control"
-        )
-      }
+      as.matrix()
+    
+    min_control_depth <- min(rowSums(control_matrix))
+    if (min_control_depth < 1) {
+      showNotification("Rarefaction failed: control samples have no reads.", type = "error")
+      return(NULL)
+    }
+    
+    rarefied_control_matrix <- vegan::rrarefy(control_matrix, sample = min_control_depth)
+    
+    control_div <- tibble(
+      Sample_ID = rownames(rarefied_control_matrix),
+      Observed = rowSums(rarefied_control_matrix > 0),
+      Shannon = vegan::diversity(rarefied_control_matrix, index = "shannon"),
+      Simpson = vegan::diversity(rarefied_control_matrix, index = "simpson"),
+      GroupLabel = "Control"
+    )
+    
     
     diversity_df <- bind_rows(sample_div, control_div)
     
@@ -3920,6 +3941,8 @@ server <- function(input, output, session) {
     control_meta <- data_store$control_sample_metadata
     sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
     control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
+    sample_tax$Abundance <- as.integer(round(sample_tax$Abundance))
+    control_tax$Abundance <- as.integer(round(control_tax$Abundance))
     
     # Sample diversity
     sample_wide <- sample_tax %>%
@@ -4049,13 +4072,15 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  
   output$ordination_plot <- renderPlotly({
     req(input$diversity_type == "beta")
     req(data_store$sample_metadata, data_store$taxonomy_data)
     req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
     req(input$distance_metric, input$ordination_method)
     
-    # Combine taxonomy
+    # Combine taxonomy and apply rarefaction
     all_tax <- bind_rows(
       data_store$taxonomy_data,
       data_store$control_taxonomy_data
@@ -4063,6 +4088,16 @@ server <- function(input, output, session) {
       select(Sample_ID, Species, Abundance) %>%
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
       column_to_rownames("Sample_ID")
+    
+    # Ensure integer counts
+    all_tax <- round(all_tax)  # round to nearest whole number
+    all_tax <- as.matrix(all_tax)
+    storage.mode(all_tax) <- "integer"  # force integer mode
+    
+    # Then rarefy
+    min_depth <- min(rowSums(all_tax))
+    rarefied_tax <- vegan::rrarefy(all_tax, sample = min_depth)
+    
     
     # Distance
     dist_method <- switch(input$distance_metric,
@@ -4073,7 +4108,7 @@ server <- function(input, output, session) {
                           "Manhattan"   = "manhattan",
                           "Kulczynski"  = "kulczynski",
                           "Chord"       = "chord")
-    dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+    dist_matrix <- vegan::vegdist(rarefied_tax, method = dist_method)
     
     # Ordination
     coords <- NULL
@@ -4118,14 +4153,14 @@ server <- function(input, output, session) {
         return(NULL)
       }
       umap_result <- tryCatch({
-        umap::umap(as.matrix(all_tax))
+        umap::umap(as.matrix(rarefied_tax))
       }, error = function(e) {
         showNotification(paste("UMAP error:", e$message), type = "error")
         return(NULL)
       })
       if (is.null(umap_result) || is.null(umap_result$layout)) return(NULL)
       coords <- umap_result$layout[, 1:2]
-      rownames(coords) <- rownames(all_tax)
+      rownames(coords) <- rownames(rarefied_tax)
       title_prefix <- "UMAP"
     }
     
@@ -4201,6 +4236,15 @@ server <- function(input, output, session) {
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
       column_to_rownames("Sample_ID")
     
+    # Ensure integer counts
+    all_tax <- round(all_tax)  # round to nearest whole number
+    all_tax <- as.matrix(all_tax)
+    storage.mode(all_tax) <- "integer"  # force integer mode
+    
+    # Then rarefy
+    min_depth <- min(rowSums(all_tax))
+    rarefied_tax <- vegan::rrarefy(all_tax, sample = min_depth)
+    
     # Sanity check for Bray-Curtis
     if (input$distance_metric == "Bray-Curtis") {
       if (any(all_tax < 0, na.rm = TRUE)) {
@@ -4232,11 +4276,11 @@ server <- function(input, output, session) {
                           "Chord"       = "chord")
     
     
-    dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+    dist_matrix <- vegan::vegdist(rarefied_tax, method = dist_method)
     
     # Convert to data frame for adonis2
     stat_df <- data.frame(GroupLabel = group_label)
-    rownames(stat_df) <- rownames(all_tax)
+    rownames(stat_df) <- rownames(rarefied_tax)
     
     # Run adonis2
     adonis_result <- vegan::adonis2(dist_matrix ~ GroupLabel, data = stat_df)
@@ -4260,6 +4304,15 @@ server <- function(input, output, session) {
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
       column_to_rownames("Sample_ID")
     
+    # Ensure integer counts
+    all_tax <- round(all_tax)  # round to nearest whole number
+    all_tax <- as.matrix(all_tax)
+    storage.mode(all_tax) <- "integer"  # force integer mode
+    
+    # Then rarefy
+    min_depth <- min(rowSums(all_tax))
+    rarefied_tax <- vegan::rrarefy(all_tax, sample = min_depth)
+    
     # Compute distance matrix
     dist_method <- switch(input$distance_metric,
                           "Bray-Curtis" = "bray",
@@ -4270,7 +4323,7 @@ server <- function(input, output, session) {
                           "Kulczynski"  = "kulczynski",
                           "Chord"       = "chord")
     
-    dist_matrix <- vegan::vegdist(all_tax, method = dist_method)
+    dist_matrix <- vegan::vegdist(rarefied_tax, method = dist_method)
     hc <- hclust(dist_matrix, method = "ward.D2")
     dend <- as.dendrogram(hc)
     
