@@ -47,9 +47,13 @@ process SUGGEST_TRUNCATION_LENGTHS {
 
                 last_good_pos = 0
                 for row in reader:
-                    position = int(row[0])
-                    # Column 2 is the '25%' (lower quartile) quality score
-                    lower_quartile_quality = int(float(row[2]))
+                    try:
+                        position = int(row[0])
+                        # Column 2 is the '25%' (lower quartile) quality score
+                        lower_quartile_quality = int(float(row[2]))
+                    except (ValueError, IndexError):
+                        # Skip rows that are not data (e.g. extra headers, comments, blank lines)
+                        continue
 
                     if lower_quartile_quality < QUALITY_THRESHOLD:
                         report.append(f"  - Quality drop detected at position {position}. Lower quartile quality ({lower_quartile_quality}) is below threshold ({QUALITY_THRESHOLD}).")
