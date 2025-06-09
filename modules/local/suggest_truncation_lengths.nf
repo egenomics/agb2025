@@ -29,20 +29,20 @@ process SUGGEST_TRUNCATION_LENGTHS {
 
     def find_truncation_position(qzv_path, read_direction):
         with zipfile.ZipFile(qzv_path, 'r') as z:
-            # Find the seven-number-summary.csv file for the specified read direction
+            # Find the seven-number-summaries.tsv file for the specified read direction
             summary_file_path = None
             for f in z.namelist():
-                if f.endswith(f'{read_direction}-seven-number-summary.csv'):
+                if f.endswith(f'{read_direction}-seven-number-summaries.tsv'):
                     summary_file_path = f
                     break
             
             if not summary_file_path:
-                return None, [f"ERROR: Could not find '{read_direction}-seven-number-summary.csv' in the QZV file."]
+                return None, [f"ERROR: Could not find '{read_direction}-seven-number-summaries.tsv' in the QZV file."]
 
             report = [f"Parsing quality data from: {summary_file_path}"]
             
             with z.open(summary_file_path) as csvfile:
-                reader = csv.reader([line.decode('utf-8') for line in csvfile])
+                reader = csv.reader([line.decode('utf-8') for line in csvfile], delimiter='\\t')
                 header = next(reader) # Skip header
 
                 last_good_pos = 0
