@@ -480,7 +480,7 @@ ui <- dashboardPage(
                              tags$ul(
                                tags$li("Ensure your CSV/TSV files have proper headers"),
                                tags$li("Include both patient and control samples when possible"),
-                               tags$li("Check that Sample_IDs match across all files"),
+                               tags$li("Check that sample IDs match across all files"),
                                tags$li("Remove any special characters from column names")
                              )
                            )
@@ -949,7 +949,6 @@ ui <- dashboardPage(
                            condition = "input.subdivide_samples == true",
                            selectInput("condition_column", "Clinical condition to group by:",
                                        choices = c("Ongoing Conditions" = "Ongoing_conditions", 
-                                                   "Neurological Disorders" = "Neurological_Disorders", 
                                                    "Allergies" = "Allergies", 
                                                    "Cancer" = "Cancer"),
                                        selected = "Ongoing_conditions")
@@ -972,9 +971,8 @@ ui <- dashboardPage(
                                        selected = "Shannon"),
                            uiOutput("alpha_plot_type_ui"),
                            uiOutput("otu_warning_ui"),
-                           selectInput("alpha_color_palette", "Color Palette:",
-                                       choices = c("Set1", "Dark2", "Pastel1", "Paired", "Viridis"),
-                                       selected = "Set1")
+                           uiOutput("alpha_palette_ui")
+                           
                          ),
                          conditionalPanel(
                            condition = "input.diversity_type == 'beta'",
@@ -1949,7 +1947,7 @@ server <- function(input, output, session) {
     if(nrow(sample_info) > 0) {
       HTML(paste0(
         "<h4>Sample Information</h4>",
-        "<p><strong>Sample_ID:</strong> ", sample_info$Sample_ID, "</p>",
+        "<p><strong>Sample ID:</strong> ", sample_info$Sample_ID, "</p>",
         "<p><strong>Collection Date:</strong> ", sample_info$Collection_Date, "</p>",
         "<p><strong>Age:</strong> ", sample_info$Age, "</p>",
         "<p><strong>Gender:</strong> ", sample_info$Gender, "</p>",
@@ -2676,7 +2674,7 @@ server <- function(input, output, session) {
   observe({
     req(data_store$sample_metadata, data_store$control_sample_metadata)
     
-    # Combine both patient and control Sample_IDs
+    # Combine both patient and control sample IDs
     all_samples <- c(data_store$sample_metadata$Sample_ID, 
                      data_store$control_sample_metadata$Sample_ID)
     
@@ -2961,7 +2959,7 @@ server <- function(input, output, session) {
               legend.text = element_text(size = 8),
               panel.spacing = unit(0.5, "lines"),
               panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
-        labs(x = "Sample_ID", y = "Relative Abundance (%)", 
+        labs(x = "Sample ID", y = "Relative Abundance (%)", 
              title = paste("Relative Abundance of", input$tax_level, "by", 
                            ifelse(metadata_col == "Age", "Age Category", metadata_col)),
              fill = input$tax_level) +
@@ -2996,7 +2994,7 @@ server <- function(input, output, session) {
               legend.position = "bottom",
               legend.text = element_text(size = 8),
               panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
-        labs(x = "Sample_ID", y = "Relative Abundance (%)", 
+        labs(x = "Sample ID", y = "Relative Abundance (%)", 
              title = paste("Relative Abundance of", input$tax_level, "by Group"),
              fill = input$tax_level) +
         get_color_scheme() +
@@ -3015,7 +3013,7 @@ server <- function(input, output, session) {
         theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
               legend.position = "bottom",
               legend.text = element_text(size = 8)) +
-        labs(x = "Sample_ID", y = "Relative Abundance (%)", 
+        labs(x = "Sample ID", y = "Relative Abundance (%)", 
              title = paste("Relative Abundance of", input$tax_level),
              fill = input$tax_level) +
         get_color_scheme()
@@ -3087,7 +3085,7 @@ server <- function(input, output, session) {
                 legend.position = "bottom",
                 panel.spacing = unit(0.5, "lines"),
                 panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
-          labs(x = "Sample_ID", y = "Relative Abundance (%)", 
+          labs(x = "Sample ID", y = "Relative Abundance (%)", 
                title = paste("Relative Abundance of", input$tax_level, "by", 
                              ifelse(metadata_col == "Age", "Age Category", metadata_col)),
                fill = input$tax_level) +
@@ -3110,7 +3108,7 @@ server <- function(input, output, session) {
           theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
                 legend.position = "bottom",
                 panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
-          labs(x = "Sample_ID", y = "Relative Abundance (%)", 
+          labs(x = "Sample ID", y = "Relative Abundance (%)", 
                title = paste("Relative Abundance of", input$tax_level, "by Group"),
                fill = input$tax_level) +
           get_color_scheme() +
@@ -3123,7 +3121,7 @@ server <- function(input, output, session) {
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
                 legend.position = "bottom") +
-          labs(x = "Sample_ID", y = "Relative Abundance (%)", 
+          labs(x = "Sample ID", y = "Relative Abundance (%)", 
                title = paste("Relative Abundance of", input$tax_level),
                fill = input$tax_level) +
           get_color_scheme()
@@ -3804,6 +3802,28 @@ server <- function(input, output, session) {
   # Add this reactive values object at the top of your server function
   rv <- reactiveValues(latest_ggplot = NULL)
   
+  output$alpha_palette_ui <- renderUI({
+    req(data_store$sample_metadata, data_store$taxonomy_data)
+    
+    # Estimate number of groups
+    all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
+    group_col <- if (input$subdivide_samples) input$condition_column else NULL
+    
+    n_groups <- if (!is.null(group_col) && group_col %in% names(all_meta)) {
+      length(unique(all_meta[[group_col]])) + 1  # +1 for control
+    } else {
+      2
+    }
+    
+    # Only show palette options if small enough
+    if (n_groups <= 9) {
+      selectInput("alpha_color_palette", "Color Palette:",
+                  choices = rownames(RColorBrewer::brewer.pal.info),
+                  selected = "Set1")
+    }
+  })
+  
+  
   # Modified diversity_main_plot with ggplot storage
   output$diversity_main_plot <- renderPlotly({
     req(data_store$sample_metadata, data_store$taxonomy_data)
@@ -3919,8 +3939,18 @@ server <- function(input, output, session) {
       labs(title = paste(input$alpha_metric, "Diversity across Groups"),
            x = "Group", y = paste(input$alpha_metric, "Index")) +
       theme_minimal() +
-      theme(legend.position = ifelse(input$show_diversity_legend, "right", "none")) +
-      scale_fill_brewer(palette = input$alpha_color_palette)
+      theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate labels
+        legend.position = ifelse(input$show_diversity_legend, "right", "none")
+      )    
+    n_groups <- length(unique(diversity_df$GroupLabel))
+    
+    if (!is.null(input$alpha_color_palette) && n_groups <= 9) {
+      p <- p + scale_fill_brewer(palette = input$alpha_color_palette)
+    } else {
+      p <- p + scale_fill_manual(values = scales::hue_pal()(n_groups))
+    }
+    
     
     # STORE THE GGPLOT OBJECT FOR DOWNLOAD
     rv$latest_ggplot <- p
