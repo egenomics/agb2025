@@ -125,6 +125,8 @@ workflow {
     // 2.9. Phylogenetic Tree Construction
     BUILD_TREE( ch_denoised_reps )
 
+    EXPORT_TREE( BUILD_TREE.out.rooted_tree )
+
     // 2.10. Calculate rarefaction threshold first
     def threshold_channel
     if (params.auto_rarefaction) {
