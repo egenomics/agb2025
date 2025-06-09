@@ -1,86 +1,99 @@
-Jun-07 13:50:06.587 [main] DEBUG nextflow.cli.Launcher - $> nextflow run metadata.nf --run_id R01070625
-Jun-07 13:50:06.691 [main] DEBUG nextflow.cli.CmdRun - N E X T F L O W  ~  version 25.04.3
-Jun-07 13:50:06.720 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/ivon/.nextflow/plugins; core-plugins: nf-amazon@2.15.0,nf-azure@1.16.0,nf-cloudcache@0.4.3,nf-codecommit@0.2.3,nf-console@1.2.1,nf-google@1.21.0,nf-k8s@1.0.0,nf-tower@1.11.3,nf-wave@1.12.1
-Jun-07 13:50:06.750 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
-Jun-07 13:50:06.751 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
-Jun-07 13:50:06.754 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
-Jun-07 13:50:06.763 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
-Jun-07 13:50:06.810 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/ivon/.nextflow/secrets/store.json
-Jun-07 13:50:06.821 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@5b5c0057] - activable => nextflow.secret.LocalSecretsProvider@5b5c0057
-Jun-07 13:50:06.880 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 from script declaration
-Jun-07 13:50:06.894 [main] DEBUG nextflow.cli.CmdRun - Launching `metadata.nf` [adoring_hodgkin] DSL2 - revision: 65def2c0a2
-Jun-07 13:50:06.896 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
-Jun-07 13:50:06.896 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
-Jun-07 13:50:06.950 [main] DEBUG nextflow.Session - Session UUID: f3531354-023e-4816-81cf-b4428048fd93
-Jun-07 13:50:06.951 [main] DEBUG nextflow.Session - Run name: adoring_hodgkin
-Jun-07 13:50:06.951 [main] DEBUG nextflow.Session - Executor pool size: 16
-Jun-07 13:50:06.958 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
-Jun-07 13:50:06.963 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=48; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
-Jun-07 13:50:06.982 [main] DEBUG nextflow.cli.CmdRun - 
+Jun-09 17:37:35.113 [main] DEBUG nextflow.cli.Launcher - $> nextflow run metadata.nf --run_id R02090625
+Jun-09 17:37:35.180 [main] DEBUG nextflow.cli.CmdRun - N E X T F L O W  ~  version 25.04.3
+Jun-09 17:37:35.193 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/ivon/.nextflow/plugins; core-plugins: nf-amazon@2.15.0,nf-azure@1.16.0,nf-cloudcache@0.4.3,nf-codecommit@0.2.3,nf-console@1.2.1,nf-google@1.21.0,nf-k8s@1.0.0,nf-tower@1.11.3,nf-wave@1.12.1
+Jun-09 17:37:35.210 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Jun-09 17:37:35.211 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Jun-09 17:37:35.212 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
+Jun-09 17:37:35.219 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Jun-09 17:37:35.242 [main] DEBUG n.secret.LocalSecretsProvider - Secrets store: /home/ivon/.nextflow/secrets/store.json
+Jun-09 17:37:35.248 [main] DEBUG nextflow.secret.SecretsLoader - Discovered secrets providers: [nextflow.secret.LocalSecretsProvider@5b5c0057] - activable => nextflow.secret.LocalSecretsProvider@5b5c0057
+Jun-09 17:37:35.275 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 from script declaration
+Jun-09 17:37:35.283 [main] DEBUG nextflow.cli.CmdRun - Launching `metadata.nf` [shrivelled_varahamihira] DSL2 - revision: 4a0e9e06d7
+Jun-09 17:37:35.284 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Jun-09 17:37:35.284 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins resolved requirement=[]
+Jun-09 17:37:35.319 [main] DEBUG nextflow.Session - Session UUID: 967f42a6-5eb2-4d63-b7f2-ed34af591136
+Jun-09 17:37:35.319 [main] DEBUG nextflow.Session - Run name: shrivelled_varahamihira
+Jun-09 17:37:35.319 [main] DEBUG nextflow.Session - Executor pool size: 16
+Jun-09 17:37:35.324 [main] DEBUG nextflow.file.FilePorter - File porter settings maxRetries=3; maxTransfers=50; pollTimeout=null
+Jun-09 17:37:35.327 [main] DEBUG nextflow.util.ThreadPoolBuilder - Creating thread pool 'FileTransfer' minSize=10; maxSize=48; workQueue=LinkedBlockingQueue[-1]; allowCoreThreadTimeout=false
+Jun-09 17:37:35.339 [main] DEBUG nextflow.cli.CmdRun - 
   Version: 25.04.3 build 5949
   Created: 02-06-2025 20:56 UTC (22:56 CEST)
   System: Linux 6.11.0-26-generic
   Runtime: Groovy 4.0.26 on OpenJDK 64-Bit Server VM 21.0.7+6-Ubuntu-0ubuntu124.04
   Encoding: UTF-8 (UTF-8)
-  Process: 86020@ivon-Cyborg-15-A13VF [127.0.1.1]
-  CPUs: 16 - Mem: 31.1 GB (12.4 GB) - Swap: 8 GB (8 GB)
-Jun-07 13:50:07.002 [main] DEBUG nextflow.Session - Work-dir: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/work [ext2/ext3]
-Jun-07 13:50:07.002 [main] DEBUG nextflow.Session - Script base path does not exist or is not a directory: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/bin
-Jun-07 13:50:07.012 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
-Jun-07 13:50:07.021 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
-Jun-07 13:50:07.025 [main] DEBUG nextflow.Session - Observer factory (v2): LinObserverFactory
-Jun-07 13:50:07.053 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
-Jun-07 13:50:07.063 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 17; maxThreads: 1000
-Jun-07 13:50:07.127 [main] DEBUG nextflow.Session - Session start
-Jun-07 13:50:07.742 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
-Jun-07 13:50:07.876 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
-Jun-07 13:50:07.876 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
-Jun-07 13:50:07.883 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
-Jun-07 13:50:07.891 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=16; memory=31.1 GB; capacity=16; pollInterval=100ms; dumpInterval=5m
-Jun-07 13:50:07.894 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
-Jun-07 13:50:07.929 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'merge_metadata': maxForks=0; fair=false; array=0
-Jun-07 13:50:07.971 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
-Jun-07 13:50:07.972 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
-Jun-07 13:50:07.973 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'classify_quality': maxForks=0; fair=false; array=0
-Jun-07 13:50:07.976 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: classify_quality, merge_metadata
-Jun-07 13:50:07.978 [main] DEBUG nextflow.Session - Igniting dataflow network (4)
-Jun-07 13:50:07.983 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > merge_metadata
-Jun-07 13:50:07.983 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > classify_quality
-Jun-07 13:50:07.984 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
-  Script_ceea0bf54e97d6b2: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/metadata.nf
-Jun-07 13:50:07.984 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
-Jun-07 13:50:07.984 [main] DEBUG nextflow.Session - Session await
-Jun-07 13:50:08.071 [Actor Thread 5] DEBUG nextflow.processor.TaskProcessor - Handling unexpected condition for
-  task: name=classify_quality; work-dir=null
-  error [nextflow.exception.ProcessUnrecoverableException]: Not a valid path value: 'sample_metadata.csv'
-Jun-07 13:50:08.102 [Actor Thread 5] ERROR nextflow.processor.TaskProcessor - Error executing process > 'classify_quality'
-
-Caused by:
-  Not a valid path value: 'sample_metadata.csv'
-
-
-
-Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
-Jun-07 13:50:08.108 [Actor Thread 5] DEBUG nextflow.Session - Session aborted -- Cause: Not a valid path value: 'sample_metadata.csv'
-Jun-07 13:50:08.121 [Actor Thread 6] DEBUG nextflow.util.HashBuilder - Unable to get file attributes file: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/runs/R01070625/metadata/sample_metadata.tsv -- Cause: java.nio.file.NoSuchFileException: /home/ivon/Desktop/agb/agb-project/agb2025/group2a/runs/R01070625/metadata/sample_metadata.tsv
-Jun-07 13:50:08.175 [Actor Thread 5] DEBUG nextflow.Session - The following nodes are still active:
+  Process: 128242@ivon-Cyborg-15-A13VF [127.0.1.1]
+  CPUs: 16 - Mem: 31.1 GB (12.3 GB) - Swap: 8 GB (8 GB)
+Jun-09 17:37:35.354 [main] DEBUG nextflow.Session - Work-dir: /home/ivon/Desktop/3rd-term/agb/agb-project/agb2025/group2a/work [ext2/ext3]
+Jun-09 17:37:35.354 [main] DEBUG nextflow.Session - Script base path does not exist or is not a directory: /home/ivon/Desktop/3rd-term/agb/agb-project/agb2025/group2a/bin
+Jun-09 17:37:35.360 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Jun-09 17:37:35.365 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Jun-09 17:37:35.368 [main] DEBUG nextflow.Session - Observer factory (v2): LinObserverFactory
+Jun-09 17:37:35.384 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Jun-09 17:37:35.390 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 17; maxThreads: 1000
+Jun-09 17:37:35.428 [main] DEBUG nextflow.Session - Session start
+Jun-09 17:37:35.759 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Jun-09 17:37:35.844 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Jun-09 17:37:35.844 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Jun-09 17:37:35.848 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Jun-09 17:37:35.852 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=16; memory=31.1 GB; capacity=16; pollInterval=100ms; dumpInterval=5m
+Jun-09 17:37:35.853 [main] DEBUG n.processor.TaskPollingMonitor - >>> barrier register (monitor: local)
+Jun-09 17:37:35.872 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'merge_metadata': maxForks=0; fair=false; array=0
+Jun-09 17:37:35.903 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Jun-09 17:37:35.903 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Jun-09 17:37:35.903 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'add_homosapiens_column': maxForks=0; fair=false; array=0
+Jun-09 17:37:35.905 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Jun-09 17:37:35.905 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Jun-09 17:37:35.906 [main] DEBUG nextflow.processor.TaskProcessor - Creating process 'classify_quality': maxForks=0; fair=false; array=0
+Jun-09 17:37:35.907 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: classify_quality, add_homosapiens_column, merge_metadata
+Jun-09 17:37:35.908 [main] DEBUG nextflow.Session - Igniting dataflow network (6)
+Jun-09 17:37:35.912 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > merge_metadata
+Jun-09 17:37:35.912 [PathVisitor-3] DEBUG nextflow.file.PathVisitor - files for syntax: glob; folder: runs/R02090625/taxonomy/kraken2/; pattern: *.report.txt; options: [checkIfExists:true]
+Jun-09 17:37:35.912 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > add_homosapiens_column
+Jun-09 17:37:35.912 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > classify_quality
+Jun-09 17:37:35.913 [main] DEBUG nextflow.script.ScriptRunner - Parsed script files:
+  Script_70e7fec1849fb555: /home/ivon/Desktop/3rd-term/agb/agb-project/agb2025/group2a/metadata.nf
+Jun-09 17:37:35.913 [main] DEBUG nextflow.script.ScriptRunner - > Awaiting termination 
+Jun-09 17:37:35.913 [main] DEBUG nextflow.Session - Session await
+Jun-09 17:37:35.914 [PathVisitor-3] DEBUG nextflow.file.PathVisitor - No such file or directory: runs/R02090625/taxonomy/kraken2/ -- Skipping visit
+Jun-09 17:37:35.915 [PathVisitor-3] ERROR nextflow.Channel - No files match pattern `*.report.txt` at path: runs/R02090625/taxonomy/kraken2/
+java.lang.IllegalArgumentException: No files match pattern `*.report.txt` at path: runs/R02090625/taxonomy/kraken2/
+	at nextflow.file.PathVisitor.pathImpl(PathVisitor.groovy:173)
+	at nextflow.file.PathVisitor.applyGlobPattern0(PathVisitor.groovy:131)
+	at nextflow.file.PathVisitor.apply(PathVisitor.groovy:69)
+	at nextflow.file.PathVisitor$_applyAsync_closure1.doCall(PathVisitor.groovy:78)
+	at nextflow.file.PathVisitor$_applyAsync_closure1.call(PathVisitor.groovy)
+	at groovy.lang.Closure.run(Closure.java:505)
+	at java.base/java.util.concurrent.CompletableFuture$UniRun.tryFire(CompletableFuture.java:787)
+	at java.base/java.util.concurrent.CompletableFuture$Completion.run(CompletableFuture.java:482)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Jun-09 17:37:35.919 [PathVisitor-3] DEBUG nextflow.Session - Session aborted -- Cause: No files match pattern `*.report.txt` at path: runs/R02090625/taxonomy/kraken2/
+Jun-09 17:37:35.931 [PathVisitor-3] DEBUG nextflow.Session - The following nodes are still active:
 [process] merge_metadata
   status=ACTIVE
   port 0: (queue) closed; channel: metadata_sample
   port 1: (queue) OPEN  ; channel: multiqc_fastqc
   port 2: (cntrl) -     ; channel: $
 
+[process] add_homosapiens_column
+  status=ACTIVE
+  port 0: (queue) OPEN  ; channel: merged_metadata_csv
+  port 1: (queue) OPEN  ; channel: kraken_reports
+  port 2: (cntrl) -     ; channel: $
+
 [process] classify_quality
   status=ACTIVE
-  port 0: (value) bound ; channel: sample_metadata_csv
+  port 0: (queue) OPEN  ; channel: sample_metadata_csv
   port 1: (cntrl) -     ; channel: $
 
-Jun-07 13:50:08.193 [main] DEBUG nextflow.Session - Session await > all processes finished
-Jun-07 13:50:08.193 [main] DEBUG nextflow.Session - Session await > all barriers passed
-Jun-07 13:50:08.192 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
-Jun-07 13:50:08.201 [Actor Thread 2] DEBUG nextflow.processor.TaskProcessor - Handling unexpected condition for
-  task: name=classify_quality; work-dir=null
+Jun-09 17:37:35.933 [main] DEBUG nextflow.Session - Session await > all processes finished
+Jun-09 17:37:35.933 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Jun-09 17:37:35.933 [Task monitor] DEBUG n.processor.TaskPollingMonitor - <<< barrier arrives (monitor: local) - terminating tasks monitor poll loop
+Jun-09 17:37:35.935 [Actor Thread 1] DEBUG nextflow.processor.TaskProcessor - Handling unexpected condition for
+  task: name=merge_metadata; work-dir=null
   error [java.lang.InterruptedException]: java.lang.InterruptedException
-Jun-07 13:50:08.209 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=1; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=0; peakCpus=0; peakMemory=0; ]
-Jun-07 13:50:08.322 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
-Jun-07 13:50:08.357 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+Jun-09 17:37:35.937 [main] DEBUG n.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=0; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=0ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=0; peakCpus=0; peakMemory=0; ]
+Jun-09 17:37:36.126 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Jun-09 17:37:36.137 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye

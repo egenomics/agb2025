@@ -18,3 +18,6 @@ runs/
 databases/k2_Human_20230629/
 k2_Human_20230629/
 databases/silva-138-99-nb-classifier.qza
+.nextflow.pid
+.nextflow-console.log
+trace-*txt

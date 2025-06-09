@@ -2,10 +2,20 @@
 nextflow.enable.dsl = 2
 
 // Could create a subworkflow for fastqc so it's not needed to include the same process twice.
-include { FASTQC as FASTQC_RAW  } from './modules/nf-core/fastqc/main.nf'
-include { FASTQC as FASTQC_TRIM } from './modules/nf-core/fastqc/main.nf'
-include { TRIMMOMATIC           } from './modules/nf-core/trimmomatic/main.nf'
+
+// Preprocessing and QC
+include { FASTQC as FASTQC_RAW  }  from './modules/nf-core/fastqc/main.nf'
+include { FASTQC as FASTQC_TRIM }  from './modules/nf-core/fastqc/main.nf'
+include { TRIMMOMATIC }             from './modules/nf-core/trimmomatic/main.nf'
+
+// Classification
 include { KRAKEN2_KRAKEN2 as KRAKEN } from './modules/nf-core/kraken2/kraken2/main.nf'
+
+// Metadata operations
+include { MERGE_METADATA_MULTIQC }       from './modules/local/merge_metadata.nf'
+include { HOMOSAPINENS_CONTAMINATION }   from './modules/local/homo_contam.nf'
+include { CLASSIFY_QUALITY_SAMPLES }     from './modules/local/classify_quality.nf'
+
 
 // QIIME2 modules
 include { IMPORT_READS          } from './modules/local/import_reads.nf'
@@ -89,6 +99,44 @@ workflow {
     .collect()
     .set { all_trimmed_files }
 
+    // Metadata handling
+ch_metadata   = Channel.fromPath(params.metadata, checkIfExists: true)
+ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
+
+def metadata_tsv_path      = "runs/${params.run_id}/metadata/sample_metadata.tsv"
+def multiqc_path           = "multiqc_data/multiqc_fastqc.txt"
+def kraken_reports_path    = "runs/${params.run_id}/taxonomy/kraken2/*.kraken2.report.txt"
+
+metadata_sample_ch = Channel.fromPath(metadata_tsv_path, checkIfExists: true)
+kraken_reports_ch  = Channel.fromPath(kraken_reports_path, checkIfExists: true)
+
+if (file(multiqc_path).exists()) {
+    log.info " Found multiqc_fastqc.txt, continuing with metadata merge"
+
+    multiqc_fastqc_ch  = Channel.fromPath(multiqc_path)
+
+    merged_csv_ch = MERGE_METADATA_MULTIQC(
+        metadata_sample_ch,
+        multiqc_fastqc_ch
+    )
+
+    human_augmented_ch = HOMOSAPINENS_CONTAMINATION(
+        merged_csv_ch,
+        kraken_reports_ch
+    )
+
+    CLASSIFY_QUALITY_SAMPLES(human_augmented_ch)
+
+} else {
+    log.warn "Skipping metadata merge: multiqc_fastqc.txt not found at ${multiqc_path}"
+
+    human_augmented_ch = HOMOSAPINENS_CONTAMINATION(
+        metadata_sample_ch,
+        kraken_reports_ch
+    )
+
+    CLASSIFY_QUALITY_SAMPLES(human_augmented_ch)
+}
 
     // 2. QIIME
     // 2.1. Import reads
