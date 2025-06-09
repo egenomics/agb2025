@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
 # Download the Kraken2 db
+
 set -euo pipefail
-DB_FILENAME="k2_Human_20230629.tar.gz"
+mkdir -p databases
+DB_FILENAME="databases/k2_Human_20230629.tar.gz"
 TMP_FILENAME="${DB_FILENAME}.part"
-EXTRACTED_DIR="k2_Human_20230629"
+EXTRACTED_DIR="databases/k2_Human_20230629"
 DB_URL="https://zenodo.org/records/8339700/files/k2_Human_20230629.tar.gz?download=1"
 
 if [[ -f "$DB_FILENAME" ]]; then
@@ -30,17 +32,17 @@ else
   mkdir "$EXTRACTED_DIR"
   tar -xzf "$DB_FILENAME" -C "$EXTRACTED_DIR"
   echo "[INFO] Extraction complete. Database available at '$EXTRACTED_DIR'."
+  # Optional: remove the compressed file to save space
+  rm -f "$DB_FILENAME"
+  echo "[INFO] Removed compressed file '$DB_FILENAME' after extraction."
 fi
 
 
+# Make sure the databases folder exists
+mkdir -p databases
 
-# run the script to download the kraken2 database
-./download_krakendb.sh
-
-# Download the classifier
-mkdir databases
-# Download the classifier using wget
+# Download the classifier into databases/
 wget -O databases/silva-138-99-nb-classifier.qza \
-https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza
+  https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza
 
 
