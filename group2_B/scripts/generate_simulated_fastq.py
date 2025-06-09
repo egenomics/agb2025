@@ -41,7 +41,7 @@ def main():
     )
     parser.add_argument(
         "--sample_id", default="sim_sample",
-        help="Sample ID prefix for read names (default: sim_sample)."
+        help="Sample_ID prefix for read names (default: sim_sample)."
     )
 
     args = parser.parse_args()

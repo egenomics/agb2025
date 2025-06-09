@@ -10,8 +10,10 @@ process MERGE_METADATA_MULTIQC_PROCESS {
 
     script:
        """
-    pip install --quiet pandas
     mkdir -p temp
+    ls -lh ${metadata_sample}
+    ls -lh ${multiqc_fastqc}
+
     tr '\\t' ',' < ${metadata_sample} > temp/metadata.csv
 
     awk -F'\\t' 'NR==1 {
@@ -23,16 +25,7 @@ process MERGE_METADATA_MULTIQC_PROCESS {
 
     sed 's/\\t/,/g' temp/multiqc_qc_clean.tsv > temp/multiqc_qc_clean.csv
 
-    python3 <<EOF
-    import pandas as pd
-    meta = pd.read_csv('temp/metadata.csv')
-    qc = pd.read_csv('temp/multiqc_qc_clean.csv')
-
-    # If the right columns have different names, adjust them below
-    merged = pd.merge(meta, qc, left_on='Sample ID', right_on='Sample')
-
-    merged.to_csv('sample_metadata.csv', index=False)
-    EOF
+    csvjoin -c Sample_ID,Sample temp/metadata.csv temp/multiqc_qc_clean.csv > sample_metadata.csv
     """
 }
 

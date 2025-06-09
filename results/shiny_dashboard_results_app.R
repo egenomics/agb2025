@@ -480,7 +480,7 @@ ui <- dashboardPage(
                              tags$ul(
                                tags$li("Ensure your CSV/TSV files have proper headers"),
                                tags$li("Include both patient and control samples when possible"),
-                               tags$li("Check that sample IDs match across all files"),
+                               tags$li("Check that Sample_IDs match across all files"),
                                tags$li("Remove any special characters from column names")
                              )
                            )
@@ -1949,7 +1949,7 @@ server <- function(input, output, session) {
     if(nrow(sample_info) > 0) {
       HTML(paste0(
         "<h4>Sample Information</h4>",
-        "<p><strong>Sample ID:</strong> ", sample_info$Sample_ID, "</p>",
+        "<p><strong>Sample_ID:</strong> ", sample_info$Sample_ID, "</p>",
         "<p><strong>Collection Date:</strong> ", sample_info$Collection_Date, "</p>",
         "<p><strong>Age:</strong> ", sample_info$Age, "</p>",
         "<p><strong>Gender:</strong> ", sample_info$Gender, "</p>",
@@ -2676,7 +2676,7 @@ server <- function(input, output, session) {
   observe({
     req(data_store$sample_metadata, data_store$control_sample_metadata)
     
-    # Combine both patient and control sample IDs
+    # Combine both patient and control Sample_IDs
     all_samples <- c(data_store$sample_metadata$Sample_ID, 
                      data_store$control_sample_metadata$Sample_ID)
     
@@ -2961,7 +2961,7 @@ server <- function(input, output, session) {
               legend.text = element_text(size = 8),
               panel.spacing = unit(0.5, "lines"),
               panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
-        labs(x = "Sample ID", y = "Relative Abundance (%)", 
+        labs(x = "Sample_ID", y = "Relative Abundance (%)", 
              title = paste("Relative Abundance of", input$tax_level, "by", 
                            ifelse(metadata_col == "Age", "Age Category", metadata_col)),
              fill = input$tax_level) +
@@ -2996,7 +2996,7 @@ server <- function(input, output, session) {
               legend.position = "bottom",
               legend.text = element_text(size = 8),
               panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
-        labs(x = "Sample ID", y = "Relative Abundance (%)", 
+        labs(x = "Sample_ID", y = "Relative Abundance (%)", 
              title = paste("Relative Abundance of", input$tax_level, "by Group"),
              fill = input$tax_level) +
         get_color_scheme() +
@@ -3015,7 +3015,7 @@ server <- function(input, output, session) {
         theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
               legend.position = "bottom",
               legend.text = element_text(size = 8)) +
-        labs(x = "Sample ID", y = "Relative Abundance (%)", 
+        labs(x = "Sample_ID", y = "Relative Abundance (%)", 
              title = paste("Relative Abundance of", input$tax_level),
              fill = input$tax_level) +
         get_color_scheme()
@@ -3087,7 +3087,7 @@ server <- function(input, output, session) {
                 legend.position = "bottom",
                 panel.spacing = unit(0.5, "lines"),
                 panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
-          labs(x = "Sample ID", y = "Relative Abundance (%)", 
+          labs(x = "Sample_ID", y = "Relative Abundance (%)", 
                title = paste("Relative Abundance of", input$tax_level, "by", 
                              ifelse(metadata_col == "Age", "Age Category", metadata_col)),
                fill = input$tax_level) +
@@ -3110,7 +3110,7 @@ server <- function(input, output, session) {
           theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
                 legend.position = "bottom",
                 panel.border = element_rect(color = "black", fill = NA, size = 0.5)) +
-          labs(x = "Sample ID", y = "Relative Abundance (%)", 
+          labs(x = "Sample_ID", y = "Relative Abundance (%)", 
                title = paste("Relative Abundance of", input$tax_level, "by Group"),
                fill = input$tax_level) +
           get_color_scheme() +
@@ -3123,7 +3123,7 @@ server <- function(input, output, session) {
           theme_minimal() +
           theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
                 legend.position = "bottom") +
-          labs(x = "Sample ID", y = "Relative Abundance (%)", 
+          labs(x = "Sample_ID", y = "Relative Abundance (%)", 
                title = paste("Relative Abundance of", input$tax_level),
                fill = input$tax_level) +
           get_color_scheme()

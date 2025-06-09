@@ -8,7 +8,7 @@ nextflow.enable.dsl=2
 params.run_id = null
 
 process MERGE_METADATA_MULTIQC {
-    publishDir "runs/${params.run_id}/metadata/", mode: 'copy'
+    publishDir "runs/${params.run_id}/", mode: 'copy'
 
     input:
     path metadata_sample
@@ -19,6 +19,7 @@ process MERGE_METADATA_MULTIQC {
 
     script:
     """
+    pip install pandas --quiet
     tr '\\t' ',' < ${metadata_sample} > metadata.csv
 
     awk -F'\\t' 'NR==1 {
@@ -35,12 +36,12 @@ process MERGE_METADATA_MULTIQC {
         exit 1
     fi
 
-    csvjoin -c "Sample ID",Sample metadata.csv multiqc_qc_clean.csv > sample_metadata.csv
+    csvjoin -c Sample_ID,Sample metadata.csv multiqc_qc_clean.csv > sample_metadata.csv
     """
 }
 process HOMOSAPINENS_CONTAMINATION {
     // This process adds a column to the metadata CSV with the percentage of Homo sapiens contamination based on Kraken2 reports.
-    publishDir "runs/${params.run_id}/metadata/", mode: 'copy'
+    publishDir "runs/${params.run_id}/", mode: 'copy'
 
     input:
     path merged_metadata_csv
@@ -54,7 +55,7 @@ process HOMOSAPINENS_CONTAMINATION {
     mkdir reports
     cp ${kraken_reports} reports/
 
-    python3 -c "
+    python3 << EOF
     import pandas as pd
     import os
 
@@ -77,14 +78,14 @@ process HOMOSAPINENS_CONTAMINATION {
                     except:
                         pass
         # If not found, optionally set to NaN or leave as 0.0
-        df.loc[df['Sample ID'] == sample_id, 'Homo_Sapiens_%'] = percent if found else 0.0
+        df.loc[df['Sample_ID'] == sample_id, 'Homo_Sapiens_%'] = percent if found else 0.0
 
     df.to_csv('sample_metadata.csv', index=False)
-"
+    EOF
     """
 }
 process CLASSIFY_QUALITY_SAMPLES {
-    publishDir "runs/${params.run_id}/metadata/", mode: 'copy'
+    publishDir "runs/${params.run_id}/", mode: 'copy'
 
     input:
     path sample_metadata_csv
@@ -94,12 +95,12 @@ process CLASSIFY_QUALITY_SAMPLES {
 
     script:
     """
-    python3 -c "
+    python3 << EOF
     import pandas as pd
     df = pd.read_csv('${sample_metadata_csv}')
     df['quality_flag'] = df['%GC'].apply(lambda x: 'FAIL' if x < 40 else 'PASS')
     df.to_csv('sample_metadata.csv', index=False)
-"
+    EOF
     """
 }
 

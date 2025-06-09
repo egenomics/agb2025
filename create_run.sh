@@ -39,7 +39,7 @@ tail -n +2 "$CSV_PATH" | cut -d, -f2 | while read -r sample_id; do
       # Use the last digit and prepend '00'
       subdir="00${sample_id: -1}"
     else
-      echo "Skipping sample ID $sample_id due to unsupported length."
+      echo "Skipping Sample_ID $sample_id due to unsupported length."
       continue
     fi
 

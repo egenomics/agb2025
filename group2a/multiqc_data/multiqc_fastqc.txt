@@ -5,3 +5,12 @@ ERR10674403	ERR1328366_1.fastq.gz	Conventional base calls	Sanger / Illumina 1.9	
 ERR10674545	ERR1328366_2.fastq.gz	Conventional base calls	Sanger / Illumina 1.9	94879.0	23.7 Mbp	0.0	250.0	50.0	3.3432055565509753	250.0	250	pass	pass	pass	pass	fail	fail	pass	pass	fail	fail	pass
 ERR10674528	ERR1328415_1.fastq.gz	Conventional base calls	Sanger / Illumina 1.9	34733.0	8.6 Mbp	0.0	250.0	51.0	3.187170702214033	250.0	250	pass	pass	pass	pass	fail	warn	pass	pass	fail	fail	pass
 SRR14068258	ERR1328415_2.fastq.gz	Conventional base calls	Sanger / Illumina 1.9	34733.0	8.6 Mbp	0.0	250.0	51.0	8.68050557107074	250.0	250	pass	pass	pass	pass	fail	fail	pass	pass	fail	fail	pass
+SRR10911029
+SRR11513680
+SRR6248907
+SRR11513690
+ERR4836382
+ERR4836452
+ERR4836380
+ERR4836460
+ERR4836386

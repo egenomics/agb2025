@@ -15,6 +15,8 @@ process MERGE_METADATA_MULTIQC_PROCESS {
     script:
     """
     mkdir -p runs/temp
+    echo "NOW"
+    echo ${metadata_sample}
     tr '\\t' ',' < ${metadata_sample} > runs/temp/metadata.csv
 
     awk -F'\\t' 'NR==1 {
@@ -26,7 +28,7 @@ process MERGE_METADATA_MULTIQC_PROCESS {
 
     sed 's/\\t/,/g' runs/temp/multiqc_qc_clean.tsv > runs/temp/multiqc_qc_clean.csv
 
-    csvjoin -c "Sample ID",Sample runs/temp/metadata.csv runs/temp/multiqc_qc_clean.csv > sample_metadata.csv
+    csvjoin -c "Sample_ID",Sample runs/temp/metadata.csv runs/temp/multiqc_qc_clean.csv > sample_metadata.csv
     """
 }
 
@@ -82,7 +84,7 @@ for fname in os.listdir('reports'):
                     break
                 except:
                     pass
-    df.loc[df['Sample ID'] == sample_id, 'Homo_Sapiens_%'] = percent if found else 0.0
+    df.loc[df['Sample_ID'] == sample_id, 'Homo_Sapiens_%'] = percent if found else 0.0
 
 df.to_csv('sample_metadata.csv', index=False)
 "
