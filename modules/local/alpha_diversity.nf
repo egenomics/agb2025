@@ -10,7 +10,8 @@ process ALPHA_DIVERSITY {
     
     output:
     path("*.qza")
-    path("*.qzv")
+    path("alpha_rarefaction.qzv"), emit: rarefaction_viz
+    path("*.qzv"), emit: core_metrics_viz
     
     script:
     """
@@ -29,7 +30,7 @@ process ALPHA_DIVERSITY {
       --i-phylogeny ${rooted_tree_qza} \\
       --p-max-depth \$THRESHOLD \\
       --m-metadata-file ${metadata_file} \\
-      --o-visualization alpha-rarefaction.qzv
+      --o-visualization alpha_rarefaction.qzv
     
     # Core alpha diversity metrics at the selected threshold
     qiime diversity core-metrics-phylogenetic \\
@@ -46,7 +47,7 @@ process ALPHA_DIVERSITY {
     stub:
     """
     echo "5000" > threshold_file
-    touch alpha-rarefaction.qzv
+    touch alpha_rarefaction.qzv
     touch observed_features_vector.qza shannon_vector.qza evenness_vector.qza
     touch faith_pd_vector.qza rarefied_table.qza
     """

@@ -21,6 +21,7 @@ include { EXPORT_TREE           } from './modules/local/export_tree.nf'
 include { EXPORT_REP_SEQS       } from './modules/local/export_rep_seqs.nf'
 include { RAREFACTION_THRESHOLD } from './modules/local/rarefaction_threshold.nf'
 include { ALPHA_DIVERSITY } from './modules/local/alpha_diversity.nf'
+include { EXPORT_ALPHAPLOT } from './modules/local/export_alphaplot.nf'
 include { CREATE_RESULTS_SUMMARY } from './modules/local/create_results_summary.nf'
 
 
@@ -152,8 +153,13 @@ workflow {
     } else {
         ch_rarefaction_summary = Channel.empty()
     }
+    
+    // 2.12. Export alpha visualization to a plot
+    EXPORT_ALPHAPLOT(
+        ALPHA_DIVERSITY.out[1]  // This should be the .qzv file from alpha diversity
+    )
 
-    // 2.11. Create Final Results Summary
+    // 2.13. Create Final Results Summary
     CREATE_RESULTS_SUMMARY(
         EXPORT_FEATURE_TABLE.out.feature_table_tsv,
         EXPORT_REP_SEQS.out.rep_seqs_fasta,
