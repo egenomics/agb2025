@@ -145,6 +145,17 @@ nextflow run main.nf --run_id <run_id> -profile docker -resume
 - `download_samples.sh` – used to download fastq files for development, testing or healthy controls. Saves them in raw_data/, test_data/ or healthy_controls/
 - `download_krakendb.sh` – Downloads a kraken2 database built from just the human library. Saves it in the main project folder with the name k2_Human_20230629.tar.gz.
 - `merge_multiqc_metadata.sh` – merges multiqc summary with `metadata_sample.csv`.
+- 
+## Custom Python Image for Metadata Merging
+This pipeline uses a custom Docker image (agb2025-python) to merge metadata with MultiQC output using pandas and csvkit.
+
+# Build the Docker Image (once, before running the pipeline)
+```bash
+docker build -t agb2025-python -f Dockerfile .
+```
+# Usage
+The image is used in the process that merges sample_metadata.tsv with multiqc_fastqc.txt. This step will fail unless agb2025-python is built locally beforehand.
+
 
 ## Documentation
 
