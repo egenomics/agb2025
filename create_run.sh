@@ -16,14 +16,18 @@ fi
 
 # Create the output directory
 RUN_DIR="runs/R${NEXT_RUN}${DATE}/raw_data"
+METADATA_DIR="runs/R${NEXT_RUN}${DATE}/metadata"
 mkdir -p "$RUN_DIR"
+mkdir -p "$METADATA_DIR"
 echo "Created: $RUN_DIR"
+echo "Created: $METADATA_DIR"
 
-mkdir -p runs/R${NEXT_RUN}${DATE}/metadata
-cp group2a/sample_metadata.tsv runs/R${NEXT_RUN}${DATE}/metadata/
+# Generate the metadata file.
+# This temporary file will hold the sample IDs that were downloaded.
+SAMPLE_IDS_FILE="${METADATA_DIR}/sample_ids.txt"
+> "$SAMPLE_IDS_FILE"  # Empty the file if it exists
 
-# Extract run_accession column and download FASTQ files
-tail -n +2 "$CSV_PATH" | cut -d, -f2 | while read -r sample_id; do
+while read -r sample_id; do
   # Clean the sample_id by stripping quotes and whitespace
   sample_id=$(echo "$sample_id" | tr -d '"' | xargs)
 
@@ -45,16 +49,42 @@ tail -n +2 "$CSV_PATH" | cut -d, -f2 | while read -r sample_id; do
 
     echo "Processing FASTQ files for ${sample_id}..."
 
+    # Append the sample_id the list od samples before downloading
+    echo "$sample_id" >> "$SAMPLE_IDS_FILE"
+
     for read in 1 2; do
-      outfile="${sample_id}_${read}.fastq.gz"
+      outfile="${RUN_DIR}/${sample_id}_${read}.fastq.gz"
       url="https://ftp.sra.ebi.ac.uk/vol1/fastq/${prefix}/${subdir}/${sample_id}/${sample_id}_${read}.fastq.gz"
 
       if [[ -f "$outfile" ]]; then
         echo "File $outfile already exists. Skipping download."
       else
         echo "Downloading: $url"
-        wget -P $RUN_DIR "$url"
+        wget -P "$RUN_DIR" "$url"
       fi
     done
   fi
-done
+done < <(tail -n +2 "$CSV_PATH" | cut -d, -f2)
+
+echo -e "\033[31mFASTQ files download finished.\033[0m"
+
+# Generate the metadata.csv for this run.
+CURATED_METADATA="metadata/run_development_dataset/curated/metadata_cleaned.csv"
+RUN_METADATA="${METADATA_DIR}/metadata.csv"
+
+if [[ ! -f "$CURATED_METADATA" ]]; then
+  echo "Curated metadata file not found: $CURATED_METADATA"
+  exit 1
+fi
+
+# Extract header and then filter sample rows using the collected sample_ids.
+header=$(head -n 1 "$CURATED_METADATA")
+echo "$header" > "$RUN_METADATA"
+tail -n +2 "$CURATED_METADATA" | grep -F -f "$SAMPLE_IDS_FILE" >> "$RUN_METADATA"
+
+echo -e "\033[31mGenerated metadata file: $RUN_METADATA\033[0m"
+
+# Remove the temporary sample_ids file
+rm -f "$SAMPLE_IDS_FILE"
+
+echo -e "\033[31mRun ID for this run: R${NEXT_RUN}${DATE}\033[0m"
