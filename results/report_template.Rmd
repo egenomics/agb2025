@@ -1,23 +1,30 @@
 
 ---
 title: "`r params$report_title`"
+author: "AGB Microbiome Analysis Platform"
+date: "`r Sys.Date()`"
 output: 
   html_document:
     toc: true
     toc_float: true
     theme: flatly
     highlight: tango
+    code_folding: hide
   pdf_document:
     toc: true
     number_sections: true
+    latex_engine: xelatex
+  word_document:
+    toc: true
+    reference_docx: NULL
 params:
   report_title: "Microbiome Analysis Report"
   report_comments: ""
   selected_sections: ["summary", "alpha", "beta"]
-  alpha_plot: ""
-  beta_plot: ""
-  phylo_plot: ""
-  parallel_plot: ""
+  sample_summary: NULL
+  taxonomy_summary: NULL
+  alpha_stats: NULL
+  plot_files: NULL
 ---
 
 ```{r setup, include=FALSE}
@@ -25,14 +32,19 @@ knitr::opts_chunk$set(
   echo = FALSE, 
   message = FALSE, 
   warning = FALSE,
-  fig.width = 10,
-  fig.height = 6,
-  dpi = 300
+  fig.width = 12,
+  fig.height = 8,
+  dpi = 300,
+  out.width = "100%"
 )
 
 # Load required libraries
-library(ggplot2)
-library(knitr)
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(knitr)
+  library(dplyr)
+  library(kableExtra)
+})
 
 # Helper function to check if file exists and is not empty
 file_exists_and_valid <- function(filepath) {
@@ -41,133 +53,303 @@ file_exists_and_valid <- function(filepath) {
   }
   file.exists(filepath) && file.info(filepath)$size > 0
 }
+
+# Helper function to format numbers
+format_number <- function(x, digits = 2) {
+  if(is.numeric(x)) {
+    formatC(x, format = "f", digits = digits, big.mark = ",")
+  } else {
+    as.character(x)
+  }
+}
 ```
 
 ---
 
-**Report Generated:** `r Sys.time()`
+**Report Generated:** `r format(Sys.time(), "%B %d, %Y at %I:%M %p")`
 
 ```{r comments, results='asis'}
 if (!is.null(params$report_comments) && params$report_comments != "") {
-  cat("\n**Comments:** ", params$report_comments, "\n\n")
+  cat("\n**Analysis Comments:** ", params$report_comments, "\n\n")
 }
 ```
 
 ---
 
-```{r summary, results='asis', eval=("summary" %in% params$selected_sections)}
-cat("# Summary\n\n")
-cat("This report contains microbiome diversity analysis results including:\n\n")
+# Executive Summary
 
-if ("alpha" %in% params$selected_sections) {
-  cat("- **Alpha Diversity Analysis:** Species richness and evenness within samples\n")
-}
-if ("beta" %in% params$selected_sections) {
-  cat("- **Beta Diversity Analysis:** Community composition differences between samples\n")
-}
-if ("phylo" %in% params$selected_sections) {
-  cat("- **Phylogenetic Analysis:** Evolutionary relationships between species\n")
-}
-if ("parallel" %in% params$selected_sections) {
-  cat("- **Parallel Plot Analysis:** Multi-dimensional data visualization\n")
+This comprehensive microbiome analysis report presents findings from high-throughput sequencing data analysis. The report includes diversity metrics, taxonomic composition, and statistical comparisons between sample groups.
+
+```{r summary-stats, results='asis'}
+if(!is.null(params$sample_summary)) {
+  cat("## Dataset Overview\n\n")
+  
+  sample_info <- params$sample_summary
+  
+  cat("- **Total Samples Analyzed:** ", sample_info$total_samples, "\n")
+  cat("- **Control Samples:** ", sample_info$total_controls, "\n")
+  cat("- **Collection Period:** ", sample_info$collection_period, "\n")
+  cat("- **Age Range:** ", sample_info$age_range, " years\n")
+  
+  if(!identical(sample_info$gender_dist, "N/A")) {
+    cat("- **Gender Distribution:** ")
+    gender_text <- paste(names(sample_info$gender_dist), 
+                        sample_info$gender_dist, 
+                        sep = ": ", collapse = ", ")
+    cat(gender_text, "\n")
+  }
+  
+  cat("\n")
 }
 
-cat("\n---\n\n")
+if(!is.null(params$taxonomy_summary)) {
+  cat("## Taxonomic Overview\n\n")
+  
+  tax_info <- params$taxonomy_summary
+  
+  cat("- **Total Species Detected:** ", format_number(tax_info$total_species, 0), "\n")
+  cat("- **Total Sequence Reads:** ", format_number(tax_info$total_reads, 0), "\n")
+  cat("- **Average Reads per Sample:** ", format_number(tax_info$avg_reads_per_sample, 0), "\n")
+  
+  if(length(tax_info$top_species) > 0) {
+    cat("- **Most Abundant Species:** ", paste(head(tax_info$top_species, 5), collapse = ", "), "\n")
+  }
+  
+  cat("\n")
+}
 ```
+
+---
 
 ```{r alpha-section, results='asis', eval=("alpha" %in% params$selected_sections)}
 cat("# Alpha Diversity Analysis\n\n")
-cat("Alpha diversity measures the species diversity within individual samples, providing insights into the richness and evenness of microbial communities.\n\n")
+cat("Alpha diversity measures the species diversity within individual samples. Higher alpha diversity typically indicates a more complex and potentially healthier microbial community.\n\n")
+
+if(!is.null(params$alpha_stats)) {
+  cat("## Summary Statistics\n\n")
+  
+  alpha_stats <- params$alpha_stats
+  
+  # Create a summary table
+  alpha_table <- data.frame(
+    Metric = c("Shannon Index", "Simpson Index", "Observed Species"),
+    Mean = c(alpha_stats$shannon_mean, alpha_stats$simpson_mean, alpha_stats$observed_mean),
+    `Standard Deviation` = c(alpha_stats$shannon_sd, alpha_stats$simpson_sd, alpha_stats$observed_sd),
+    check.names = FALSE
+  )
+  
+  print(kable(alpha_table, 
+              caption = "Alpha Diversity Summary Statistics",
+              digits = 3) %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed")))
+  
+  cat("\n\n")
+  cat("**Interpretation:**\n")
+  cat("- **Shannon Index:** Measures both richness and evenness. Range: 0-∞ (higher = more diverse)\n")
+  cat("- **Simpson Index:** Probability that two randomly selected individuals belong to different species. Range: 0-1 (higher = more diverse)\n")
+  cat("- **Observed Species:** Total number of different species detected in each sample\n\n")
+}
 ```
 
 ```{r alpha-plot, eval=("alpha" %in% params$selected_sections)}
-if (file_exists_and_valid(params$alpha_plot)) {
-  knitr::include_graphics(params$alpha_plot)
+if (!is.null(params$plot_files$alpha_plot) && file_exists_and_valid(params$plot_files$alpha_plot)) {
+  knitr::include_graphics(params$plot_files$alpha_plot)
 } else {
-  # Create a placeholder plot if the file doesn't exist
-  ggplot() + 
-    annotate("text", x = 0, y = 0, 
-             label = "Alpha diversity plot not available", 
-             size = 6, color = "gray50") +
-    theme_void() +
-    theme(
-      plot.background = element_rect(fill = "white", color = "gray80"),
-      panel.background = element_rect(fill = "white")
-    ) +
-    labs(title = "Alpha Diversity Plot Placeholder")
+  cat("*Alpha diversity plot not available*\n")
 }
 ```
 
 ```{r beta-section, results='asis', eval=("beta" %in% params$selected_sections)}
 cat("\n\n# Beta Diversity Analysis\n\n")
-cat("Beta diversity analysis examines the differences in species composition between samples, revealing patterns of community structure and relationships.\n\n")
+cat("Beta diversity analysis examines the differences in species composition between samples. This analysis helps identify patterns of community structure and relationships between different sample groups.\n\n")
+
+cat("## Principal Coordinate Analysis (PCoA)\n\n")
+cat("PCoA is an ordination method that reduces the dimensionality of community data while preserving the distances between samples. Samples that cluster together have similar microbial compositions.\n\n")
 ```
 
 ```{r beta-plot, eval=("beta" %in% params$selected_sections)}
-if (file_exists_and_valid(params$beta_plot)) {
-  knitr::include_graphics(params$beta_plot)
+if (!is.null(params$plot_files$beta_plot) && file_exists_and_valid(params$plot_files$beta_plot)) {
+  knitr::include_graphics(params$plot_files$beta_plot)
 } else {
-  # Create a placeholder plot if the file doesn't exist  
-  ggplot() + 
-    annotate("text", x = 0, y = 0, 
-             label = "Beta diversity plot not available", 
-             size = 6, color = "gray50") +
-    theme_void() +
-    theme(
-      plot.background = element_rect(fill = "white", color = "gray80"),
-      panel.background = element_rect(fill = "white")
-    ) +
-    labs(title = "Beta Diversity Plot Placeholder")
+  cat("*Beta diversity plot not available*\n")
+}
+```
+
+```{r taxonomy-section, results='asis', eval=("taxonomy" %in% params$selected_sections)}
+cat("\n\n# Taxonomic Composition Analysis\n\n")
+cat("Taxonomic composition analysis reveals the relative abundance of different microbial species across samples, providing insights into the dominant members of the microbial community.\n\n")
+
+if(!is.null(params$taxonomy_summary)) {
+  tax_info <- params$taxonomy_summary
+  
+  cat("## Key Findings\n\n")
+  cat("- A total of **", format_number(tax_info$total_species, 0), " species** were identified across all samples\n")
+  cat("- The analysis processed **", format_number(tax_info$total_reads, 0), " sequence reads**\n")
+  cat("- Average sequencing depth was **", format_number(tax_info$avg_reads_per_sample, 0), " reads per sample**\n\n")
+  
+  if(length(tax_info$top_species) > 0) {
+    cat("## Most Abundant Species\n\n")
+    top_species_df <- data.frame(
+      Rank = 1:length(tax_info$top_species),
+      Species = tax_info$top_species
+    )
+    
+    print(kable(top_species_df, 
+                caption = "Top 10 Most Frequently Detected Species") %>%
+          kable_styling(bootstrap_options = c("striped", "hover", "condensed")))
+    cat("\n\n")
+  }
+}
+```
+
+```{r taxonomy-plot, eval=("taxonomy" %in% params$selected_sections)}
+if (!is.null(params$plot_files$taxonomy_plot) && file_exists_and_valid(params$plot_files$taxonomy_plot)) {
+  knitr::include_graphics(params$plot_files$taxonomy_plot)
+} else {
+  cat("*Taxonomic composition plot not available*\n")
 }
 ```
 
 ```{r phylo-section, results='asis', eval=("phylo" %in% params$selected_sections)}
 cat("\n\n# Phylogenetic Analysis\n\n")
-cat("Phylogenetic analysis incorporates evolutionary relationships between species to provide deeper insights into community structure.\n\n")
+cat("Phylogenetic analysis incorporates evolutionary relationships between species to provide deeper insights into community structure and evolutionary diversity.\n\n")
+
+cat("## Phylogenetic Tree\n\n")
+cat("The phylogenetic tree shows the evolutionary relationships among the detected microbial species. Closely related species appear as neighboring branches, while distantly related species are separated by longer branch lengths.\n\n")
 ```
 
 ```{r phylo-plot, eval=("phylo" %in% params$selected_sections)}
-if (file_exists_and_valid(params$phylo_plot)) {
-  knitr::include_graphics(params$phylo_plot)
+if (!is.null(params$plot_files$phylo_plot) && file_exists_and_valid(params$plot_files$phylo_plot)) {
+  knitr::include_graphics(params$plot_files$phylo_plot)
 } else {
-  ggplot() + 
-    annotate("text", x = 0, y = 0, 
-             label = "Phylogenetic plot not available", 
-             size = 6, color = "gray50") +
-    theme_void() +
-    theme(
-      plot.background = element_rect(fill = "white", color = "gray80"),
-      panel.background = element_rect(fill = "white")
-    ) +
-    labs(title = "Phylogenetic Plot Placeholder")
+  cat("*Phylogenetic tree not available*\n")
 }
 ```
 
-```{r parallel-section, results='asis', eval=("parallel" %in% params$selected_sections)}
-cat("\n\n# Parallel Plot Analysis\n\n")
-cat("Parallel coordinate plots allow visualization of multi-dimensional relationships in the microbiome data.\n\n")
-```
+```{r metadata-section, results='asis', eval=("metadata" %in% params$selected_sections)}
+cat("\n\n# Metadata Analysis\n\n")
+cat("Analysis of sample metadata provides context for understanding microbiome patterns in relation to host characteristics and experimental conditions.\n\n")
 
-```{r parallel-plot, eval=("parallel" %in% params$selected_sections)}
-if (file_exists_and_valid(params$parallel_plot)) {
-  knitr::include_graphics(params$parallel_plot)
-} else {
-  ggplot() + 
-    annotate("text", x = 0, y = 0, 
-             label = "Parallel plot not available", 
-             size = 6, color = "gray50") +
-    theme_void() +
-    theme(
-      plot.background = element_rect(fill = "white", color = "gray80"),
-      panel.background = element_rect(fill = "white")
-    ) +
-    labs(title = "Parallel Plot Placeholder")
+if(!is.null(params$sample_summary)) {
+  sample_info <- params$sample_summary
+  
+  cat("## Sample Demographics\n\n")
+  
+  # Create demographics table
+  demo_data <- list()
+  if(!identical(sample_info$age_range, "N/A")) {
+    demo_data[["Age Range"]] <- sample_info$age_range
+  }
+  if(!identical(sample_info$gender_dist, "N/A")) {
+    gender_summary <- paste(names(sample_info$gender_dist), 
+                           sample_info$gender_dist, 
+                           sep = ": ", collapse = "; ")
+    demo_data[["Gender Distribution"]] <- gender_summary
+  }
+  demo_data[["Collection Period"]] <- sample_info$collection_period
+  demo_data[["Total Samples"]] <- sample_info$total_samples
+  demo_data[["Control Samples"]] <- sample_info$total_controls
+  
+  if(length(demo_data) > 0) {
+    demo_df <- data.frame(
+      Characteristic = names(demo_data),
+      Value = unlist(demo_data),
+      row.names = NULL
+    )
+    
+    print(kable(demo_df, 
+                caption = "Sample Characteristics Summary") %>%
+          kable_styling(bootstrap_options = c("striped", "hover", "condensed")))
+    cat("\n\n")
+  }
 }
 ```
 
-```{r footer, results='asis'}
-cat("\n\n---\n\n")
-cat("*Report generated using R Shiny microbiome analysis application*\n\n")
-cat("**Generation Time:** ", as.character(Sys.time()), "\n")
+```{r metadata-plot, eval=("metadata" %in% params$selected_sections)}
+if (!is.null(params$plot_files$metadata_plot) && file_exists_and_valid(params$plot_files$metadata_plot)) {
+  knitr::include_graphics(params$plot_files$metadata_plot)
+} else {
+  cat("*Metadata analysis plot not available*\n")
+}
 ```
 
+# Statistical Methods
+
+## Data Processing
+
+- **Quality Control:** Raw sequencing data underwent quality filtering and preprocessing
+- **Taxonomic Assignment:** Species identification using reference databases
+- **Rarefaction:** Samples were rarefied to normalize sequencing depth differences
+- **Diversity Metrics:** Alpha and beta diversity calculated using established ecological indices
+
+## Statistical Analysis
+
+- **Alpha Diversity:** Shannon and Simpson indices calculated using vegan package in R
+- **Beta Diversity:** Bray-Curtis dissimilarity with Principal Coordinate Analysis (PCoA)
+- **Statistical Testing:** Appropriate parametric and non-parametric tests applied based on data distribution
+- **Multiple Testing Correction:** False Discovery Rate (FDR) correction applied where appropriate
+
+## Software and Packages
+
+This analysis was performed using R statistical software with the following key packages:
+
+- **vegan:** Community ecology analysis
+- **ape:** Phylogenetic analysis
+- **ggplot2:** Data visualization
+- **dplyr:** Data manipulation
+- **Shiny:** Interactive web application framework
+
+---
+
+# Conclusions and Recommendations
+
+```{r conclusions, results='asis'}
+cat("## Key Findings\n\n")
+
+if(!is.null(params$sample_summary) && !is.null(params$taxonomy_summary)) {
+  sample_info <- params$sample_summary
+  tax_info <- params$taxonomy_summary
+  
+  cat("1. **Sample Diversity:** This dataset contains", sample_info$total_samples, "samples")
+  if(sample_info$total_controls > 0) {
+    cat(" including", sample_info$total_controls, "control samples")
+  }
+  cat("\n\n")
+  
+  cat("2. **Taxonomic Richness:** A total of", format_number(tax_info$total_species, 0), 
+      "species were identified, indicating")
+  if(tax_info$total_species > 100) {
+    cat(" high taxonomic diversity")
+  } else if(tax_info$total_species > 50) {
+    cat(" moderate taxonomic diversity")  
+  } else {
+    cat(" limited taxonomic diversity")
+  }
+  cat("\n\n")
+  
+  cat("3. **Sequencing Depth:** Average sequencing depth of", 
+      format_number(tax_info$avg_reads_per_sample, 0), "reads per sample provides")
+  if(tax_info$avg_reads_per_sample > 10000) {
+    cat(" excellent coverage for diversity analysis")
+  } else if(tax_info$avg_reads_per_sample > 1000) {
+    cat(" adequate coverage for diversity analysis")
+  } else {
+    cat(" limited coverage that may affect analysis sensitivity")
+  }
+  cat("\n\n")
+}
+
+cat("## Recommendations for Future Analysis\n\n")
+cat("- **Statistical Power:** Consider additional samples if comparing between groups\n")
+cat("- **Functional Analysis:** Investigate metabolic pathways and functional potential\n")
+cat("- **Longitudinal Studies:** Track microbiome changes over time if applicable\n")
+cat("- **Environmental Factors:** Include additional metadata for comprehensive analysis\n\n")
+```
+
+---
+
+**Report Generated Using:** AGB Microbiome Analysis Platform  
+**Generation Time:** `r format(Sys.time(), "%B %d, %Y at %I:%M %p")`  
+**Analysis Version:** 1.0
+
+*For questions regarding this analysis, please contact the bioinformatics team.*
