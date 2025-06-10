@@ -7,7 +7,7 @@ process HOMO_CONTAM_PROCESS {
     path kraken_reports
 
     output:
-    path "sample_metadata.csv"
+    path "sample_metadata.tsv"
 
 
     script:
@@ -41,7 +41,7 @@ process HOMO_CONTAM_PROCESS {
                         pass
         df.loc[df['Sample_ID'] == sample_id, 'Homo_Sapiens_%'] = percent if found else 0.0
 
-    df.to_csv('sample_metadata.csv', index=False)
+    df.to_csv('sample_metadata.tsv', index=False)
     EOF
     """
 }

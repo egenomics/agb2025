@@ -6,13 +6,11 @@ process MERGE_METADATA_MULTIQC_PROCESS {
     path multiqc_fastqc
 
     output:
-    path "sample_metadata.csv"
+    path "sample_metadata.tsv"
 
     script:
        """
     mkdir -p temp
-    ls -lh ${metadata_sample}
-    ls -lh ${multiqc_fastqc}
 
     tr '\\t' ',' < ${metadata_sample} > temp/metadata.csv
 
@@ -26,6 +24,11 @@ process MERGE_METADATA_MULTIQC_PROCESS {
     sed 's/\\t/,/g' temp/multiqc_qc_clean.tsv > temp/multiqc_qc_clean.csv
 
     csvjoin -c Sample_ID,Sample temp/metadata.csv temp/multiqc_qc_clean.csv > sample_metadata.csv
+    
+    # Convert joined CSV to TSV
+    tr ',' '\\t' < temp/sample_metadata.csv > sample_metadata.tsv
+
+    echo "Merged metadata saved as sample_metadata.tsv"
     """
 }
 
