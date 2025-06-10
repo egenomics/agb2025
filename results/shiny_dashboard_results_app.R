@@ -1087,7 +1087,6 @@ ui <- dashboardPage(
       ),
       
       
-      
       # TAB 4: Phylogenetic tree
       tabItem(tabName = "phylo",
               fluidRow(
@@ -1122,7 +1121,7 @@ ui <- dashboardPage(
                          
                          # Size controls
                          sliderInput("tree_text_size", "Text Size:",
-                                     min = 0.4, max = 5.0, value = 2.8, step = 0.2),
+                                     min = 0.4, max = 5.0, value = 3.2, step = 0.2),
                          
                          hr(),
                          h4("Taxonomic Grouping", style = "font-weight: bold;"),
@@ -1148,8 +1147,6 @@ ui <- dashboardPage(
                          downloadButton("download_phylo_plot", "Download Tree Plot",
                                         class = "btn-sm btn-success"),
                          br(), br(),
-                         downloadButton("download_phylo_data", "Download Tree Data",
-                                        class = "btn-sm btn-info")
                        ),
                        
                        # Tree Information Box
@@ -1177,44 +1174,23 @@ ui <- dashboardPage(
                            height = "980px",
                            
                            # Main tree plot
-                           tabPanel("Tree Plot",
-                                    div(style = "height: 100%; overflow: auto; text-align: center;",
-                                        conditionalPanel(
-                                          condition = "output.tree_loaded",
-                                          plotOutput("main_phylo_plot", height = "100%", width = "100%")
-                                        ),
-                                        conditionalPanel(
-                                          condition = "!output.tree_loaded",
-                                          div(style = "padding: 50px; text-align: center;",
-                                              uiOutput("tree_status_message")
-                                          )
-                                        )
-                                    )
+                           div(style = "height: 100%; overflow: auto; text-align: center;",
+                               conditionalPanel(
+                                 condition = "output.tree_loaded",
+                                 plotOutput("main_phylo_plot", height = "100%", width = "100%")
+                               ),
+                               conditionalPanel(
+                                 condition = "!output.tree_loaded",
+                                 div(style = "padding: 50px; text-align: center;",
+                                     uiOutput("tree_status_message")
+                                 )
+                               )
                            ),
-                           
-                           # Tree statistics and data
-                           tabPanel("Tree Data",
-                                    div(style = "height: 700px; overflow-y: auto;",
-                                        conditionalPanel(
-                                          condition = "output.tree_loaded",
-                                          verbatimTextOutput("tree_summary"),
-                                          br(),
-                                          h4("Tip Labels:"),
-                                          dataTableOutput("tree_tips_table")
-                                        ),
-                                        conditionalPanel(
-                                          condition = "!output.tree_loaded",
-                                          div(style = "padding: 50px; text-align: center;",
-                                              h4("Tree file not available",
-                                                 style = "color: #666;"))
-                                        )
-                                    )
-                           )
                          )
                        )
                 )
               )
-      ),   
+      ),  
       
       # TAB 5: Lifestyle Tab 
       tabItem(tabName = "multifactor",
@@ -5460,15 +5436,6 @@ server <- function(input, output, session) {
               plot.background = element_rect(fill = "white", color = NA)
             )
           
-          # Add tip labels only for small unrooted trees
-          if (show_tips && ape::Ntip(tree) <= 30) {
-            p <- p + ggtree::geom_tiplab(
-              size = text_sz * 0.6, 
-              hjust = -0.1,
-              alpha = 0.8
-            )
-          }
-          
         } else {
           # RECTANGULAR LAYOUT (existing code with minor improvements)
           p <- p +
@@ -5768,6 +5735,360 @@ server <- function(input, output, session) {
       )
     }
   })
+  
+  # Download handler for phylogenetic tree
+  output$download_phylo_plot <- downloadHandler(
+    filename = function() {
+      # Create filename based on current settings
+      layout_name <- input$tree_layout %||% "rectangular"
+      tax_level <- if (!is.null(input$tax_level) && input$tax_level != "none") {
+        input$tax_level
+      } else {
+        "original"
+      }
+      
+      paste("phylo_tree_", layout_name, "_", tax_level, ".png", sep = "")
+    },
+    content = function(file) {
+      # Get the current processed tree
+      tree <- processed_tree()
+      
+      # Get current parameters
+      layout <- input$tree_layout %||% "rectangular"
+      text_sz <- as.numeric(input$tree_text_size %||% 1.2)
+      line_sz <- as.numeric(input$tree_line_size %||% 0.5)
+      
+      # Get display options
+      show_tips <- "show_tip_labels" %in% input$display_options
+      show_nodes <- "show_node_labels" %in% input$display_options
+      show_branches <- "show_branch_length" %in% input$display_options
+      
+      cat("Saving tree plot - Layout:", layout, "Tips:", show_tips, "Nodes:", show_nodes, "Branches:", show_branches, "\n")
+      
+      # Clean tree
+      tree <- clean_phylo_tree(tree)
+      
+      tryCatch({
+        # Check if ggtree is available for high-quality plots
+        if (requireNamespace("ggtree", quietly = TRUE)) {
+          
+          # Get taxonomic groups for coloring
+          if (!is.null(input$tax_level) && input$tax_level != "none") {
+            tip_groups <- extract_taxonomy_simple(tree$tip.label, input$tax_level)
+            group_levels <- unique(tip_groups)
+            
+            # Get color palette (viridis)
+            colors <- get_color_palette(length(group_levels))
+            names(colors) <- group_levels
+            
+            # Create metadata data frame
+            meta_df <- data.frame(
+              label = tree$tip.label,
+              grp = tip_groups,
+              stringsAsFactors = FALSE
+            )
+          } else {
+            # No grouping - use single color
+            meta_df <- data.frame(
+              label = tree$tip.label,
+              grp = "All",
+              stringsAsFactors = FALSE
+            )
+            colors <- c("All" = "#440154")  # Dark viridis color
+          }
+          
+          # Create base plot with appropriate layout
+          if (layout == "circular") {
+            # Handle circular layout with enhanced sizing for downloads
+            n_tips <- ape::Ntip(tree)
+            optimal_text_size <- case_when(
+              n_tips <= 20 ~ text_sz * 1.4,   # Larger for download
+              n_tips <= 50 ~ text_sz * 1.2,
+              n_tips <= 100 ~ text_sz * 1.0,
+              n_tips <= 200 ~ text_sz * 0.8,
+              TRUE ~ text_sz * 0.6
+            )
+            
+            p <- ggtree::ggtree(tree, layout = "circular", size = line_sz) %<+% meta_df +
+              scale_color_manual(values = colors, name = input$tax_level %||% "Group") +
+              ggtree::theme_tree() +
+              theme(
+                plot.margin = margin(100, 100, 100, 100),  # Larger margins for download
+                legend.position = "none",
+                panel.background = element_rect(fill = "white", color = NA),
+                plot.background = element_rect(fill = "white", color = NA),
+                plot.title = element_text(size = 16, hjust = 0.5, margin = margin(b = 20))
+              ) +
+              labs(title = paste("Circular Phylogenetic Tree -", 
+                                 ifelse(input$tax_level != "none", input$tax_level, "Original"),
+                                 "(", n_tips, "tips)"))
+            
+            # Add tip labels/points for circular
+            if (show_tips && n_tips <= 100) {
+              p <- p + ggtree::geom_tiplab(
+                aes(color = grp),
+                size = optimal_text_size,
+                hjust = -0.1,
+                alpha = 0.8
+              )
+            } else if (show_tips) {
+              p <- p + ggtree::geom_tippoint(aes(color = grp), size = 2, alpha = 0.7)
+            }
+            
+            # Add branch lengths for circular (simplified approach)
+            if (show_branches && !is.null(tree$edge.length)) {
+              edge_threshold <- quantile(tree$edge.length[tree$edge.length > 0], 0.8, na.rm = TRUE)
+              p <- p + ggtree::geom_text2(
+                aes(
+                  subset = (!isTip & !is.na(branch.length) & branch.length >= edge_threshold),
+                  label = round(branch.length, 3)
+                ),
+                hjust = 0.5,
+                vjust = -0.3,
+                size = optimal_text_size * 0.7,
+                color = "darkblue",
+                fontface = "bold",
+                alpha = 0.9
+              )
+            }
+            
+          } else if (layout == "unrooted") {
+            # Unrooted layout
+            p <- ggtree::ggtree(tree, layout = "unrooted", size = line_sz) %<+% meta_df +
+              ggtree::geom_tippoint(
+                aes(color = grp),
+                size = 3,
+                stroke = 0,
+                alpha = 0.8
+              ) +
+              scale_color_manual(values = colors, name = input$tax_level %||% "Group") +
+              ggtree::theme_tree() +
+              coord_equal(clip = "off") +
+              theme(
+                legend.position = "bottom",
+                legend.title = element_text(size = 14),
+                legend.text = element_text(size = 12),
+                plot.margin = margin(60, 60, 80, 60),
+                panel.background = element_rect(fill = "white", color = NA),
+                plot.background = element_rect(fill = "white", color = NA),
+                plot.title = element_text(size = 16, hjust = 0.5, margin = margin(b = 20))
+              ) +
+              labs(title = paste("Unrooted Phylogenetic Tree -", 
+                                 ifelse(input$tax_level != "none", input$tax_level, "Original"),
+                                 "(", ape::Ntip(tree), "tips)"))
+            
+            
+          } else {
+            # Rectangular layout (default)
+            p <- ggtree::ggtree(tree, layout = layout, size = line_sz) %<+% meta_df +
+              scale_color_manual(values = colors, name = input$tax_level %||% "Group")
+            
+            # Add tip labels if requested
+            if (show_tips) {
+              p <- p +
+                ggtree::geom_tiplab(
+                  aes(color = grp),
+                  size = text_sz,
+                  align = TRUE,
+                  linesize = 0.3,
+                  linetype = "dotted",
+                  offset = 0.002,
+                  fontface = "bold"
+                ) +
+                ggplot2::xlim(NA, max(p$data$x, na.rm = TRUE) * 1.4)  # Extra space for download
+            }
+            
+            # Add styling
+            p <- p +
+              ggplot2::coord_cartesian(clip = "off") +
+              ggtree::theme_tree() +
+              theme(
+                plot.margin = margin(80, 200, 80, 50),  # Larger margins for download
+                legend.position = "none",
+                panel.background = element_rect(fill = "white", color = NA),
+                plot.background = element_rect(fill = "white", color = NA),
+                plot.title = element_text(size = 16, hjust = 0.5, margin = margin(b = 20))
+              ) +
+              labs(title = paste("Phylogenetic Tree -", 
+                                 ifelse(input$tax_level != "none", input$tax_level, "Original"),
+                                 "(", ape::Ntip(tree), "tips)"))
+            
+            # Add subtle branch coloring
+            if (!is.null(input$tax_level) && input$tax_level != "none") {
+              p <- p +
+                ggtree::geom_tree(
+                  aes(color = grp),
+                  alpha = 0.3,
+                  size = line_sz * 0.8
+                )
+            }
+          }
+          
+          # Add branch length labels (for all layouts)
+          if (show_branches && !is.null(tree$edge.length) && layout != "circular") {
+            p <- p + ggtree::geom_text2(
+              aes(subset = !isTip, label = round(branch.length, 3)),
+              hjust = -0.1, vjust = -0.5, 
+              size = text_sz * 0.8, 
+              color = "gray50"
+            )
+          }
+          
+          # Add node support values
+          if (show_nodes) {
+            support_info <- extract_node_support(tree)
+            if (!is.null(support_info$values) && support_info$source == "node.label") {
+              p <- p + ggtree::geom_nodelab(
+                aes(label = label),
+                subset = (!is.na(label) & label != "" & label != "NA"),
+                hjust = 1.2,
+                vjust = -0.5,
+                size = text_sz * 0.9,  # Slightly larger for download
+                color = "red",
+                fontface = "bold"
+              )
+            } else {
+              p <- p + ggtree::geom_nodepoint(
+                color = "orange", 
+                size = 2, 
+                alpha = 0.7
+              )
+            }
+          }
+          
+          # Determine plot dimensions based on layout and tree size
+          n_tips <- ape::Ntip(tree)
+          if (layout == "circular") {
+            width <- height <- max(12, min(20, 8 + n_tips * 0.1))
+          } else if (layout == "unrooted") {
+            width <- height <- max(12, min(18, 10 + n_tips * 0.08))
+          } else {
+            # Rectangular
+            width <- max(14, min(24, 10 + n_tips * 0.1))
+            height <- max(10, min(16, 8 + n_tips * 0.05))
+          }
+          
+          # Save the plot
+          ggsave(file, plot = p, width = width, height = height, dpi = 300, bg = "white")
+          cat("ggtree plot saved successfully\n")
+          
+        } else {
+          # Fallback to ape plotting for PNG export
+          cat("Using ape fallback for plot export\n")
+          
+          # Open PNG device with high resolution
+          n_tips <- ape::Ntip(tree)
+          if (layout == "circular") {
+            png(file, width = 3000, height = 3000, res = 300)
+          } else {
+            png(file, width = 4200, height = 2800, res = 300)
+          }
+          
+          par(mar = c(2, 2, 4, 2), bg = "white")
+          
+          # Calculate optimal label size
+          label_cex <- case_when(
+            n_tips <= 30 ~ text_sz * 1.0,
+            n_tips <= 60 ~ text_sz * 0.8,
+            n_tips <= 100 ~ text_sz * 0.6,
+            TRUE ~ text_sz * 0.5
+          )
+          
+          if (layout == "circular") {
+            ape::plot.phylo(
+              tree,
+              type = "fan",
+              cex = label_cex,
+              main = paste("Circular Phylogenetic Tree (", n_tips, " tips)"),
+              show.tip.label = show_tips && n_tips <= 100,
+              show.node.label = FALSE,
+              edge.color = "darkblue",
+              edge.width = line_sz * 2,
+              tip.color = "darkred"
+            )
+          } else if (layout == "unrooted") {
+            ape::plot.phylo(
+              tree,
+              type = "unrooted",
+              cex = label_cex,
+              main = paste("Unrooted Phylogenetic Tree (", n_tips, " tips)"),
+              show.tip.label = FALSE,
+              show.node.label = FALSE,
+              edge.color = "darkblue",
+              edge.width = line_sz * 2
+            )
+          } else {
+            ape::plot.phylo(
+              tree,
+              cex = label_cex,
+              main = paste("Phylogenetic Tree (", n_tips, " tips)"),
+              show.tip.label = show_tips,
+              show.node.label = FALSE,
+              edge.color = "darkblue",
+              edge.width = line_sz * 2
+            )
+          }
+          
+          # Add branch lengths if requested
+          if (show_branches && !is.null(tree$edge.length)) {
+            if (layout == "circular") {
+              # For circular plots, only show major branches
+              edge_threshold <- quantile(tree$edge.length[tree$edge.length > 0], 0.8, na.rm = TRUE)
+              long_edges <- which(tree$edge.length >= edge_threshold)
+              if (length(long_edges) > 0 && length(long_edges) <= 30) {
+                ape::edgelabels(
+                  text = round(tree$edge.length[long_edges], 3),
+                  edge = long_edges,
+                  cex = label_cex * 0.7,
+                  col = "darkblue",
+                  bg = "lightblue",
+                  frame = "rect"
+                )
+              }
+            } else {
+              ape::edgelabels(round(tree$edge.length, 3), cex = 0.6, col = "gray50")
+            }
+          }
+          
+          # Add node support if available and requested
+          if (show_nodes) {
+            support_info <- extract_node_support(tree)
+            if (!is.null(support_info$values) && support_info$source == "node.label") {
+              ape::nodelabels(
+                tree$node.label,
+                cex = label_cex * 0.7,
+                col = "red",
+                bg = "white",
+                frame = "circle"
+              )
+            } else {
+              ape::nodelabels(pch = 19, cex = 0.8, col = "red")
+            }
+          }
+          
+          dev.off()
+          cat("ape plot saved successfully\n")
+        }
+        
+      }, error = function(e) {
+        cat("Error saving plot:", e$message, "\n")
+        
+        # Create a simple error plot
+        png(file, width = 2400, height = 1600, res = 300)
+        par(mar = c(5, 5, 5, 5), bg = "white")
+        plot(1, 1, type = "n",
+             main = "Error Saving Phylogenetic Tree",
+             xlab = "", ylab = "",
+             xlim = c(0, 2), ylim = c(0, 2))
+        
+        text(1, 1.5, paste("Error:", e$message), col = "red", cex = 1.2)
+        text(1, 1.2, "Try using rectangular layout for more stable export", col = "blue", cex = 1)
+        text(1, 0.8, paste("Tree has", ape::Ntip(tree), "tips"), col = "gray", cex = 0.9)
+        
+        dev.off()
+      })
+    }
+  )
   
   # Reactive for status
   output$tree_loaded <- reactive({
