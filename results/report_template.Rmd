@@ -126,22 +126,69 @@ cat("# Alpha Diversity Analysis\n\n")
 cat("Alpha diversity measures the species diversity within individual samples. Higher alpha diversity typically indicates a more complex and potentially healthier microbial community.\n\n")
 
 if(!is.null(params$alpha_stats)) {
-  cat("## Summary Statistics\n\n")
+  cat("## Summary Statistics by Group\n\n")
   
-  alpha_stats <- params$alpha_stats
-  
-  # Create a summary table
+  # Create a comprehensive summary table
   alpha_table <- data.frame(
-    Metric = c("Shannon Index", "Simpson Index", "Observed Species"),
-    Mean = c(alpha_stats$shannon_mean, alpha_stats$simpson_mean, alpha_stats$observed_mean),
-    `Standard Deviation` = c(alpha_stats$shannon_sd, alpha_stats$simpson_sd, alpha_stats$observed_sd),
+    Metric = rep(c("Shannon Index", "Simpson Index", "Observed Species"), 2),
+    Group = c(rep("Patient", 3), rep("Control", 3)),
+    Mean = c(
+      params$alpha_stats$shannon_mean_patient,
+      params$alpha_stats$simpson_mean_patient,
+      params$alpha_stats$observed_mean_patient,
+      params$alpha_stats$shannon_mean_control,
+      params$alpha_stats$simpson_mean_control,
+      params$alpha_stats$observed_mean_control
+    ),
+    `Standard Deviation` = c(
+      params$alpha_stats$shannon_sd_patient,
+      params$alpha_stats$simpson_sd_patient,
+      params$alpha_stats$observed_sd_patient,
+      params$alpha_stats$shannon_sd_control,
+      params$alpha_stats$simpson_sd_control,
+      params$alpha_stats$observed_sd_control
+    ),
     check.names = FALSE
   )
   
   print(kable(alpha_table, 
-              caption = "Alpha Diversity Summary Statistics",
+              caption = "Alpha Diversity Summary Statistics by Group",
               digits = 3) %>%
-        kable_styling(bootstrap_options = c("striped", "hover", "condensed")))
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
+        column_spec(2, bold = TRUE) %>%
+        row_spec(which(alpha_table$Group == "Patient"), background = "#e3f2fd") %>%
+        row_spec(which(alpha_table$Group == "Control"), background = "#e8f5e8"))
+  
+  cat("\n\n")
+  
+  # Statistical comparison
+  cat("## Group Comparisons\n\n")
+  
+  shannon_diff <- params$alpha_stats$shannon_mean_patient - params$alpha_stats$shannon_mean_control
+  simpson_diff <- params$alpha_stats$simpson_mean_patient - params$alpha_stats$simpson_mean_control
+  observed_diff <- params$alpha_stats$observed_mean_patient - params$alpha_stats$observed_mean_control
+  
+  cat("**Key Findings:**\n\n")
+  cat("- **Shannon Diversity:** ")
+  if(shannon_diff > 0) {
+    cat("Patients show higher diversity (difference: +", round(shannon_diff, 3), ")\n")
+  } else {
+    cat("Controls show higher diversity (difference: ", round(shannon_diff, 3), ")\n")
+  }
+  
+  cat("- **Simpson Diversity:** ")
+  if(simpson_diff > 0) {
+    cat("Patients show higher diversity (difference: +", round(simpson_diff, 3), ")\n")
+  } else {
+    cat("Controls show higher diversity (difference: ", round(simpson_diff, 3), ")\n")
+  }
+  
+  cat("- **Species Richness:** ")
+  if(observed_diff > 0) {
+    cat("Patients have more species on average (difference: +", round(observed_diff, 1), " species)\n")
+  } else {
+    cat("Controls have more species on average (difference: ", round(observed_diff, 1), " species)\n")
+  }
   
   cat("\n\n")
   cat("**Interpretation:**\n")
@@ -151,33 +198,99 @@ if(!is.null(params$alpha_stats)) {
 }
 ```
 
-```{r alpha-plot, eval=("alpha" %in% params$selected_sections)}
-if (!is.null(params$plot_files$alpha_plot) && file_exists_and_valid(params$plot_files$alpha_plot)) {
-  knitr::include_graphics(params$plot_files$alpha_plot)
+```{r alpha-plot, eval=("alpha" %in% params$selected_sections), fig.width=10, fig.height=6}
+# Check for alpha diversity plot
+if (!is.null(params$plot_files) && !is.null(params$plot_files$alpha_plot)) {
+  if (file_exists_and_valid(params$plot_files$alpha_plot)) {
+    cat("## Alpha Diversity Visualization\n\n")
+    knitr::include_graphics(params$plot_files$alpha_plot)
+  } else {
+    cat("## Alpha Diversity Visualization\n\n")
+    cat("*Alpha diversity plot could not be generated.*\n\n")
+    if (file.exists(params$plot_files$alpha_plot)) {
+      cat("Plot file exists but appears to be empty or corrupted.\n\n")
+    } else {
+      cat("Plot file was not created.\n\n")
+    }
+  }
 } else {
-  cat("*Alpha diversity plot not available*\n")
+  cat("## Alpha Diversity Visualization\n\n")
+  cat("*Alpha diversity plot not available - plot_files$alpha_plot is NULL.*\n\n")
 }
 ```
 
 ```{r beta-section, results='asis', eval=("beta" %in% params$selected_sections)}
 cat("\n\n# Beta Diversity Analysis\n\n")
-cat("Beta diversity analysis examines the differences in species composition between samples. This analysis helps identify patterns of community structure and relationships between different sample groups.\n\n")
+cat("Beta diversity analysis examines the differences in species composition between samples, revealing patterns of community structure and relationships between different sample groups.\n\n")
 
-cat("## Principal Coordinate Analysis (PCoA)\n\n")
-cat("PCoA is an ordination method that reduces the dimensionality of community data while preserving the distances between samples. Samples that cluster together have similar microbial compositions.\n\n")
+cat("## Community Structure Analysis\n\n")
+cat("Two complementary approaches are used to visualize beta diversity patterns:\n\n")
+cat("1. **Principal Coordinate Analysis (PCoA):** Reduces the dimensionality of community data while preserving distances between samples\n")
+cat("2. **Hierarchical Clustering:** Groups samples based on similarity, showing relationships in a tree-like structure\n\n")
 ```
 
-```{r beta-plot, eval=("beta" %in% params$selected_sections)}
-if (!is.null(params$plot_files$beta_plot) && file_exists_and_valid(params$plot_files$beta_plot)) {
-  knitr::include_graphics(params$plot_files$beta_plot)
+```{r beta-pcoa-plot, eval=("beta" %in% params$selected_sections), fig.width=10, fig.height=8}
+if (!is.null(params$plot_files) && !is.null(params$plot_files$beta_plot)) {
+  if (file_exists_and_valid(params$plot_files$beta_plot)) {
+    cat("### Principal Coordinate Analysis (PCoA)\n\n")
+    cat("PCoA ordination showing the first two principal coordinates. Samples that cluster together have similar microbial compositions. Ellipses represent 95% confidence intervals for each group.\n\n")
+    knitr::include_graphics(params$plot_files$beta_plot)
+  } else {
+    cat("### Principal Coordinate Analysis (PCoA)\n\n")
+    cat("*PCoA plot could not be generated.*\n\n")
+  }
 } else {
-  cat("*Beta diversity plot not available*\n")
+  cat("### Principal Coordinate Analysis (PCoA)\n\n")
+  cat("*PCoA plot not available.*\n\n")
 }
 ```
 
+```{r beta-dendrogram-plot, eval=("beta" %in% params$selected_sections), fig.width=14, fig.height=10}
+if (!is.null(params$plot_files) && !is.null(params$plot_files$beta_dendrogram)) {
+  if (file_exists_and_valid(params$plot_files$beta_dendrogram)) {
+    cat("\n\n### Hierarchical Clustering Dendrogram\n\n")
+    cat("Hierarchical clustering dendrogram showing relationships between samples based on Bray-Curtis dissimilarity. ")
+    cat("The tree structure reveals which samples are most similar to each other. ")
+    cat("Colored rectangles indicate major clusters identified by the algorithm.\n\n")
+    knitr::include_graphics(params$plot_files$beta_dendrogram)
+  } else {
+    cat("\n\n### Hierarchical Clustering Dendrogram\n\n")
+    cat("*Clustering dendrogram could not be generated.*\n\n")
+  }
+} else {
+  cat("\n\n### Hierarchical Clustering Dendrogram\n\n")
+  cat("*Clustering dendrogram not available.*\n\n")
+}
+```
+
+```{r beta-interpretation, results='asis', eval=("beta" %in% params$selected_sections)}
+cat("\n\n## Interpretation Guide\n\n")
+
+cat("**Understanding the Plots:**\n\n")
+
+cat("**PCoA Plot:**\n")
+cat("- Points represent individual samples\n")
+cat("- Distance between points reflects dissimilarity in microbial composition\n")
+cat("- Closer points = more similar microbiomes\n")
+cat("- Variance explained by each axis is shown in parentheses\n")
+cat("- Group ellipses help visualize separation between sample types\n\n")
+
+cat("**Clustering Dendrogram:**\n")
+cat("- Height of branches indicates degree of dissimilarity\n")
+cat("- Samples joined at lower heights are more similar\n")
+cat("- Major clusters are highlighted with colored rectangles\n")
+cat("- Ward.D2 linkage method minimizes within-cluster variance\n\n")
+
+cat("**Biological Significance:**\n")
+cat("- Clear separation between groups suggests distinct microbiome signatures\n")
+cat("- Mixed clustering may indicate heterogeneity within groups\n")
+cat("- Outlier samples may represent unique microbiome states or technical artifacts\n\n")
+```
+
+
 ```{r taxonomy-section, results='asis', eval=("taxonomy" %in% params$selected_sections)}
 cat("\n\n# Taxonomic Composition Analysis\n\n")
-cat("Taxonomic composition analysis reveals the relative abundance of different microbial species across samples, providing insights into the dominant members of the microbial community.\n\n")
+cat("Taxonomic composition analysis reveals the relative abundance of different microbial species across samples, providing insights into the dominant members of the microbial community and differences between sample groups.\n\n")
 
 if(!is.null(params$taxonomy_summary)) {
   tax_info <- params$taxonomy_summary
@@ -202,11 +315,90 @@ if(!is.null(params$taxonomy_summary)) {
 }
 ```
 
-```{r taxonomy-plot, eval=("taxonomy" %in% params$selected_sections)}
-if (!is.null(params$plot_files$taxonomy_plot) && file_exists_and_valid(params$plot_files$taxonomy_plot)) {
-  knitr::include_graphics(params$plot_files$taxonomy_plot)
+```{r taxonomy-composition-plot, eval=("taxonomy" %in% params$selected_sections), fig.width=16, fig.height=10}
+if (!is.null(params$plot_files) && !is.null(params$plot_files$taxonomy_plot)) {
+  if (file_exists_and_valid(params$plot_files$taxonomy_plot)) {
+    cat("## Species Composition Overview\n\n")
+    cat("The stacked bar chart below shows the relative abundance of the most dominant species in each sample, grouped by sample type. Each color represents a different species, and the height of each segment represents its relative abundance within that sample.\n\n")
+    knitr::include_graphics(params$plot_files$taxonomy_plot)
+  } else {
+    cat("## Species Composition Overview\n\n")
+    cat("*Taxonomic composition plot could not be generated.*\n\n")
+  }
 } else {
-  cat("*Taxonomic composition plot not available*\n")
+  cat("## Species Composition Overview\n\n")
+  cat("*Taxonomic composition plot not available.*\n\n")
+}
+```
+
+```{r taxonomy-heatmap-plot, eval=("taxonomy" %in% params$selected_sections), fig.width=14, fig.height=10}
+if (!is.null(params$plot_files) && !is.null(params$plot_files$taxonomy_heatmap)) {
+  if (file_exists_and_valid(params$plot_files$taxonomy_heatmap)) {
+    cat("\n\n## Taxonomic Abundance Heatmap\n\n")
+    cat("The heatmap provides a comprehensive view of species abundance patterns across all samples. ")
+    cat("Samples are clustered by similarity (columns) and species are grouped by abundance patterns (rows). ")
+    cat("Color intensity represents log-transformed relative abundance, with darker colors indicating higher abundance.\n\n")
+    
+    cat("**Key Features:**\n")
+    cat("- **Hierarchical clustering** groups similar samples and species together\n")
+    cat("- **Sample annotations** (top bar) distinguish between patient and control groups\n")
+    cat("- **Color scale** represents log10-transformed relative abundance values\n")
+    cat("- **Dendrograms** show relationships between samples (top) and species (left)\n\n")
+    
+    knitr::include_graphics(params$plot_files$taxonomy_heatmap)
+  } else {
+    cat("\n\n## Taxonomic Abundance Heatmap\n\n")
+    cat("*Taxonomic heatmap could not be generated.*\n\n")
+  }
+} else {
+  cat("\n\n## Taxonomic Abundance Heatmap\n\n")
+  cat("*Taxonomic heatmap not available.*\n\n")
+}
+```
+
+```{r taxonomy-interpretation, results='asis', eval=("taxonomy" %in% params$selected_sections)}
+cat("\n\n## Interpretation Guide\n\n")
+
+cat("**Understanding the Visualizations:**\n\n")
+
+cat("**Stacked Bar Chart:**\n")
+cat("- Each bar represents one sample\n")
+cat("- Colors represent different species\n")
+cat("- Height of each colored segment = relative abundance of that species\n")
+cat("- Samples are grouped by type (Patient vs Control) for easy comparison\n")
+cat("- Only the most abundant species are shown individually; rare species are grouped as \"Other\"\n\n")
+
+cat("**Abundance Heatmap:**\n")
+cat("- Rows = species, Columns = samples\n")
+cat("- Color intensity = species abundance (log-transformed)\n")
+cat("- Clustering reveals patterns in microbial community structure\n")
+cat("- Sample groupings (top annotation) help identify group-specific patterns\n")
+cat("- Similar samples cluster together (shown by column dendrogram)\n")
+cat("- Co-occurring species cluster together (shown by row dendrogram)\n\n")
+
+cat("**Biological Insights:**\n")
+cat("- **Dominant species** appear as consistent high-abundance bands across samples\n")
+cat("- **Group-specific patterns** are visible when one sample type consistently shows different abundance patterns\n")
+cat("- **Individual variation** is revealed by differences in abundance patterns between samples of the same type\n")
+cat("- **Core microbiome** species appear in most samples, while **variable species** are present in only some samples\n\n")
+
+if(!is.null(params$taxonomy_summary)) {
+  tax_info <- params$taxonomy_summary
+  
+  cat("**Dataset-Specific Observations:**\n")
+  cat("- This dataset contains", format_number(tax_info$total_species, 0), "distinct species\n")
+  cat("- Average sequencing depth of", format_number(tax_info$avg_reads_per_sample, 0), "reads per sample provides")
+  if(tax_info$avg_reads_per_sample > 10000) {
+    cat(" excellent resolution for abundance analysis\n")
+  } else if(tax_info$avg_reads_per_sample > 1000) {
+    cat(" adequate resolution for abundance analysis\n")
+  } else {
+    cat(" limited resolution that may affect detection of rare species\n")
+  }
+  
+  if(length(tax_info$top_species) > 0) {
+    cat("- The most frequently detected species include:", paste(head(tax_info$top_species, 3), collapse = ", "), "\n")
+  }
 }
 ```
 
@@ -228,7 +420,7 @@ if (!is.null(params$plot_files$phylo_plot) && file_exists_and_valid(params$plot_
 
 ```{r metadata-section, results='asis', eval=("metadata" %in% params$selected_sections)}
 cat("\n\n# Metadata Analysis\n\n")
-cat("Analysis of sample metadata provides context for understanding microbiome patterns in relation to host characteristics and experimental conditions.\n\n")
+cat("Analysis of sample metadata provides context for understanding microbiome patterns in relation to host characteristics and experimental conditions. This section explores relationships between clinical variables and microbial community structure.\n\n")
 
 if(!is.null(params$sample_summary)) {
   sample_info <- params$sample_summary
@@ -265,12 +457,84 @@ if(!is.null(params$sample_summary)) {
 }
 ```
 
-```{r metadata-plot, eval=("metadata" %in% params$selected_sections)}
-if (!is.null(params$plot_files$metadata_plot) && file_exists_and_valid(params$plot_files$metadata_plot)) {
-  knitr::include_graphics(params$plot_files$metadata_plot)
-} else {
-  cat("*Metadata analysis plot not available*\n")
+```{r metadata-demographics-plot, eval=("metadata" %in% params$selected_sections), fig.width=10, fig.height=6}
+if (!is.null(params$plot_files) && !is.null(params$plot_files$metadata_plot)) {
+  if (file_exists_and_valid(params$plot_files$metadata_plot)) {
+    cat("## Demographic Analysis\n\n")
+    cat("Age and gender distribution analysis helps identify potential confounding factors and ensures balanced representation across sample groups.\n\n")
+    knitr::include_graphics(params$plot_files$metadata_plot)
+  }
 }
+```
+
+```{r parallel-coordinates-plot, eval=("metadata" %in% params$selected_sections), fig.width=14, fig.height=8}
+if (!is.null(params$plot_files) && !is.null(params$plot_files$parallel_plot)) {
+  if (file_exists_and_valid(params$plot_files$parallel_plot)) {
+    cat("\n\n## Multidimensional Metadata Analysis\n\n")
+    cat("The parallel coordinates plot provides a comprehensive view of relationships between multiple metadata variables and microbial community characteristics. Each line represents one sample, and the path of the line across variables reveals patterns and correlations.\n\n")
+    
+    cat("**How to Read the Plot:**\n")
+    cat("- Each vertical axis represents a different variable (scaled 0-1)\n")
+    cat("- Each colored line represents one sample traced across all variables\n")
+    cat("- Line color indicates sample group (Patient vs Control)\n")
+    cat("- Parallel lines suggest correlation between variables\n")
+    cat("- Crossing lines indicate different patterns between groups\n\n")
+    
+    knitr::include_graphics(params$plot_files$parallel_plot)
+  } else {
+    cat("\n\n## Multidimensional Metadata Analysis\n\n")
+    cat("*Parallel coordinates plot could not be generated.*\n\n")
+  }
+} else {
+  cat("\n\n## Multidimensional Metadata Analysis\n\n")
+  cat("*Parallel coordinates plot not available.*\n\n")
+}
+```
+
+```{r metadata-interpretation, results='asis', eval=("metadata" %in% params$selected_sections)}
+cat("\n\n## Clinical and Lifestyle Correlations\n\n")
+
+cat("**Understanding Metadata Relationships:**\n\n")
+
+cat("**Demographic Patterns:**\n")
+cat("- Age and gender distributions help identify potential biological confounders\n")
+cat("- Balanced representation across groups strengthens analytical conclusions\n")
+cat("- Demographic outliers may indicate samples requiring special consideration\n\n")
+
+cat("**Parallel Coordinates Insights:**\n")
+cat("- **Group Separation:** Clear separation of colored lines suggests distinct profiles between patient and control groups\n")
+cat("- **Variable Correlations:** Variables where lines tend to be parallel show positive correlation\n")
+cat("- **Outlier Detection:** Individual lines that deviate significantly from group patterns may represent outlier samples\n")
+cat("- **Pattern Recognition:** Similar line shapes within groups suggest common phenotypic characteristics\n\n")
+
+cat("**Clinical Significance:**\n")
+cat("- Lifestyle factors (exercise, diet, alcohol) may influence microbiome composition\n")
+cat("- Medical conditions and medications can have direct effects on microbial communities\n")
+cat("- BMI and age are known correlates of microbiome diversity and composition\n")
+cat("- Antibiotic usage history is a major factor affecting microbial community structure\n\n")
+
+if(!is.null(params$sample_summary)) {
+  sample_info <- params$sample_summary
+  
+  cat("**Dataset-Specific Observations:**\n")
+  
+  if(!identical(sample_info$age_range, "N/A")) {
+    cat("- Age range of", sample_info$age_range, "years provides good representation across life stages\n")
+  }
+  
+  if(sample_info$total_controls > 0) {
+    control_percentage <- round((sample_info$total_controls / sample_info$total_samples) * 100, 1)
+    cat("- Control samples represent", control_percentage, "% of the dataset, enabling robust comparative analysis\n")
+  }
+  
+  cat("- Collection period spanning", sample_info$collection_period, "helps control for temporal effects\n")
+}
+
+cat("\n**Recommendations for Further Analysis:**\n")
+cat("- Consider stratifying microbiome analyses by key demographic variables\n")
+cat("- Include significant metadata variables as covariates in statistical models\n")
+cat("- Investigate outlier samples for potential technical or biological explanations\n")
+cat("- Validate group differences while controlling for confounding variables\n\n")
 ```
 
 # Statistical Methods
