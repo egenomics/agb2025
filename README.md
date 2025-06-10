@@ -50,6 +50,7 @@ HdMBioinfo-MicrobiotaPipeline/
 │       │   ├── metadata_sample.csv
 │       │   └── metadata_run.csv
 │       ├── qc_reports/
+│       │   ├── multiqc_data/ (all generated files from multiqc)           
 │       │   ├── raw/
 │       │   │   ├── *_fastqc.html
 │       │   │   └── *_fastqc.zip
