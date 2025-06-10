@@ -168,5 +168,4 @@ https://github.com/egenomics/agb2025/wiki/Group-2-A
 ### Notes
 
 - Filtered fastq's and `outputs/` directories are not pushed to github due to size limits.
-- kraken2 is under development and lives in a separate branch (`kraken_integration`).
 - multiqc summary merging into metadata is done via csv tools and logged in `outputs/run_<run_id>/`.
