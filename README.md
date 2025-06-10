@@ -10,78 +10,8 @@ Wiki you can modify and use to document the process!
 
 In this wiki page you will find the information about the pipeline context, the sample processing and the decisions made through each of the modules (https://github.com/egenomics/agb2025/wiki/Pipeline-Context).
 
-## Project Directory Structure
-
-```text
-HdMBioinfo-MicrobiotaPipeline/
-├── main.nf                        # Entry point of the pipeline     
-├── nextflow.config 
-│
-├── scripts/                       # Helper scripts and small executables
-│   ├── api_csv.py
-│   ├── metadata_parsing.R
-│   ├── Reorder.R
-│   └── process_metadata.py
-│
-├── modules/                       # DSL2-style modules for each pipeline step
-│   └── nf-core/
-│       ├── fastqc/
-│       ├── trimmomatic/
-│       └── kraken2/kraken2
-│
-├── databases/
-│   ├── silva-138-99-nb-classifier.qza
-│   └── k2_Human_20230629.tar.gz                
-│
-├── conf/                          # Configuration files (??)
-│
-├── controls/
-│   ├── metadata_controls.csv
-│   ├── taxonomy_control
-│   └── ...
-│
-├── runs/
-│   └── R[01-99][DDMMYY] (e.g. R01030525)/
-│       ├── raw_data/
-│       │   ├── S[A-Z]{2}[1-9][DDMMYY][R1-R2].fastq.gz 
-│       │   └── e.g. SAF1030525R1.fastq.gz
-│       ├── metadata/
-│       │   ├── metadata_cleaned.csv
-│       │   ├── metadata_sample.csv
-│       │   └── metadata_run.csv
-│       ├── qc_reports/
-│       │   ├── multiqc_data/ (all generated files from multiqc)           
-│       │   ├── raw/
-│       │   │   ├── *_fastqc.html
-│       │   │   └── *_fastqc.zip
-│       │   └── trimmed/
-│       │       ├── *_trimmed_fastqc.html
-│       │       └── *_trimmed_fastqc.zip
-│       ├── preprocessed_data/
-│       │   ├── *_trimmed.fastq.gz
-│       │   └── e.g. SAF1030525R1_trimmed.fastq.gz
-│       ├── qiime_output/
-│       │   ├── artifacts/
-│       │   │   ├── 01_imported_reads
-│       │   │   ├── 02_denoised_dada2
-│       │   │   ├── 03_summaries
-│       │   │   ├── 04_taxonomy
-│       │   │   └── 05_phylogeny
-│       │   └── relevant_results/
-│       └── results/
-│           ├── pipeline.log ?
-│           ├── multiqc_report.html
-│           └── shiny_dashboard_results_app.R
-│
-├── .gitignore
-├── LICENSE
-├── README.md
-└── CHANGELOG.md
-```
 
 ## Quick start (Docker edition)
-
-### 1 · Prerequisites
 
 ### 1 · Prerequisites
 
