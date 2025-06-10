@@ -6392,7 +6392,10 @@ server <- function(input, output, session) {
     })
   })
   
-  # Report generation handler
+  # ENHANCED PLOT GENERATION FOR REPORTS
+  # Replace the plot generation section in your generate_report downloadHandler
+  
+  # Enhanced report generation with proper plots
   output$generate_report <- downloadHandler(
     filename = function() {
       ext <- switch(input$report_format,
@@ -6417,7 +6420,7 @@ server <- function(input, output, session) {
         temp_dir <- tempdir()
         plot_files <- list()
         
-        # Generate basic statistics
+        # Generate basic statistics (same as before)
         sample_summary <- list(
           total_samples = nrow(data_store$sample_metadata),
           total_controls = if(!is.null(data_store$control_sample_metadata)) nrow(data_store$control_sample_metadata) else 0,
@@ -6431,6 +6434,25 @@ server <- function(input, output, session) {
             if(length(dates) > 0) paste(min(dates), "to", max(dates)) else "N/A"
           } else "N/A"
         )
+        tryCatch({
+          # Clean and convert abundance data to integers
+          data_store$taxonomy_data <- data_store$taxonomy_data %>%
+            mutate(Abundance = as.integer(round(pmax(Abundance, 1))))
+          
+          if(!is.null(data_store$control_taxonomy_data)) {
+            data_store$control_taxonomy_data <- data_store$control_taxonomy_data %>%
+              mutate(Abundance = as.integer(round(pmax(Abundance, 1))))
+          }
+          
+          cat("Data cleaned: converted abundance to integers\n")
+          
+          # Rest of your plot generation code...
+          
+        }, error = function(e) {
+          showNotification(paste("Error cleaning data:", e$message), type = "error")
+          return()
+        })
+        
         
         # Taxonomy summary
         taxonomy_summary <- list(
@@ -6440,37 +6462,817 @@ server <- function(input, output, session) {
           top_species = head(names(sort(table(data_store$taxonomy_data$Species), decreasing = TRUE)), 10)
         )
         
-        # Simple alpha diversity plot if requested
+        # FIXED ALPHA DIVERSITY CALCULATION
+        # Replace the alpha diversity section in your generate_report with this:
+        
+        # ENHANCED ALPHA DIVERSITY PLOT
         if("alpha" %in% input$report_sections) {
           alpha_plot_path <- file.path(temp_dir, "alpha_diversity.png")
           
-          # Create a simple diversity plot
-          png(alpha_plot_path, width = 12*150, height = 8*150, res = 150)
-          par(mar = c(5, 5, 4, 2))
+          tryCatch({
+            # Prepare data for alpha diversity
+            sample_tax <- data_store$taxonomy_data %>% 
+              filter(Sample_ID %in% data_store$sample_metadata$Sample_ID)
+            control_tax <- data_store$control_taxonomy_data %>% 
+              filter(Sample_ID %in% data_store$control_sample_metadata$Sample_ID)
+            
+            # Convert to wide format and ensure integer counts
+            sample_wide <- sample_tax %>%
+              select(Sample_ID, Species, Abundance) %>%
+              # CRITICAL: Convert to integers and ensure positive values
+              mutate(Abundance = as.integer(round(pmax(Abundance, 0)))) %>%
+              pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0L) %>%
+              column_to_rownames("Sample_ID") %>%
+              as.matrix()
+            
+            # Ensure the matrix is integer type
+            storage.mode(sample_wide) <- "integer"
+            
+            # Check if we have sufficient data for rarefaction
+            sample_totals <- rowSums(sample_wide)
+            min_depth <- min(sample_totals[sample_totals > 0])
+            
+            cat("Sample matrix info: min_depth =", min_depth, "max =", max(sample_totals), "\n")
+            
+            # Only rarefy if we have sufficient depth, otherwise use original data
+            if(min_depth >= 1000) {
+              # Rarefy to minimum depth
+              rarefied_sample <- vegan::rrarefy(sample_wide, sample = min_depth)
+            } else {
+              # Use original data if rarefaction depth is too low
+              rarefied_sample <- sample_wide
+              cat("Skipping rarefaction due to low depth, using original counts\n")
+            }
+            
+            sample_div <- tibble(
+              Sample_ID = rownames(rarefied_sample),
+              Observed = rowSums(rarefied_sample > 0),
+              Shannon = vegan::diversity(rarefied_sample, index = "shannon"),
+              Simpson = vegan::diversity(rarefied_sample, index = "simpson"),
+              Group = "Patient"
+            )
+            
+            # Same for controls with proper integer conversion
+            control_wide <- control_tax %>%
+              select(Sample_ID, Species, Abundance) %>%
+              # CRITICAL: Convert to integers and ensure positive values
+              mutate(Abundance = as.integer(round(pmax(Abundance, 0)))) %>%
+              pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0L) %>%
+              column_to_rownames("Sample_ID") %>%
+              as.matrix()
+            
+            # Ensure the matrix is integer type
+            storage.mode(control_wide) <- "integer"
+            
+            control_totals <- rowSums(control_wide)
+            min_control_depth <- min(control_totals[control_totals > 0])
+            
+            cat("Control matrix info: min_depth =", min_control_depth, "max =", max(control_totals), "\n")
+            
+            # Only rarefy if we have sufficient depth
+            if(min_control_depth >= 1000) {
+              rarefied_control <- vegan::rrarefy(control_wide, sample = min_control_depth)
+            } else {
+              rarefied_control <- control_wide
+              cat("Skipping control rarefaction due to low depth, using original counts\n")
+            }
+            
+            control_div <- tibble(
+              Sample_ID = rownames(rarefied_control),
+              Observed = rowSums(rarefied_control > 0),
+              Shannon = vegan::diversity(rarefied_control, index = "shannon"),
+              Simpson = vegan::diversity(rarefied_control, index = "simpson"),
+              Group = "Control"
+            )
+            
+            # Combine data
+            diversity_df <- bind_rows(sample_div, control_div)
+            
+            # Remove any rows with NaN or infinite values
+            diversity_df <- diversity_df %>%
+              filter(is.finite(Shannon), is.finite(Simpson), is.finite(Observed))
+            
+            cat("Final diversity data: Patient samples =", sum(diversity_df$Group == "Patient"), 
+                ", Control samples =", sum(diversity_df$Group == "Control"), "\n")
+            
+            # Create improved alpha diversity plot with ggplot2
+            p_alpha <- ggplot(diversity_df, aes(x = Group, y = Shannon, fill = Group)) +
+              geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+              geom_jitter(width = 0.2, alpha = 0.6, size = 2) +
+              scale_fill_manual(values = c("Control" = "#27ae60", "Patient" = "#3498db")) +
+              labs(
+                title = "Shannon Diversity Index by Group",
+                subtitle = paste("Patient samples (n =", sum(diversity_df$Group == "Patient"), 
+                                 ") vs Control samples (n =", sum(diversity_df$Group == "Control"), ")"),
+                x = "Sample Group",
+                y = "Shannon Diversity Index"
+              ) +
+              theme_minimal() +
+              theme(
+                plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+                plot.subtitle = element_text(size = 12, hjust = 0.5),
+                axis.title = element_text(size = 12),
+                axis.text = element_text(size = 11),
+                legend.position = "none"
+              ) +
+              stat_summary(fun = mean, geom = "point", shape = 23, size = 3, fill = "red")
+            
+            ggsave(alpha_plot_path, p_alpha, width = 10, height = 6, dpi = 300, bg = "white")
+            plot_files$alpha_plot <- alpha_plot_path
+            
+            cat("Alpha diversity plot saved successfully\n")
+            
+          }, error = function(e) {
+            cat("Error in alpha diversity calculation:", e$message, "\n")
+            
+            # Fallback: Create a simple plot without rarefaction
+            tryCatch({
+              # Simple diversity calculation without rarefaction
+              simple_sample_div <- data_store$taxonomy_data %>%
+                group_by(Sample_ID) %>%
+                summarise(
+                  Observed = n_distinct(Species[Abundance > 0]),
+                  Shannon = vegan::diversity(Abundance, index = "shannon"),
+                  Simpson = vegan::diversity(Abundance, index = "simpson"),
+                  .groups = "drop"
+                ) %>%
+                mutate(Group = "Patient")
+              
+              simple_control_div <- data_store$control_taxonomy_data %>%
+                group_by(Sample_ID) %>%
+                summarise(
+                  Observed = n_distinct(Species[Abundance > 0]),
+                  Shannon = vegan::diversity(Abundance, index = "shannon"),
+                  Simpson = vegan::diversity(Abundance, index = "simpson"),
+                  .groups = "drop"
+                ) %>%
+                mutate(Group = "Control")
+              
+              diversity_df <- bind_rows(simple_sample_div, simple_control_div) %>%
+                filter(is.finite(Shannon), is.finite(Simpson))
+              
+              p_alpha <- ggplot(diversity_df, aes(x = Group, y = Shannon, fill = Group)) +
+                geom_boxplot(alpha = 0.7) +
+                geom_jitter(width = 0.2, alpha = 0.6) +
+                scale_fill_manual(values = c("Control" = "#27ae60", "Patient" = "#3498db")) +
+                labs(
+                  title = "Shannon Diversity Index by Group (No Rarefaction)",
+                  x = "Sample Group",
+                  y = "Shannon Diversity Index"
+                ) +
+                theme_minimal() +
+                theme(legend.position = "none")
+              
+              ggsave(alpha_plot_path, p_alpha, width = 10, height = 6, dpi = 300, bg = "white")
+              plot_files$alpha_plot <- alpha_plot_path
+              
+              cat("Fallback alpha diversity plot created\n")
+              
+            }, error = function(e2) {
+              cat("Fallback alpha plot also failed:", e2$message, "\n")
+            })
+          })
+        }
+        
+        # BETA DIVERSITY PLOT WITH DENDROGRAM
+        if("beta" %in% input$report_sections) {
+          beta_plot_path <- file.path(temp_dir, "beta_diversity.png")
+          dendrogram_plot_path <- file.path(temp_dir, "beta_dendrogram.png")
           
-          # Calculate Shannon diversity (simplified)
-          sample_diversity <- aggregate(Abundance ~ Sample_ID, data_store$taxonomy_data, 
-                                        function(x) {
-                                          p <- x/sum(x)
-                                          p <- p[p > 0]
-                                          -sum(p * log(p))
-                                        })
+          cat("=== BETA DIVERSITY PLOTS DEBUG ===\n")
           
-          # Add group labels
-          sample_diversity$Group <- ifelse(
-            sample_diversity$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
-            "Control", "Patient"
+          tryCatch({
+            # Combine all taxonomy data
+            all_tax <- bind_rows(
+              data_store$taxonomy_data %>% mutate(Group = "Patient"),
+              data_store$control_taxonomy_data %>% mutate(Group = "Control")
+            ) %>%
+              select(Sample_ID, Species, Abundance) %>%
+              # Ensure integer counts for consistency
+              mutate(Abundance = as.integer(round(pmax(Abundance, 0)))) %>%
+              pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0L) %>%
+              column_to_rownames("Sample_ID")
+            
+            cat("Beta diversity matrix: samples =", nrow(all_tax), ", species =", ncol(all_tax), "\n")
+            
+            # Ensure integer matrix
+            all_tax <- as.matrix(all_tax)
+            storage.mode(all_tax) <- "integer"
+            
+            # Calculate distance matrix (Bray-Curtis)
+            dist_matrix <- vegan::vegdist(all_tax, method = "bray")
+            
+            # 1. CREATE ORDINATION PLOT (PCoA)
+            ord <- ape::pcoa(dist_matrix)
+            coords <- as.data.frame(ord$vectors[, 1:2])
+            colnames(coords) <- c("PC1", "PC2")
+            coords$Sample_ID <- rownames(coords)
+            
+            # Add group information
+            coords$Group <- ifelse(coords$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, 
+                                   "Control", "Patient")
+            
+            # Calculate variance explained
+            var_explained <- round(ord$values$Relative_eig[1:2] * 100, 1)
+            
+            p_beta <- ggplot(coords, aes(x = PC1, y = PC2, color = Group)) +
+              geom_point(size = 3, alpha = 0.8) +
+              stat_ellipse(alpha = 0.3, size = 1) +
+              scale_color_manual(values = c("Control" = "#27ae60", "Patient" = "#3498db")) +
+              labs(
+                title = "Principal Coordinate Analysis (PCoA)",
+                subtitle = "Based on Bray-Curtis dissimilarity",
+                x = paste0("PC1 (", var_explained[1], "% variance)"),
+                y = paste0("PC2 (", var_explained[2], "% variance)"),
+                color = "Group"
+              ) +
+              theme_minimal() +
+              theme(
+                plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+                plot.subtitle = element_text(size = 12, hjust = 0.5),
+                axis.title = element_text(size = 12),
+                axis.text = element_text(size = 11),
+                legend.position = "bottom",
+                legend.title = element_text(size = 12),
+                legend.text = element_text(size = 11)
+              )
+            
+            ggsave(beta_plot_path, p_beta, width = 10, height = 8, dpi = 300, bg = "white")
+            cat("PCoA plot saved successfully\n")
+            
+            # 2. CREATE CLUSTERING DENDROGRAM
+            # Perform hierarchical clustering
+            hc <- hclust(dist_matrix, method = "ward.D2")
+            
+            # Create dendrogram
+            dend <- as.dendrogram(hc)
+            
+            # Color branches by group
+            sample_groups <- ifelse(rownames(all_tax) %in% data_store$control_sample_metadata$Sample_ID, 
+                                    "Control", "Patient")
+            names(sample_groups) <- rownames(all_tax)
+            
+            # Create enhanced dendrogram plot
+            png(dendrogram_plot_path, width = 14*300, height = 10*300, res = 300)
+            par(mar = c(8, 4, 4, 2))
+            
+            # Plot dendrogram
+            plot(dend,
+                 main = "Hierarchical Clustering Dendrogram\n(Ward.D2 method, Bray-Curtis distance)",
+                 ylab = "Distance",
+                 xlab = "",
+                 cex.main = 1.2,
+                 cex.lab = 1.1)
+            
+            # Add colored rectangles to show groups
+            # Find optimal number of clusters (try 2 first)
+            clusters <- cutree(hc, k = 2)
+            
+            # Add rectangles around clusters
+            rect.hclust(hc, k = 2, border = c("#3498db", "#e74c3c"))
+            
+            # Add legend
+            legend("topright", 
+                   legend = c("Cluster 1", "Cluster 2", "Patient samples", "Control samples"),
+                   col = c("#3498db", "#e74c3c", "black", "black"),
+                   lty = c(1, 1, NA, NA),
+                   pch = c(NA, NA, 16, 1),
+                   cex = 0.9,
+                   bg = "white")
+            
+            # Add sample type information in bottom margin
+            mtext("Sample types: filled circles = patients, open circles = controls", 
+                  side = 1, line = 6, cex = 0.9, col = "gray40")
+            
+            dev.off()
+            
+            cat("Dendrogram plot saved successfully\n")
+            
+            # Store both plots
+            plot_files$beta_plot <- beta_plot_path
+            plot_files$beta_dendrogram <- dendrogram_plot_path
+            
+            # Verify files were created
+            if(file.exists(beta_plot_path)) {
+              cat("✅ Beta PCoA plot created, size:", file.info(beta_plot_path)$size, "bytes\n")
+            }
+            if(file.exists(dendrogram_plot_path)) {
+              cat("✅ Dendrogram plot created, size:", file.info(dendrogram_plot_path)$size, "bytes\n")
+            }
+            
+          }, error = function(e) {
+            cat("❌ ERROR in beta diversity plots:", e$message, "\n")
+            cat("Traceback:", paste(as.character(sys.calls()), collapse = "\n"), "\n")
+          })
+          
+          cat("=== END BETA DIVERSITY DEBUG ===\n")
+        }
+        
+        # TAXONOMY HEATMAP GENERATION FOR REPORT
+        # Add this to your taxonomy section in the generate_report function:
+        
+        # TAXONOMY COMPOSITION PLOT AND HEATMAP
+        if("taxonomy" %in% input$report_sections) {
+          taxonomy_plot_path <- file.path(temp_dir, "taxonomy_composition.png")
+          heatmap_plot_path <- file.path(temp_dir, "taxonomy_heatmap.png")
+          
+          cat("=== TAXONOMY PLOTS DEBUG ===\n")
+          
+          tryCatch({
+            # 1. STACKED BAR PLOT (existing code)
+            # Prepare taxonomy data
+            tax_data <- bind_rows(
+              data_store$taxonomy_data %>% mutate(Group = "Patient"),
+              data_store$control_taxonomy_data %>% mutate(Group = "Control")
+            )
+            
+            # Calculate relative abundance
+            tax_data <- tax_data %>%
+              group_by(Sample_ID) %>%
+              mutate(Total_Abundance = sum(Abundance),
+                     Relative_Abundance = (Abundance / Total_Abundance) * 100) %>%
+              ungroup()
+            
+            # Get top 15 most abundant species
+            top_species <- tax_data %>%
+              group_by(Species) %>%
+              summarise(Mean_Abundance = mean(Relative_Abundance), .groups = "drop") %>%
+              arrange(desc(Mean_Abundance)) %>%
+              head(15) %>%
+              pull(Species)
+            
+            # Filter and aggregate others
+            tax_subset <- tax_data %>%
+              mutate(Species_Display = ifelse(Species %in% top_species, Species, "Other")) %>%
+              group_by(Sample_ID, Group, Species_Display) %>%
+              summarise(Relative_Abundance = sum(Relative_Abundance), .groups = "drop")
+            
+            # Create stacked bar plot
+            p_tax <- ggplot(tax_subset, aes(x = Sample_ID, y = Relative_Abundance, fill = Species_Display)) +
+              geom_bar(stat = "identity") +
+              facet_wrap(~Group, scales = "free_x", ncol = 1) +
+              scale_fill_viridis_d(name = "Species") +
+              labs(
+                title = "Taxonomic Composition by Sample Group",
+                subtitle = paste("Top", length(top_species), "most abundant species shown"),
+                x = "Sample ID",
+                y = "Relative Abundance (%)"
+              ) +
+              theme_minimal() +
+              theme(
+                plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+                plot.subtitle = element_text(size = 12, hjust = 0.5),
+                axis.title = element_text(size = 12),
+                axis.text.x = element_text(angle = 90, hjust = 1, size = 8),
+                axis.text.y = element_text(size = 11),
+                legend.position = "bottom",
+                legend.title = element_text(size = 11),
+                legend.text = element_text(size = 9),
+                strip.text = element_text(size = 12, face = "bold")
+              ) +
+              guides(fill = guide_legend(ncol = 4))
+            
+            ggsave(taxonomy_plot_path, p_tax, width = 16, height = 10, dpi = 300, bg = "white")
+            cat("Taxonomy stacked bar plot saved successfully\n")
+            
+            # 2. HEATMAP GENERATION (adapted from your code)
+            cat("Creating taxonomy heatmap...\n")
+            
+            # Prepare heatmap matrix
+            # Aggregate data by Sample_ID and Species (using top species)
+            heatmap_data <- tax_data %>%
+              filter(Species %in% top_species) %>%  # Use top species for better visualization
+              select(Sample_ID, Species, Relative_Abundance) %>%
+              group_by(Sample_ID, Species) %>%
+              summarise(Relative_Abundance = mean(Relative_Abundance), .groups = "drop")
+            
+            # Convert to wide format (matrix)
+            heatmap_matrix <- heatmap_data %>%
+              pivot_wider(names_from = Sample_ID, values_from = Relative_Abundance, values_fill = 0) %>%
+              column_to_rownames("Species") %>%
+              as.matrix()
+            
+            cat("Heatmap matrix dimensions:", nrow(heatmap_matrix), "x", ncol(heatmap_matrix), "\n")
+            
+            # Log transform the data for better visualization
+            heatmap_matrix <- log10(heatmap_matrix + 0.01)
+            
+            # Prepare sample annotations
+            sample_ids <- colnames(heatmap_matrix)
+            sample_groups <- ifelse(sample_ids %in% data_store$control_sample_metadata$Sample_ID, 
+                                    "Control", "Patient")
+            names(sample_groups) <- sample_ids
+            
+            # Create annotation data frame
+            annotations <- data.frame(
+              Group = sample_groups,
+              stringsAsFactors = FALSE
+            )
+            rownames(annotations) <- sample_ids
+            
+            # Check if ComplexHeatmap is available
+            if(requireNamespace("ComplexHeatmap", quietly = TRUE) && 
+               requireNamespace("circlize", quietly = TRUE)) {
+              
+              cat("Using ComplexHeatmap for advanced heatmap\n")
+              
+              # Create color function (Viridis only)
+              col_fun <- circlize::colorRamp2(
+                seq(min(heatmap_matrix, na.rm = TRUE), 
+                    max(heatmap_matrix, na.rm = TRUE), 
+                    length.out = 100), 
+                viridis::viridis(100)
+              )
+              
+              # Create annotation colors
+              annotation_colors <- list(
+                Group = c("Patient" = "#3498db", "Control" = "#27ae60")
+              )
+              
+              # Create column annotation
+              col_annotation <- ComplexHeatmap::HeatmapAnnotation(
+                df = annotations,
+                col = annotation_colors,
+                annotation_name_gp = grid::gpar(fontsize = 10)
+              )
+              
+              # Create the heatmap
+              ht <- ComplexHeatmap::Heatmap(
+                heatmap_matrix,
+                name = "Log10(Rel. Abundance + 0.01)",
+                col = col_fun,
+                
+                # Row parameters
+                row_title = "Species",
+                row_title_gp = grid::gpar(fontsize = 12, fontface = "bold"),
+                row_names_gp = grid::gpar(fontsize = 9),
+                row_names_max_width = grid::unit(6, "cm"),
+                show_row_dend = TRUE,
+                row_dend_width = grid::unit(2, "cm"),
+                
+                # Column parameters
+                column_title = "Samples",
+                column_title_gp = grid::gpar(fontsize = 12, fontface = "bold"),
+                column_names_gp = grid::gpar(fontsize = 7),
+                column_names_rot = 90,
+                show_column_dend = TRUE,
+                column_dend_height = grid::unit(2, "cm"),
+                
+                # Clustering
+                clustering_distance_rows = "euclidean",
+                clustering_method_rows = "complete",
+                clustering_distance_columns = "euclidean",
+                clustering_method_columns = "complete",
+                
+                # Annotations
+                top_annotation = col_annotation,
+                
+                # Legend
+                heatmap_legend_param = list(
+                  title = "Relative\nAbundance\n(Log10)",
+                  title_gp = grid::gpar(fontsize = 10),
+                  labels_gp = grid::gpar(fontsize = 8),
+                  legend_direction = "vertical"
+                ),
+                
+                # Additional parameters
+                border = TRUE,
+                rect_gp = grid::gpar(col = "white", lwd = 0.5)
+              )
+              
+              # Save the heatmap
+              png(heatmap_plot_path, width = 14*300, height = 10*300, res = 300)
+              ComplexHeatmap::draw(ht, 
+                                   heatmap_legend_side = "right",
+                                   annotation_legend_side = "right",
+                                   merge_legend = TRUE)
+              dev.off()
+              
+              cat("ComplexHeatmap saved successfully\n")
+              
+            } else {
+              cat("ComplexHeatmap not available, creating simple heatmap with base R\n")
+              
+              # Fallback: Create simple heatmap with base R
+              png(heatmap_plot_path, width = 14*300, height = 10*300, res = 300)
+              par(mar = c(10, 12, 4, 8))
+              
+              # Create color palette
+              colors <- viridis::viridis(100)
+              
+              # Create heatmap
+              image(t(heatmap_matrix[nrow(heatmap_matrix):1, ]), 
+                    col = colors,
+                    axes = FALSE,
+                    main = "Taxonomic Composition Heatmap\n(Log10 Relative Abundance)",
+                    cex.main = 1.2)
+              
+              # Add row labels (species)
+              axis(2, at = seq(0, 1, length.out = nrow(heatmap_matrix)), 
+                   labels = rev(rownames(heatmap_matrix)), 
+                   las = 2, cex.axis = 0.8)
+              
+              # Add column labels (samples) - show every 5th to avoid overcrowding
+              col_indices <- seq(1, ncol(heatmap_matrix), by = max(1, ncol(heatmap_matrix) %/% 20))
+              axis(1, at = (col_indices - 1) / (ncol(heatmap_matrix) - 1), 
+                   labels = colnames(heatmap_matrix)[col_indices], 
+                   las = 2, cex.axis = 0.6)
+              
+              # Add color legend
+              legend_x <- par("usr")[2] + 0.02
+              legend_y <- seq(par("usr")[3], par("usr")[4], length.out = length(colors))
+              for(i in 1:length(colors)) {
+                rect(legend_x, legend_y[i], legend_x + 0.03, legend_y[i+1], 
+                     col = colors[i], border = NA)
+              }
+              
+              # Add legend labels
+              legend_labels <- round(seq(min(heatmap_matrix, na.rm = TRUE), 
+                                         max(heatmap_matrix, na.rm = TRUE), 
+                                         length.out = 5), 2)
+              legend_positions <- seq(par("usr")[3], par("usr")[4], length.out = 5)
+              text(legend_x + 0.05, legend_positions, legend_labels, cex = 0.8)
+              text(legend_x + 0.05, mean(par("usr")[3:4]), "Log10\nAbundance", 
+                   srt = 90, adj = 0.5, cex = 0.9)
+              
+              dev.off()
+              
+              cat("Simple heatmap saved successfully\n")
+            }
+            
+            # Store both plots
+            plot_files$taxonomy_plot <- taxonomy_plot_path
+            plot_files$taxonomy_heatmap <- heatmap_plot_path
+            
+            # Verify files were created
+            if(file.exists(taxonomy_plot_path)) {
+              cat("✅ Taxonomy composition plot created, size:", file.info(taxonomy_plot_path)$size, "bytes\n")
+            }
+            if(file.exists(heatmap_plot_path)) {
+              cat("✅ Taxonomy heatmap created, size:", file.info(heatmap_plot_path)$size, "bytes\n")
+            }
+            
+          }, error = function(e) {
+            cat("❌ ERROR in taxonomy plots:", e$message, "\n")
+            cat("Traceback:", paste(as.character(sys.calls()), collapse = "\n"), "\n")
+          })
+          
+          cat("=== END TAXONOMY PLOTS DEBUG ===\n")
+        }
+        
+        # PARALLEL COORDINATES PLOT GENERATION FOR REPORT
+        # Add this to your metadata analysis section in the generate_report function:
+        
+        # METADATA ANALYSIS PLOT (Enhanced with Parallel Coordinates)
+        if("metadata" %in% input$report_sections) {
+          metadata_plot_path <- file.path(temp_dir, "metadata_analysis.png")
+          parallel_plot_path <- file.path(temp_dir, "parallel_coordinates.png")
+          
+          cat("=== METADATA PLOTS DEBUG ===\n")
+          
+          tryCatch({
+            # 1. TRADITIONAL METADATA PLOT (Age/Gender analysis)
+            if("Age" %in% colnames(data_store$sample_metadata) && 
+               "Gender" %in% colnames(data_store$sample_metadata)) {
+              
+              meta_data <- data_store$sample_metadata %>%
+                select(Sample_ID, Age, Gender) %>%
+                mutate(Group = "Patient") %>%
+                filter(!is.na(Age), !is.na(Gender))
+              
+              if(!is.null(data_store$control_sample_metadata)) {
+                control_meta <- data_store$control_sample_metadata %>%
+                  select(Sample_ID, Age, Gender) %>%
+                  mutate(Group = "Control") %>%
+                  filter(!is.na(Age), !is.na(Gender))
+                meta_data <- bind_rows(meta_data, control_meta)
+              }
+              
+              p_meta <- ggplot(meta_data, aes(x = interaction(Gender, Group), y = Age, fill = Group)) +
+                geom_boxplot(alpha = 0.7) +
+                geom_jitter(width = 0.2, alpha = 0.6) +
+                scale_fill_manual(values = c("Control" = "#27ae60", "Patient" = "#3498db")) +
+                labs(
+                  title = "Age Distribution by Gender and Group",
+                  x = "Gender × Group",
+                  y = "Age (years)"
+                ) +
+                theme_minimal() +
+                theme(
+                  plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+                  axis.title = element_text(size = 12),
+                  axis.text = element_text(size = 11),
+                  legend.position = "bottom"
+                )
+              
+              ggsave(metadata_plot_path, p_meta, width = 10, height = 6, dpi = 300, bg = "white")
+              cat("Traditional metadata plot saved successfully\n")
+            }
+            
+            # 2. PARALLEL COORDINATES PLOT (adapted from your code)
+            cat("Creating parallel coordinates plot...\n")
+            
+            # Calculate Total Abundance per sample
+            taxa_data <- data_store$taxonomy_data %>%
+              group_by(Sample_ID) %>%
+              summarize(Total_Abundance = sum(Abundance), .groups = "drop")
+            
+            # Merge with metadata
+            combined <- merge(data_store$sample_metadata, taxa_data, by = "Sample_ID")
+            
+            # Add control data if available
+            if(!is.null(data_store$control_sample_metadata) && !is.null(data_store$control_taxonomy_data)) {
+              control_taxa_data <- data_store$control_taxonomy_data %>%
+                group_by(Sample_ID) %>%
+                summarize(Total_Abundance = sum(Abundance), .groups = "drop")
+              
+              control_combined <- merge(data_store$control_sample_metadata, control_taxa_data, by = "Sample_ID")
+              
+              # Add Group column to distinguish samples
+              combined$Group <- "Patient"
+              control_combined$Group <- "Control"
+              
+              # Combine all data
+              combined <- bind_rows(combined, control_combined)
+            } else {
+              combined$Group <- "Patient"
+            }
+            
+            # Select key variables for parallel plot (commonly available ones)
+            available_vars <- names(combined)
+            
+            # Define preferred variables in order of preference
+            preferred_vars <- c("Age", "Gender", "Body_Mass_Index", "Ongoing_conditions", 
+                                "Exercise_frequency", "Alcohol_consumption", "Smoking_status")
+            
+            # Select variables that exist in the data
+            selected_vars <- intersect(preferred_vars, available_vars)
+            
+            # If we don't have enough preferred vars, add other numeric/categorical ones
+            if(length(selected_vars) < 4) {
+              other_vars <- setdiff(available_vars, c(selected_vars, "Sample_ID", "Total_Abundance", "Group"))
+              # Filter to likely metadata columns (not technical ones)
+              other_vars <- other_vars[!grepl("ID|Date|Name|Notes", other_vars, ignore.case = TRUE)]
+              selected_vars <- c(selected_vars, head(other_vars, 4 - length(selected_vars)))
+            }
+            
+            # Add Total_Abundance at the end
+            all_vars <- c(selected_vars, "Total_Abundance", "Group")
+            
+            cat("Selected variables for parallel plot:", paste(selected_vars, collapse = ", "), "\n")
+            
+            # Prepare data for parallel plot
+            plot_data <- combined %>%
+              select(all_of(all_vars)) %>%
+              filter(!is.na(Group)) %>%  # Ensure we have group information
+              # Handle missing values by removing rows with any NA in selected columns
+              na.omit()
+            
+            cat("Parallel plot data: ", nrow(plot_data), "samples with", length(selected_vars), "variables\n")
+            
+            if(nrow(plot_data) < 5) {
+              cat("Not enough data for parallel plot\n")
+            } else {
+              
+              # Check if GGally is available for parallel coordinates
+              if(requireNamespace("GGally", quietly = TRUE)) {
+                
+                cat("Creating parallel plot with GGally\n")
+                
+                # Separate numeric and categorical variables
+                numeric_vars <- plot_data %>% 
+                  select(all_of(selected_vars), Total_Abundance) %>%
+                  select(where(is.numeric)) %>%
+                  names()
+                
+                categorical_vars <- plot_data %>% 
+                  select(all_of(selected_vars)) %>%
+                  select(where(~ is.character(.) || is.factor(.))) %>%
+                  names()
+                
+                cat("Numeric variables:", paste(numeric_vars, collapse = ", "), "\n")
+                cat("Categorical variables:", paste(categorical_vars, collapse = ", "), "\n")
+                
+                # Prepare data for parallel plot - handle each type appropriately
+                plot_data_processed <- plot_data %>%
+                  # Convert categorical to ordered factors first, then to numeric
+                  mutate(across(all_of(categorical_vars), ~ as.numeric(as.factor(.)))) %>%
+                  # Ensure all plotting columns are numeric
+                  select(all_of(c(numeric_vars, categorical_vars)), Group)
+                
+                # Only use numeric columns for the parallel plot
+                plot_columns <- c(numeric_vars, categorical_vars)
+                
+                # Create color mapping by group
+                group_colors <- c("Patient" = "#3498db", "Control" = "#27ae60")
+                plot_data_numeric$group_color <- group_colors[plot_data_numeric$Group]
+                
+                # User-friendly labels
+                friendly_labels <- gsub("_", " ", selected_vars)
+                friendly_labels <- c(friendly_labels, "Total Abundance")
+                
+                # Create parallel coordinates plot
+                p_parallel <- GGally::ggparcoord(
+                  data = plot_data_numeric,
+                  columns = 1:(length(selected_vars) + 1),  # Don't include Group column in plot
+                  groupColumn = "Group",
+                  scale = "uniminmax",
+                  showPoints = FALSE,
+                  alphaLines = 0.6
+                ) +
+                  scale_color_manual(values = group_colors) +
+                  theme_minimal(base_size = 12) +
+                  theme(
+                    plot.background = element_rect(fill = "white", color = NA),
+                    panel.background = element_rect(fill = "white", color = NA),
+                    panel.grid.major = element_line(color = "gray90", size = 0.3),
+                    panel.grid.minor = element_blank(),
+                    plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+                    plot.subtitle = element_text(size = 12, hjust = 0.5),
+                    axis.title = element_text(size = 12),
+                    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+                    axis.text.y = element_text(size = 10),
+                    legend.position = "bottom",
+                    legend.title = element_text(size = 11),
+                    legend.text = element_text(size = 10)
+                  ) +
+                  labs(
+                    title = "Parallel Coordinates Plot",
+                    subtitle = paste("Multidimensional analysis of", nrow(plot_data), "samples across", length(selected_vars) + 1, "variables"),
+                    x = "Variables",
+                    y = "Scaled Values (0-1)",
+                    color = "Sample Group"
+                  ) +
+                  scale_x_discrete(labels = friendly_labels)
+                
+                ggsave(parallel_plot_path, p_parallel, width = 14, height = 8, dpi = 300, bg = "white")
+                cat("Parallel coordinates plot saved successfully\n")
+                
+              } else {
+                cat("GGally not available, creating simple correlation plot\n")
+                
+                # Fallback: Create a simple correlation/relationship plot
+                if(length(selected_vars) >= 2) {
+                  # Select first two numeric variables for a simple scatter plot
+                  numeric_vars <- plot_data %>% 
+                    select(where(is.numeric)) %>%
+                    select(-Total_Abundance) %>%
+                    names()
+                  
+                  if(length(numeric_vars) >= 2) {
+                    p_simple <- ggplot(plot_data, aes_string(x = numeric_vars[1], y = numeric_vars[2], color = "Group")) +
+                      geom_point(size = 3, alpha = 0.7) +
+                      scale_color_manual(values = group_colors) +
+                      labs(
+                        title = paste("Relationship between", gsub("_", " ", numeric_vars[1]), "and", gsub("_", " ", numeric_vars[2])),
+                        x = gsub("_", " ", numeric_vars[1]),
+                        y = gsub("_", " ", numeric_vars[2])
+                      ) +
+                      theme_minimal() +
+                      theme(legend.position = "bottom")
+                    
+                    ggsave(parallel_plot_path, p_simple, width = 10, height = 6, dpi = 300, bg = "white")
+                  }
+                }
+              }
+            }
+            
+            # Store both plots
+            if(file.exists(metadata_plot_path)) {
+              plot_files$metadata_plot <- metadata_plot_path
+              cat("✅ Metadata analysis plot created\n")
+            }
+            
+            if(file.exists(parallel_plot_path)) {
+              plot_files$parallel_plot <- parallel_plot_path
+              cat("✅ Parallel coordinates plot created\n")
+            }
+            
+          }, error = function(e) {
+            cat("❌ ERROR in metadata plots:", e$message, "\n")
+            cat("Traceback:", paste(as.character(sys.calls()), collapse = "\n"), "\n")
+          })
+          
+          cat("=== END METADATA PLOTS DEBUG ===\n")
+        }
+        
+        # Calculate alpha diversity statistics
+        alpha_stats <- NULL
+        if("alpha" %in% input$report_sections && exists("diversity_df")) {
+          alpha_stats <- list(
+            shannon_mean_patient = round(mean(diversity_df$Shannon[diversity_df$Group == "Patient"], na.rm = TRUE), 3),
+            shannon_sd_patient = round(sd(diversity_df$Shannon[diversity_df$Group == "Patient"], na.rm = TRUE), 3),
+            shannon_mean_control = round(mean(diversity_df$Shannon[diversity_df$Group == "Control"], na.rm = TRUE), 3),
+            shannon_sd_control = round(sd(diversity_df$Shannon[diversity_df$Group == "Control"], na.rm = TRUE), 3),
+            simpson_mean_patient = round(mean(diversity_df$Simpson[diversity_df$Group == "Patient"], na.rm = TRUE), 3),
+            simpson_sd_patient = round(sd(diversity_df$Simpson[diversity_df$Group == "Patient"], na.rm = TRUE), 3),
+            simpson_mean_control = round(mean(diversity_df$Simpson[diversity_df$Group == "Control"], na.rm = TRUE), 3),
+            simpson_sd_control = round(sd(diversity_df$Simpson[diversity_df$Group == "Control"], na.rm = TRUE), 3),
+            observed_mean_patient = round(mean(diversity_df$Observed[diversity_df$Group == "Patient"], na.rm = TRUE), 1),
+            observed_sd_patient = round(sd(diversity_df$Observed[diversity_df$Group == "Patient"], na.rm = TRUE), 1),
+            observed_mean_control = round(mean(diversity_df$Observed[diversity_df$Group == "Control"], na.rm = TRUE), 1),
+            observed_sd_control = round(sd(diversity_df$Observed[diversity_df$Group == "Control"], na.rm = TRUE), 1)
           )
-          
-          # Simple boxplot
-          boxplot(Abundance ~ Group, data = sample_diversity,
-                  main = "Shannon Diversity Index",
-                  ylab = "Shannon Index",
-                  xlab = "Sample Group",
-                  col = c("lightblue", "lightcoral"))
-          
-          dev.off()
-          plot_files$alpha_plot <- alpha_plot_path
         }
         
         # Determine output format
@@ -6491,7 +7293,7 @@ server <- function(input, output, session) {
             selected_sections = input$report_sections,
             sample_summary = sample_summary,
             taxonomy_summary = taxonomy_summary,
-            alpha_stats = NULL,
+            alpha_stats = alpha_stats,
             plot_files = plot_files
           ),
           quiet = TRUE
@@ -6501,6 +7303,7 @@ server <- function(input, output, session) {
         
       }, error = function(e) {
         showNotification(paste("Error generating report:", e$message), type = "error")
+        cat("Report generation error:", e$message, "\n")
       })
     }
   )
