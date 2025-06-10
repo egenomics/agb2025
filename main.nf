@@ -105,10 +105,9 @@ ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
 
 def metadata_tsv_path      = "runs/${params.run_id}/metadata/metadata.tsv"
 def multiqc_path           = "runs/${params.run_id}/qc_reports/multiqc_data/multiqc_fastqc.txt"
-def kraken_reports_path    = "runs/${params.run_id}/taxonomy/kraken2/*.kraken2.report.txt"
 
 metadata_sample_ch = Channel.fromPath(metadata_tsv_path, checkIfExists: true)
-kraken_reports_ch  = Channel.fromPath(kraken_reports_path, checkIfExists: true)
+kraken_reports_ch = KRAKEN.out.report
 
 if (file(multiqc_path).exists()) {
     log.info " Found multiqc_fastqc.txt, continuing with metadata merge"
