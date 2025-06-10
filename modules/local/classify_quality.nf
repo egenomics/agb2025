@@ -5,7 +5,7 @@ process CLASSIFY_QUALITY_PROCESS {
     path sample_metadata_csv
 
     output:
-    path "sample_metadata.tsv"
+    path "metadata.tsv"
 
     script:
     """
@@ -15,10 +15,10 @@ process CLASSIFY_QUALITY_PROCESS {
     import pandas as pd
     df = pd.read_csv('${sample_metadata_csv}')
     df['quality_flag'] = df['%GC'].apply(lambda x: 'FAIL' if x < 40 else 'PASS')
-    df.to_csv('sample_metadata.tsv', index=False)
+    df.to_csv('metadata.tsv', index=False)
     EOF
 
-    echo "Sample metadata classified and saved as sample_metadata.tsv in runs/${RUN_ID}/metadata/"
+    echo "Sample metadata classified and saved as metadata.tsv in runs/${RUN_ID}/metadata/"
     """
 
 }
