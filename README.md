@@ -110,7 +110,7 @@ This script is only needed to simulate a real sequencing run during development.
 
 ### 3 · Setup Installing
 
-To run the pipeline (specially Kraken2), we have to download a database built from the human library.
+To run the pipeline (specially kraken2), we have to download a database built from the human library.
 
 On the other hand, for running qiime2 and obtaining the feature table, a classifier has to be downloaded. By default, the classifier downloaded is: https://data.qiime2.org/classifiers/sklearn-1.4.2/silva/silva-138-99-nb-classifier.qza. If you want to change the classifier, further information is in the documentation.
 
@@ -143,10 +143,8 @@ nextflow run main.nf --run_id <run_id> -profile docker -resume
 
 ## Scripts Overview
 - `create_run.sh` – prepares a run folder with raw fastq files and metadata.
-- `download_samples.sh` – used to download fastq files for development, testing or healthy controls. Saves them in raw_data/, test_data/ or healthy_controls/
-- `download_krakendb.sh` – Downloads a kraken2 database built from just the human library. Saves it in the main project folder with the name k2_Human_20230629.tar.gz.
-- `merge_multiqc_metadata.sh` – merges multiqc summary with `metadata_sample.csv`.
-- 
+- `INSTALLME.sh` – automatically downloads and extracts kraken2 and qiime2 databases.
+
 ## Custom Python Image for Metadata Merging
 This pipeline uses a custom Docker image (agb2025-python) to merge metadata with MultiQC output using pandas and csvkit.
 
@@ -155,7 +153,7 @@ This pipeline uses a custom Docker image (agb2025-python) to merge metadata with
 docker build -t agb2025-python -f Dockerfile .
 ```
 ### Usage
-The image is used in the process that merges sample_metadata.tsv with multiqc_fastqc.txt. This step will fail unless agb2025-python is built locally beforehand.
+The image is used in the process that merges metadata.tsv with multiqc_fastqc.txt. This step will fail unless agb2025-python is built locally beforehand.
 
 
 ## Documentation
