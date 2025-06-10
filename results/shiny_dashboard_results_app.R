@@ -1209,43 +1209,171 @@ ui <- dashboardPage(
               )
       ),
       
-      # Reports Tab
+      # COMPLETE REPORTS TAB UI
+      
       tabItem(tabName = "reports",
               fluidRow(
+                # Main Report Configuration
+                column(width = 8,
+                       box(
+                         title = "📊 Generate Comprehensive Microbiome Report", 
+                         status = "primary", 
+                         solidHeader = TRUE,
+                         width = 12,
+                         
+                         fluidRow(
+                           # Report Settings
+                           column(width = 6,
+                                  h4("📝 Report Configuration", style = "color: #2c3e50;"),
+                                  
+                                  textInput("report_title", "Report Title:", 
+                                            value = "Microbiome Analysis Report",
+                                            placeholder = "Enter a descriptive title..."),
+                                  
+                                  radioButtons("report_format", "📄 Output Format:",
+                                               choices = list(
+                                                 "HTML Document" = "html",
+                                                 "PDF Document" = "pdf", 
+                                                 "Word Document" = "docx"
+                                               ),
+                                               selected = "html"),
+                                  
+                                  textAreaInput("report_comments", "📋 Analysis Comments:", 
+                                                rows = 4,
+                                                placeholder = "Add any specific notes about this analysis, methodology, or findings..."),
+                                  
+                                  br(),
+                                  div(
+                                    style = "text-align: center;",
+                                    downloadButton("generate_report", 
+                                                   "🔄 Generate Report", 
+                                                   class = "btn-success btn-lg",
+                                                   style = "width: 200px; height: 50px; font-size: 16px;")
+                                  )
+                           ),
+                           
+                           # Section Selection
+                           column(width = 6,
+                                  h4("📋 Include Sections", style = "color: #2c3e50;"),
+                                  
+                                  checkboxGroupInput("report_sections", 
+                                                     "Select sections to include:",
+                                                     choices = list(
+                                                       "📊 Summary & Statistics" = "summary",
+                                                       "🔬 Alpha Diversity Analysis" = "alpha",
+                                                       "🌐 Beta Diversity Analysis" = "beta", 
+                                                       "🦠 Taxonomic Composition" = "taxonomy",
+                                                       "🌳 Phylogenetic Analysis" = "phylo",
+                                                       "👥 Metadata Exploration" = "metadata"
+                                                     ),
+                                                     selected = c("summary", "alpha", "beta", "taxonomy")),
+                                  
+                                  hr(),
+                                  
+                                  h5("ℹ️ Section Descriptions:", style = "color: #34495e;"),
+                                  div(
+                                    style = "font-size: 12px; color: #7f8c8d; line-height: 1.4;",
+                                    tags$ul(
+                                      tags$li(strong("Summary:"), "Dataset overview and key statistics"),
+                                      tags$li(strong("Alpha Diversity:"), "Within-sample diversity metrics"),
+                                      tags$li(strong("Beta Diversity:"), "Between-sample community comparisons"),
+                                      tags$li(strong("Taxonomy:"), "Species composition and abundance"),
+                                      tags$li(strong("Phylogenetic:"), "Evolutionary relationships (if tree available)"),
+                                      tags$li(strong("Metadata:"), "Sample characteristics and demographics")
+                                    )
+                                  )
+                           )
+                         )
+                       )
+                ),
+                
+                # Report Preview and Status
+                column(width = 4,
+                       # Data Status Box
+                       box(
+                         title = "📈 Data Status", 
+                         status = "info", 
+                         solidHeader = TRUE,
+                         width = 12,
+                         uiOutput("reports_data_status")
+                       ),
+                       
+                       # Report Features Box
+                       box(
+                         title = "✨ Report Features", 
+                         status = "warning", 
+                         solidHeader = TRUE,
+                         width = 12,
+                         
+                         div(
+                           h5("📊 Comprehensive Analysis", style = "color: #2c3e50;"),
+                           tags$ul(
+                             style = "font-size: 13px; color: #34495e;",
+                             tags$li("High-quality publication-ready plots"),
+                             tags$li("Statistical summaries and interpretations"),
+                             tags$li("Automated data quality assessments"),
+                             tags$li("Professional formatting and layout")
+                           ),
+                           
+                           hr(),
+                           
+                           h5("🔧 Technical Details", style = "color: #2c3e50;"),
+                           tags$ul(
+                             style = "font-size: 13px; color: #34495e;",
+                             tags$li("Methods and software documentation"),
+                             tags$li("Reproducible analysis pipeline"),
+                             tags$li("Multiple export formats supported"),
+                             tags$li("Customizable sections and content")
+                           )
+                         )
+                       ),
+                       
+                       # Tips Box
+                       box(
+                         title = "💡 Tips for Best Results", 
+                         status = "success", 
+                         solidHeader = TRUE,
+                         width = 12,
+                         collapsible = TRUE,
+                         collapsed = TRUE,
+                         
+                         div(
+                           style = "font-size: 12px; color: #2c3e50;",
+                           h6("📄 Format Selection:", style = "color: #27ae60;"),
+                           tags$ul(
+                             tags$li(strong("HTML:"), "Interactive, best for viewing online"),
+                             tags$li(strong("PDF:"), "Print-ready, professional appearance"),
+                             tags$li(strong("Word:"), "Editable, easy to modify")
+                           ),
+                           
+                           h6("⚡ Performance:", style = "color: #27ae60; margin-top: 15px;"),
+                           tags$ul(
+                             tags$li("Report generation may take 2-5 minutes"),
+                             tags$li("Large datasets will take longer to process"),
+                             tags$li("PDF generation is typically slowest")
+                           ),
+                           
+                           h6("🎯 Content:", style = "color: #27ae60; margin-top: 15px;"),
+                           tags$ul(
+                             tags$li("Include comments for context"),
+                             tags$li("Select relevant sections only"),
+                             tags$li("Summary section recommended for all reports")
+                           )
+                         )
+                       )
+                )
+              ),
+              
+              # Debug Section (remove this after testing)
+              fluidRow(
                 box(
-                  title = "Generate Reports", 
-                  status = "primary", 
+                  title = "🔍 Debug Information", 
+                  status = "warning", 
                   solidHeader = TRUE,
                   width = 12,
-                  fluidRow(
-                    column(
-                      width = 6,
-                      h4("Report Options"),
-                      checkboxGroupInput("report_sections", "Include Sections:",
-                                         choices = c("Taxonomy Analysis" = "taxonomy",
-                                                     "Alpha Diversity" = "alpha",
-                                                     "Beta Diversity" = "beta",
-                                                     "Functional Analysis" = "function",
-                                                     "Metadata Exploration" = "metadata"),
-                                         selected = c("taxonomy", "alpha", "beta")),
-                      radioButtons("report_format", "Report Format:",
-                                   choices = c("PDF" = "pdf", 
-                                               "HTML" = "html",
-                                               "Word Document" = "docx"),
-                                   selected = "html"),
-                      textInput("report_title", "Report Title:", 
-                                value = "Microbiome Analysis Report"),
-                      textAreaInput("report_comments", "Additional Comments:", 
-                                    rows = 3),
-                      hr(),
-                      downloadButton("generate_report", "Generate Report", class = "btn-success")
-                    ),
-                    column(
-                      width = 6,
-                      h4("Report Preview"),
-                      htmlOutput("report_preview")
-                    )
-                  )
+                  collapsible = TRUE,
+                  collapsed = TRUE,
+                  verbatimTextOutput("debug_reactive_values")
                 )
               )
       )
@@ -6125,213 +6253,255 @@ server <- function(input, output, session) {
   ########################################################################
 
 
+  # COMPLETE REPORTS TAB SERVER SECTION
+  
+  # Safe data status check for Reports tab
+  output$reports_data_status <- renderUI({
+    
+    tryCatch({
+      
+      # Safe checks with error handling
+      manual_loaded <- if(is.null(data_store$manual_data_loaded)) FALSE else isTRUE(data_store$manual_data_loaded)
+      auto_loaded <- if(is.null(data_store$automatic_data_loaded)) FALSE else isTRUE(data_store$automatic_data_loaded)
+      
+      # Check data existence safely
+      has_sample_meta <- !is.null(data_store$sample_metadata)
+      sample_rows <- if(has_sample_meta) {
+        tryCatch(nrow(data_store$sample_metadata), error = function(e) 0)
+      } else 0
+      
+      has_taxonomy <- !is.null(data_store$taxonomy_data)
+      taxonomy_rows <- if(has_taxonomy) {
+        tryCatch(nrow(data_store$taxonomy_data), error = function(e) 0)
+      } else 0
+      
+      has_controls <- !is.null(data_store$control_sample_metadata)
+      control_rows <- if(has_controls) {
+        tryCatch(nrow(data_store$control_sample_metadata), error = function(e) 0)
+      } else 0
+      
+      # Species count (safely)
+      species_count <- if(has_taxonomy && taxonomy_rows > 0) {
+        tryCatch({
+          unique_species <- unique(data_store$taxonomy_data$Species)
+          length(unique_species[!is.na(unique_species)])
+        }, error = function(e) 0)
+      } else 0
+      
+      # Determine if we have sufficient data
+      has_sufficient_data <- sample_rows > 0 && taxonomy_rows > 0
+      
+      if(has_sufficient_data) {
+        # DATA IS READY
+        tagList(
+          div(
+            style = "text-align: center;",
+            icon("check-circle", class = "fa-2x", style = "color: #27ae60;"),
+            h4("✅ Data Ready", style = "color: #27ae60; margin-top: 10px;")
+          ),
+          
+          # Show data source
+          div(
+            style = "background: #e8f5e8; padding: 8px; border-radius: 3px; margin: 10px 0; border-left: 3px solid #27ae60;",
+            p(paste("📂 Data Source:", 
+                    if(manual_loaded) "Manual/Example Data" else if(auto_loaded) "Automatic Import" else "Unknown"), 
+              style = "margin: 0; font-size: 12px; color: #27ae60; font-weight: bold;")
+          ),
+          
+          hr(),
+          
+          # Data summary
+          div(
+            style = "background: #ecf0f1; padding: 10px; border-radius: 5px;",
+            h5("📊 Dataset Summary", style = "margin-bottom: 10px; color: #2c3e50;"),
+            tags$table(
+              style = "width: 100%; font-size: 12px;",
+              tags$tr(
+                tags$td(strong("Patient Samples:"), style = "width: 60%;"),
+                tags$td(sample_rows, style = "color: #2980b9;")
+              ),
+              tags$tr(
+                tags$td(strong("Control Samples:"), style = "width: 60%;"),
+                tags$td(control_rows, style = "color: #27ae60;")
+              ),
+              tags$tr(
+                tags$td(strong("Species Detected:"), style = "width: 60%;"),
+                tags$td(species_count, style = "color: #8e44ad;")
+              ),
+              tags$tr(
+                tags$td(strong("Total Records:"), style = "width: 60%;"),
+                tags$td(taxonomy_rows, style = "color: #d35400;")
+              )
+            )
+          ),
+          
+          hr(),
+          
+          div(
+            style = "text-align: center; color: #27ae60;",
+            h5("🎯 Ready to Generate Report!", style = "margin: 10px 0; font-weight: bold;")
+          )
+        )
+        
+      } else {
+        # NO DATA AVAILABLE
+        div(
+          style = "text-align: center; padding: 20px;",
+          icon("exclamation-triangle", class = "fa-3x", style = "color: #e74c3c;"),
+          h4("⚠️ No Data Available", style = "color: #e74c3c;"),
+          p("Please load data first:", style = "color: #7f8c8d; margin: 15px 0;"),
+          
+          div(
+            style = "text-align: left; max-width: 300px; margin: 0 auto;",
+            tags$ul(
+              style = "color: #7f8c8d; font-size: 14px;",
+              tags$li("Generate example data, OR"),
+              tags$li("Upload files manually, OR"),
+              tags$li("Use automatic data import")
+            )
+          ),
+          
+          p("Go to 'Data Upload & Overview' tab to get started.", 
+            style = "color: #7f8c8d; margin-top: 15px; font-style: italic;")
+        )
+      }
+      
+    }, error = function(e) {
+      # Error fallback
+      div(
+        style = "text-align: center; padding: 20px; color: #e74c3c;",
+        icon("exclamation-circle", class = "fa-2x"),
+        h4("❌ Error Checking Data Status"),
+        p(paste("Error:", e$message), style = "font-size: 12px; color: #7f8c8d;")
+      )
+    })
+  })
+  
+  # Debug output (remove after testing)
+  output$debug_reactive_values <- renderText({
+    tryCatch({
+      paste(
+        "Manual flag:", if(is.null(data_store$manual_data_loaded)) "NULL" else data_store$manual_data_loaded,
+        "| Auto flag:", if(is.null(data_store$automatic_data_loaded)) "NULL" else data_store$automatic_data_loaded,
+        "| Sample rows:", if(is.null(data_store$sample_metadata)) "NULL" else nrow(data_store$sample_metadata),
+        "| Taxonomy rows:", if(is.null(data_store$taxonomy_data)) "NULL" else nrow(data_store$taxonomy_data),
+        "| Control rows:", if(is.null(data_store$control_sample_metadata)) "NULL" else nrow(data_store$control_sample_metadata)
+      )
+    }, error = function(e) {
+      paste("Debug error:", e$message)
+    })
+  })
+  
+  # Report generation handler
   output$generate_report <- downloadHandler(
     filename = function() {
-      paste0("Microbiome_Report_", Sys.Date(), ".", input$report_format)
+      ext <- switch(input$report_format,
+                    "html" = "html",
+                    "pdf" = "pdf", 
+                    "docx" = "docx")
+      paste0("Microbiome_Report_", Sys.Date(), ".", ext)
     },
     content = function(file) {
       
-      alpha_plot_path <- file.path(tempdir(), "alpha_diversity_plot.png")
-      beta_plot_path <- file.path(tempdir(), "beta_diversity_plot.png")
-      parallel_plot_path <- file.path(tempdir(), "parallel_plot.png")
+      # Check if data is available
+      if(is.null(data_store$sample_metadata) || is.null(data_store$taxonomy_data)) {
+        showNotification("No data available for report generation!", type = "error")
+        return()
+      }
       
-      try({
-        req(data_store$sample_metadata, data_store$taxonomy_data, input$parallel_vars)
-        
-        taxa_data <- data_store$taxonomy_data %>%
-          group_by(Sample_ID) %>%
-          summarize(Total_Abundance = sum(Abundance), .groups = "drop")
-        
-        combined <- merge(data_store$sample_metadata, taxa_data, by = "Sample_ID")
-        vars <- input$parallel_vars
-        all_vars <- c(vars, "Total_Abundance")
-        
-        plot_data <- combined %>%
-          select(all_of(all_vars)) %>%
-          na.omit() %>%
-          mutate(across(where(is.character), as.factor)) %>%
-          mutate(across(where(is.factor), ~ as.numeric(as.factor(.))))
-        
-        plot_obj <- plot_ly(
-          type = 'parcoords',
-          line = list(
-            color = plot_data$Total_Abundance,
-            colorscale = 'Viridis',
-            showscale = TRUE
-          ),
-          dimensions = lapply(names(plot_data), function(col) {
-            if (is.character(combined[[col]]) || is.factor(combined[[col]])) {
-              f <- factor(combined[[col]])
-              list(
-                label = col,
-                values = as.numeric(f),
-                tickvals = seq_along(levels(f)),
-                ticktext = levels(f)
-              )
-            } else {
-              list(
-                label = col,
-                values = plot_data[[col]]
-              )
-            }
-          })
-        )
-        # Save as temporary HTML and snapshot as PNG
-        html_temp <- tempfile(fileext = ".html")
-        saveWidget(as_widget(plot_obj), file = html_temp, selfcontained = TRUE)
-        webshot2::webshot(url = html_temp, file = parallel_plot_path, vwidth = 1200, vheight = 800)
-        message("✅ Parallel plot saved.")
-      })
+      showNotification("Generating report... This may take a few minutes.", 
+                       type = "message", duration = 5)
       
-      # === REGENERATE p_alpha ===
-      try({
-        sample_meta <- data_store$sample_metadata
-        control_meta <- data_store$control_sample_metadata
+      tryCatch({
+        # Create temporary directory for plots
+        temp_dir <- tempdir()
+        plot_files <- list()
         
-        sample_tax <- data_store$taxonomy_data %>% filter(Sample_ID %in% sample_meta$Sample_ID)
-        control_tax <- data_store$control_taxonomy_data %>% filter(Sample_ID %in% control_meta$Sample_ID)
-        
-        sample_wide <- sample_tax %>%
-          select(Sample_ID, Species, Abundance) %>%
-          pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
-        
-        sample_div <- sample_wide %>%
-          column_to_rownames("Sample_ID") %>%
-          as.matrix() %>%
-          {
-            tibble(
-              Sample_ID = rownames(.),
-              Observed = rowSums(. > 0),
-              Shannon = vegan::diversity(., index = "shannon"),
-              Simpson = vegan::diversity(., index = "simpson")
-            )
-          }
-        
-        control_wide <- control_tax %>%
-          select(Sample_ID, Species, Abundance) %>%
-          pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
-        
-        control_div <- control_wide %>%
-          column_to_rownames("Sample_ID") %>%
-          as.matrix() %>%
-          {
-            tibble(
-              Sample_ID = rownames(.),
-              Observed = rowSums(. > 0),
-              Shannon = vegan::diversity(., index = "shannon"),
-              Simpson = vegan::diversity(., index = "simpson"),
-              GroupLabel = "Control"
-            )
-          }
-        
-        diversity_df <- bind_rows(
-          sample_div %>%
-            left_join(sample_meta, by = "Sample_ID") %>%
-            mutate(GroupLabel = if (input$subdivide_samples) .[[input$condition_column]] else "Sample"),
-          control_div
+        # Generate basic statistics
+        sample_summary <- list(
+          total_samples = nrow(data_store$sample_metadata),
+          total_controls = if(!is.null(data_store$control_sample_metadata)) nrow(data_store$control_sample_metadata) else 0,
+          age_range = if("Age" %in% colnames(data_store$sample_metadata)) {
+            ages <- data_store$sample_metadata$Age[!is.na(data_store$sample_metadata$Age)]
+            if(length(ages) > 0) paste(min(ages), "-", max(ages)) else "N/A"
+          } else "N/A",
+          collection_period = if("Collection_Date" %in% colnames(data_store$sample_metadata)) {
+            dates <- as.Date(data_store$sample_metadata$Collection_Date)
+            dates <- dates[!is.na(dates)]
+            if(length(dates) > 0) paste(min(dates), "to", max(dates)) else "N/A"
+          } else "N/A"
         )
         
-        metric_col <- switch(input$alpha_metric,
-                             "Observed OTUs" = "Observed",
-                             "Shannon" = "Shannon",
-                             "Simpson" = "Simpson")
+        # Taxonomy summary
+        taxonomy_summary <- list(
+          total_species = length(unique(data_store$taxonomy_data$Species)),
+          total_reads = sum(data_store$taxonomy_data$Abundance, na.rm = TRUE),
+          avg_reads_per_sample = round(mean(aggregate(Abundance ~ Sample_ID, data_store$taxonomy_data, sum)$Abundance)),
+          top_species = head(names(sort(table(data_store$taxonomy_data$Species), decreasing = TRUE)), 10)
+        )
         
-        p_alpha <- ggplot(diversity_df, aes(x = GroupLabel, y = .data[[metric_col]], fill = GroupLabel)) +
-          geom_boxplot(alpha = 0.6, outlier.shape = NA) +
-          geom_jitter(shape = 21, alpha = 0.6, color = "black", width = 0.2) +
-          labs(title = paste(input$alpha_metric, "Diversity across Groups"),
-               x = "Group", y = paste(input$alpha_metric, "Index")) +
-          theme_minimal() +
-          theme(
-            legend.position = "right",
-            plot.title = element_text(size = 14, hjust = 0.5),
-            axis.title = element_text(size = 12),
-            axis.text = element_text(size = 10),
-            legend.text = element_text(size = 10),
-            legend.title = element_text(size = 11)
-          ) +
-          scale_fill_brewer(palette = input$alpha_color_palette)
-        
-        ggsave(alpha_plot_path, plot = p_alpha, width = 10, height = 6, dpi = 300, bg = "white")
-        message("✅ Alpha plot saved.")
-      })
-      
-      # === REGENERATE p_beta ===
-      try({
-        all_tax <- bind_rows(
-          data_store$taxonomy_data,
-          data_store$control_taxonomy_data
-        ) %>%
-          select(Sample_ID, Species, Abundance) %>%
-          pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0) %>%
-          column_to_rownames("Sample_ID")
-        
-        dist_method <- switch(input$distance_metric,
-                              "Bray-Curtis" = "bray",
-                              "Euclidean" = "euclidean",
-                              "Jaccard" = "jaccard",
-                              "Canberra" = "canberra",
-                              "Manhattan" = "manhattan",
-                              "Kulczynski" = "kulczynski",
-                              "Chord" = "chord")
-        
-        ord <- ape::pcoa(vegan::vegdist(all_tax, method = dist_method))
-        coords <- ord$vectors[, 1:2]
-        ord_df <- as.data.frame(coords)
-        colnames(ord_df) <- c("Axis1", "Axis2")
-        ord_df$Sample_ID <- rownames(coords)
-        
-        all_meta <- bind_rows(data_store$sample_metadata, data_store$control_sample_metadata)
-        ord_df <- left_join(ord_df, all_meta, by = "Sample_ID")
-        
-        ord_df$GroupLabel <- if (input$subdivide_samples) {
-          ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
-                 "Control", ord_df[[input$condition_column]])
-        } else {
-          ifelse(ord_df$Sample_ID %in% data_store$control_sample_metadata$Sample_ID, "Control", "Sample")
-        }
-        
-        p_beta <- ggplot(ord_df, aes(x = Axis1, y = Axis2, color = GroupLabel)) +
-          geom_point(size = 3, alpha = 0.8)
-        
-        if (isTRUE(input$show_group_ellipses)) {
-          p_beta <- p_beta +
-            stat_ellipse(aes(group = GroupLabel),
-                         type = "norm", linetype = "dashed",
-                         alpha = 0.6, size = 1, show.legend = FALSE)
-        }
-        
-        p_beta <- p_beta +
-          labs(title = paste0("PCoA on ", input$distance_metric, " Distance"),
-               x = "Axis 1", y = "Axis 2") +
-          theme_minimal() +
-          theme(
-            legend.position = "right",
-            plot.title = element_text(size = 14, hjust = 0.5),
-            axis.title = element_text(size = 12),
-            axis.text = element_text(size = 10),
-            legend.text = element_text(size = 10),
-            legend.title = element_text(size = 11)
+        # Simple alpha diversity plot if requested
+        if("alpha" %in% input$report_sections) {
+          alpha_plot_path <- file.path(temp_dir, "alpha_diversity.png")
+          
+          # Create a simple diversity plot
+          png(alpha_plot_path, width = 12*150, height = 8*150, res = 150)
+          par(mar = c(5, 5, 4, 2))
+          
+          # Calculate Shannon diversity (simplified)
+          sample_diversity <- aggregate(Abundance ~ Sample_ID, data_store$taxonomy_data, 
+                                        function(x) {
+                                          p <- x/sum(x)
+                                          p <- p[p > 0]
+                                          -sum(p * log(p))
+                                        })
+          
+          # Add group labels
+          sample_diversity$Group <- ifelse(
+            sample_diversity$Sample_ID %in% data_store$control_sample_metadata$Sample_ID,
+            "Control", "Patient"
           )
+          
+          # Simple boxplot
+          boxplot(Abundance ~ Group, data = sample_diversity,
+                  main = "Shannon Diversity Index",
+                  ylab = "Shannon Index",
+                  xlab = "Sample Group",
+                  col = c("lightblue", "lightcoral"))
+          
+          dev.off()
+          plot_files$alpha_plot <- alpha_plot_path
+        }
         
-        ggsave(beta_plot_path, plot = p_beta, width = 10, height = 6, dpi = 300, bg = "white")
-        message("✅ Beta plot saved.")
+        # Determine output format
+        output_format <- switch(input$report_format,
+                                "html" = "html_document",
+                                "pdf" = "pdf_document", 
+                                "docx" = "word_document"
+        )
+        
+        # Render the report
+        rmarkdown::render(
+          input = "report_template.Rmd",
+          output_format = output_format,
+          output_file = file,
+          params = list(
+            report_title = input$report_title,
+            report_comments = input$report_comments,
+            selected_sections = input$report_sections,
+            sample_summary = sample_summary,
+            taxonomy_summary = taxonomy_summary,
+            alpha_stats = NULL,
+            plot_files = plot_files
+          ),
+          quiet = TRUE
+        )
+        
+        showNotification("Report generated successfully!", type = "message")
+        
+      }, error = function(e) {
+        showNotification(paste("Error generating report:", e$message), type = "error")
       })
-      
-      # === RENDER REPORT ===
-      rmarkdown::render(
-        input = "report_template.Rmd",
-        output_file = file,
-        params = list(
-          report_title = input$report_title,
-          report_comments = input$report_comments,
-          selected_sections = input$report_sections,
-          alpha_plot = alpha_plot_path,
-          beta_plot = beta_plot_path,
-          parallel_plot = parallel_plot_path
-        ),
-        envir = new.env(parent = globalenv())
-      )
     }
   )
   
