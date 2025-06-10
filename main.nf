@@ -103,7 +103,7 @@ workflow {
 ch_metadata   = Channel.fromPath(params.metadata, checkIfExists: true)
 ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
 
-def metadata_tsv_path      = "runs/${params.run_id}/metadata/sample_metadata.tsv"
+def metadata_tsv_path      = "runs/${params.run_id}/metadata/metadata.tsv"
 def multiqc_path           = "runs/${params.run_id}/qc_reports/multiqc_data/multiqc_fastqc.txt"
 def kraken_reports_path    = "runs/${params.run_id}/taxonomy/kraken2/*.kraken2.report.txt"
 
