@@ -107,7 +107,7 @@ def metadata_tsv_path      = "runs/${params.run_id}/metadata/metadata.tsv"
 def multiqc_path           = "runs/${params.run_id}/qc_reports/multiqc_data/multiqc_fastqc.txt"
 
 metadata_sample_ch = Channel.fromPath(metadata_tsv_path, checkIfExists: true)
-kraken_reports_ch = KRAKEN.out.report
+kraken_reports_ch = KRAKEN.out.report.map { meta, report -> report }
 
 if (file(multiqc_path).exists()) {
     log.info " Found multiqc_fastqc.txt, continuing with metadata merge"

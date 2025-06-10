@@ -79,7 +79,7 @@ fi
 
 # Extract header and then filter sample rows using the collected sample_ids,
 # converting commas to tabs for TSV output.
-header=$(head -n 1 "$CURATED_METADATA" | sed 's/Sample_ID/Sample ID/' | tr ',' '\t')
+header=$(head -n 1 "$CURATED_METADATA" | tr ',' '\t')
 echo -e "$header" > "$RUN_METADATA"
 tail -n +2 "$CURATED_METADATA" \
   | grep -F -f "$SAMPLE_IDS_FILE" \
