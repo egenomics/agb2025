@@ -49,7 +49,7 @@ while read -r sample_id; do
 
     echo "Processing FASTQ files for ${sample_id}..."
 
-    # Append the sample_id the list od samples before downloading
+    # Append the sample_id the list of samples before downloading
     echo "$sample_id" >> "$SAMPLE_IDS_FILE"
 
     for read in 1 2; do
@@ -68,19 +68,22 @@ done < <(tail -n +2 "$CSV_PATH" | cut -d, -f2)
 
 echo -e "\033[31mFASTQ files download finished.\033[0m"
 
-# Generate the metadata.csv for this run.
+# Generate the metadata.tsv for this run.
 CURATED_METADATA="metadata/run_development_dataset/curated/metadata_cleaned.csv"
-RUN_METADATA="${METADATA_DIR}/metadata.csv"
+RUN_METADATA="${METADATA_DIR}/metadata.tsv"
 
 if [[ ! -f "$CURATED_METADATA" ]]; then
   echo "Curated metadata file not found: $CURATED_METADATA"
   exit 1
 fi
 
-# Extract header and then filter sample rows using the collected sample_ids.
-header=$(head -n 1 "$CURATED_METADATA")
-echo "$header" > "$RUN_METADATA"
-tail -n +2 "$CURATED_METADATA" | grep -F -f "$SAMPLE_IDS_FILE" >> "$RUN_METADATA"
+# Extract header and then filter sample rows using the collected sample_ids,
+# converting commas to tabs for TSV output.
+header=$(head -n 1 "$CURATED_METADATA" | sed 's/Sample_ID/Sample ID/' | tr ',' '\t')
+echo -e "$header" > "$RUN_METADATA"
+tail -n +2 "$CURATED_METADATA" \
+  | grep -F -f "$SAMPLE_IDS_FILE" \
+  | tr ',' '\t' >> "$RUN_METADATA"
 
 echo -e "\033[31mGenerated metadata file: $RUN_METADATA\033[0m"
 
