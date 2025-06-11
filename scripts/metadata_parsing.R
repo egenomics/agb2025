@@ -64,6 +64,7 @@ if (!"Sample_Accession" %in% colnames(metadata_run)) {
 metadata <- metadata_sample %>%
   left_join(metadata_run, by = "Sample_Accession", suffix = c("", "_run"))
 
+metadata <- metadata[, c("Sample ID", setdiff(names(metadata), "Sample ID"))]
 print(paste("Merged metadata rows:", nrow(metadata)))
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -454,7 +455,7 @@ if ("Sequencing_Platform" %in% colnames(metadata)) {
 # 8) Write out the cleaned CSV ------------------------------------------------
 # ─────────────────────────────────────────────────────────────────────────────
 print("Writing cleaned metadata...")
-write_csv(metadata, "controls/metadata_controls.csv", na = "")
+write_csv(metadata, "metadata/healthy_controls/curated/metadata_controls.csv", na = "")
 
 print("✓ Successfully created metadata_cleaned.csv")
 print(paste("Final dataset contains", nrow(metadata), "rows and", ncol(metadata), "columns"))
