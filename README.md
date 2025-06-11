@@ -1,6 +1,9 @@
-# agb2025
+# Welcome to **AGB 2025 Microbiota Classification Pipeline**
 
-Repository for the AGB 2025 common class project
+### Repository for the AGB 2025 common class project.
+AGB 2025 is a **dockerised Nextflow workflow** that turns raw stool sequencing reads into clinically actionable labels (*healthy* vs *non-healthy*) and rich microbiome analytics. Built by the students of the subject AGB_2025. 
+
+---
 
 [![Documentation  Wiki](https://img.shields.io/static/v1?label=Documentation&message=Wiki&labelColor=black&color=blue&logo=github&logoColor=white)](https://github.com/egenomics/agb2025/wiki)
 
@@ -9,7 +12,7 @@ In this wiki page you will find the information about the pipeline context, the 
 ![IMG1.png](https://github.com/egenomics/agb2025/blob/main/img/IMG1.png)
 ## Quick start (Docker edition)
 
-### Prerequisites
+### Prerequisites to install the pipeline
 
 | Tool                   | macOS (Homebrew)                                                            | Ubuntu / Debian                                                           | Notes                                                         |
 |------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------|
@@ -19,6 +22,14 @@ In this wiki page you will find the information about the pipeline context, the 
 
 ## 1 · Setup Installing
 
+Before running the pipeline you must **(i)** clone the repository, **(ii)** make the custom Docker image available, and **(iii)** download the reference databases. 
+
+### 1.1 Clone the repository
+```bash
+git clone https://github.com/egenomics/agb2025.git
+cd agb2025 
+```
+### 1.2 Docker image
 This pipeline uses a **custom Docker image (agb2025-python)** to merge metadata with MultiQC output using pandas and csvkit. **To build the Docker Image, run this in the terminal**
 
 ```bash
@@ -27,6 +38,7 @@ docker build -t agb2025-python -f Dockerfile .
 
 The image is used in the process that merges metadata.tsv with multiqc_fastqc.txt. This step will fail unless agb2025-python is built locally beforehand.
 
+### 1.3 Download the reference databases
 In addition, **it is mandatory to install two databases: Kraken2 and the classifier SILVA**. To install them, run this command line:
 
 ```bash
@@ -35,7 +47,6 @@ chmod +x INSTALLME.sh
 ```
 
 The `INSTALLME.sh` script will save both databases in databases/.
-
 
 ## 2 · Usage
 
