@@ -94,3 +94,12 @@ nextflow run main.nf --run_id R01110625 --auto_rarefaction TRUE --sampling_depth
 
 - Filtered fastq's and `outputs/` directories are not pushed to github due to size limits.
 - multiqc summary merging into metadata is done via csv tools and logged in `outputs/run_<run_id>/`.
+
+## 4 · Validation
+
+- Benchmarking used 30 synthetic datasets with varying depths, error models, and GC correction, based on top gut ASVs from 10,000 fecal samples. Metrics were computed against known ground truth.
+
+- Stress Testing with mock communities assessed performance under edge-case conditions, leading to practical recommendations.
+
+- Real Sample Application involved running the pipeline on datasets from different studies and sequencing depths. 
+
