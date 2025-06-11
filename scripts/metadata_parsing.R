@@ -40,29 +40,29 @@ print("Deleting unconsistent records...")
 
 
 metadata_sample <- metadata_sample_raw %>%
-  group_by(Sample_ID) %>%
+  group_by(Sample_Accession) %>%
   filter(!(n() > 1 & (n_distinct(Age) > 1 | n_distinct(Gender) > 1))) %>%
   ungroup()
 
 metadata_run <- metadata_run_raw %>%
-  filter(Sample_ID %in% metadata_sample$Sample_ID)
+  filter(Sample_Accession %in% metadata_sample$Sample_Accession)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2) Merge the two datasets based on SampleID -----------------------------------
 # ─────────────────────────────────────────────────────────────────────────────
-print("Merging datasets by Sample_ID...")
+print("Merging datasets by Sample_Accession...")
 
 # Check if SampleID exists in both datasets
-if (!"Sample_ID" %in% colnames(metadata_sample)) {
-  stop("Sample_ID column not found in metadata_sample.csv")
+if (!"Sample_Accession" %in% colnames(metadata_sample)) {
+  stop("Sample_Accession column not found in metadata_sample.csv")
 }
-if (!"Sample_ID" %in% colnames(metadata_run)) {
-  stop("Sample_ID column not found in metadata_run.csv")
+if (!"Sample_Accession" %in% colnames(metadata_run)) {
+  stop("Sample_Accession column not found in metadata_run.csv")
 }
 
 # Perform left join to keep all samples and add run information
 metadata <- metadata_sample %>%
-  left_join(metadata_run, by = "Sample_ID", suffix = c("", "_run"))
+  left_join(metadata_run, by = "Sample_Accession", suffix = c("", "_run"))
 
 print(paste("Merged metadata rows:", nrow(metadata)))
 
@@ -178,8 +178,8 @@ metadata <- metadata %>%
   # First, replace all empty/NA values with "N/A"
   mutate(across(-Collection_Date, ~ ifelse(is.na(.) | . == "" | . == "NA", "N/A", as.character(.)))) %>%
   mutate(
-    # Sample_ID - keep as is (should already be in correct format)
-    Sample_ID = str_trim(Sample_ID),
+    # Sample_Accession - keep as is (should already be in correct format)
+    Sample_Accession = str_trim(Sample_Accession),
     
     # Institution - First letter uppercase with underscores
     Institution = clean_text(Institution),
@@ -469,7 +469,7 @@ print(colnames(metadata))
 
 # Display sample of key formatted columns
 print("\n=== SAMPLE OF FORMATTED DATA ===")
-sample_cols <- c("Sample_ID", "Gender", "Age", "Body_Mass_Index", "Dietary_Information", "Allergies")
+sample_cols <- c("Sample_Accession", "Gender", "Age", "Body_Mass_Index", "Dietary_Information", "Allergies")
 available_cols <- intersect(sample_cols, colnames(metadata_clean))
 if (length(available_cols) > 0) {
   print(head(metadata_clean[, available_cols, drop = FALSE], 10))
