@@ -110,10 +110,10 @@ Alpha diversity metrics comparison reveals strong pipeline performance:
 
 - **Shannon Diversity (r=0.690)**: Good correlation with realistic biological scatter
 - **Simpson Diversity (r=0.681)**: Excellent tight clustering around 1:1 line
-- **Richness (r=nan)**: Consistent detection across samples (stable performance)
+- **Richness (r=nan)**: Consistent detection across samples caution!
 - **Evenness (r=0.683)**: Good preservation of community structure patterns
 
-The diversity metrics demonstrate that our pipeline maintains ecological relationships between samples, making it suitable for downstream community ecology analyses.
+The diversity metrics are borderline acceptable and we believe this is coming from rarefaction threshold artifacts.
 
 ### Performance Across Experimental Conditions
 
@@ -122,9 +122,9 @@ The diversity metrics demonstrate that our pipeline maintains ecological relatio
 Comprehensive analysis across synthetic experimental conditions shows:
 
 #### Excellent Performers (r > 0.9):
-- **Standard samples**: Mean r=0.937 (highly reproducible)
+- **100K samples**: Mean r=0.937 (highly reproducible)
 - **MiSeq variants** (standard, 24, 28): r=0.91-0.93 (platform robust)
-- **High quality samples**: r=0.889 (excellent on high-quality data)
+- **Higher quality samples 200K-500K**: r=0.889 (excellent on high-quality data)
 
 #### Good Performers (r > 0.8):
 - **No GC bias samples**: r=0.845 (shows GC bias correction helps)
@@ -137,7 +137,7 @@ Comprehensive analysis across synthetic experimental conditions shows:
 #### Key Insights:
 
 1. **Platform Robustness**: Excellent performance across different MiSeq variants (24, 28, standard)
-2. **Depth Sensitivity**: Performance degrades gracefully with very low coverage
+2. **Depth Sensitivity**: Performance degrades with low coverage
 3. **Quality Dependence**: High-quality samples show superior results
 4. **Error Model Impact**: Basic error samples failed completely, suggesting pipeline expects realistic error patterns
 
@@ -161,22 +161,20 @@ Shannon diversity errors remain consistently low (<3%) across all successful con
 
 These results demonstrate that our pipeline:
 
-1. **Preserves biological signal** in high-quality, standard-depth samples
-2. **Maintains ecological relationships** between samples for community analyses
+1. **Preserves biological signal** in high-quality, high-depth samples (100K)
+2. **Maintains ecological relationships** moderately between samples for community analyses
 3. **Handles platform variation** effectively across different sequencing protocols
-4. **Degrades gracefully** under challenging conditions (low depth, poor quality)
+4. **Degrades** under challenging conditions (lower depth, poor quality)
 
 ### Recommended Use Cases
 
 Based on benchmarking results, the pipeline is recommended for:
 
 **Standard 16S amplicon analysis** (100K+ reads per sample)
-**Community diversity studies** (excellent diversity metric preservation)
 **Multi-platform studies** (robust across MiSeq variants)
-**Comparative microbiome analysis** (high correlation accuracy)
 
 **Use with caution for:**
-- Very low-depth samples (<50K reads)
+- Medium to low-depth samples (<50K reads)
 - Samples with severe sequencing artifacts
 - Studies requiring detection of very rare taxa
 
