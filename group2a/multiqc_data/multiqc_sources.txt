@@ -1,7 +1,0 @@
-Module	Section	Sample Name	Source
-FastQC	all_sections	ERR1328366_1	/home/ivon/Desktop/fastqc_results/ERR1328366_1_fastqc.zip
-FastQC	all_sections	ERR1328363_1	/home/ivon/Desktop/fastqc_results/ERR1328363_1_fastqc.zip
-FastQC	all_sections	ERR1328415_1	/home/ivon/Desktop/fastqc_results/ERR1328415_1_fastqc.zip
-FastQC	all_sections	ERR1328366_2	/home/ivon/Desktop/fastqc_results/ERR1328366_2_fastqc.zip
-FastQC	all_sections	ERR1328363_2	/home/ivon/Desktop/fastqc_results/ERR1328363_2_fastqc.zip
-FastQC	all_sections	ERR1328415_2	/home/ivon/Desktop/fastqc_results/ERR1328415_2_fastqc.zip
