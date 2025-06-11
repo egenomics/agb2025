@@ -1,4 +1,3 @@
-#!/usr/bin/env Rscript
 
 ###### AGB RESULTS DELIVERY #########
 
@@ -667,12 +666,61 @@ ui <- dashboardPage(
                     status = "primary", 
                     solidHeader = TRUE, 
                     width = 12, 
+                    
+                    # Quality Filter Controls - at the top of the box
+                    fluidRow(
+                      column(
+                        width = 12,
+                        div(
+                          style = "background-color: #f8f9fa; padding: 15px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #dee2e6;",
+                          h5("Quality Filtering Controls", style = "margin-top: 0px; color: #495057;"),
+                          fluidRow(
+                            column(
+                              width = 6,
+                              checkboxInput("apply_quality_filter", 
+                                            "Apply Quality Filter (Remove FAIL samples)", 
+                                            value = TRUE)
+                            ),
+                            column(
+                              width = 3,
+                              conditionalPanel(
+                                condition = "input.apply_quality_filter == true",
+                                div(
+                                  style = "margin-top: 5px;",
+                                  span("Status: ", style = "color: #495057;"),
+                                  span("FILTERING ACTIVE", 
+                                       style = "color: #28a745; font-weight: bold; background-color: #d4edda; padding: 2px 8px; border-radius: 3px;")
+                                )
+                              ),
+                              conditionalPanel(
+                                condition = "input.apply_quality_filter == false",
+                                div(
+                                  style = "margin-top: 5px;",
+                                  span("Status: ", style = "color: #495057;"),
+                                  span("SHOWING ALL DATA", 
+                                       style = "color: #dc3545; font-weight: bold; background-color: #f8d7da; padding: 2px 8px; border-radius: 3px;")
+                                )
+                              )
+                            ),
+                            column(
+                              width = 3,
+                              div(
+                                style = "margin-top: 5px;",
+                                textOutput("quality_filter_summary", inline = TRUE)
+                              )
+                            )
+                          )
+                        )
+                      )
+                    ),
+                    
+                    # Tab panels for data preview
                     tabBox(
                       width = 12, 
                       tabPanel("Sample Metadata", 
                                fluidRow(
                                  column(width = 12, 
-                                        radioButtons("sample_metadata_filter", "Filter by Conditiions:", 
+                                        radioButtons("sample_metadata_filter", "Filter by Conditions:", 
                                                      choices = c("All", "Control", "Sample"), 
                                                      selected = "All", 
                                                      inline = TRUE))
@@ -686,6 +734,16 @@ ui <- dashboardPage(
                                                      selected = "All", 
                                                      inline = TRUE))
                                ), 
+                               # Quality flag indicator for Run Metadata
+                               conditionalPanel(
+                                 condition = "input.run_metadata_filter == 'Sample' || input.run_metadata_filter == 'All'",
+                                 div(
+                                   style = "margin-bottom: 10px; padding: 8px; background-color: #e3f2fd; border-radius: 4px;",
+                                   icon("info-circle"), 
+                                   span(" Run Metadata includes quality_flag column for sample data. Use the Quality Filter above to control visibility.", 
+                                        style = "margin-left: 5px; color: #1976d2;")
+                                 )
+                               ),
                                dataTableOutput("run_metadata_preview")), 
                       tabPanel("Taxonomy Data Preview", 
                                fluidRow(
@@ -1612,13 +1670,37 @@ server <- function(input, output, session) {
           # Control data loading failed, continue without controls 
         })
       }
-      # Store the loaded data 
-      data_store$sample_metadata <- sample_metadata
-      data_store$run_metadata <- run_metadata
-      data_store$taxonomy_data <- taxonomy_data
+      
+      # Store the RAW data first (will be filtered in reactive expressions based on checkbox)
+      data_store$sample_metadata_raw <- sample_metadata
+      data_store$run_metadata_raw <- run_metadata
+      data_store$taxonomy_data_raw <- taxonomy_data
       data_store$control_sample_metadata <- control_sample_metadata
       data_store$control_run_metadata <- control_run_metadata
       data_store$control_taxonomy_data <- control_taxonomy_data
+      
+      # Calculate quality statistics if quality_flag column exists
+      if ("quality_flag" %in% colnames(run_metadata)) {
+        total_samples <- nrow(run_metadata)
+        failed_samples <- sum(run_metadata$quality_flag == "FAIL", na.rm = TRUE)
+        passed_samples <- sum(run_metadata$quality_flag == "PASS", na.rm = TRUE)
+        
+        data_store$quality_stats <- list(
+          total = total_samples,
+          passed = passed_samples,
+          failed = failed_samples
+        )
+        
+        filter_message <- paste0(" Quality column detected: ", passed_samples, " PASS, ", failed_samples, " FAIL samples.")
+      } else {
+        data_store$quality_stats <- list(
+          total = nrow(run_metadata),
+          passed = nrow(run_metadata),
+          failed = 0
+        )
+        filter_message <- " No quality_flag column found."
+      }
+      
       data_store$automatic_data_loaded <- TRUE
       data_store$manual_data_loaded <- FALSE
       
@@ -1633,10 +1715,12 @@ server <- function(input, output, session) {
         "Run: ", selected_run, "\n", 
         "Samples: ", nrow(sample_metadata), "\n",
         "Runs: ", nrow(run_metadata), "\n",
-        "Species: ", length(unique(taxonomy_data$Species)), "\n",
-        control_status
+        "Species: ", if(!is.null(taxonomy_data)) length(unique(taxonomy_data$Species)) else "No taxonomy data", "\n",
+        control_status, "\n",
+        filter_message, " Use quality filter to control data visibility."
       )
-      showNotification("Automatic data loaded successfully!", type = "message")
+      showNotification(paste0("Automatic data loaded successfully!", filter_message), type = "message")
+      
     }, error = function(e) {
       data_store$error_message <- paste("Error loading automatic data:", e$message)
       showNotification(paste("Loading error:", e$message), type = "error")
@@ -1655,6 +1739,17 @@ server <- function(input, output, session) {
     data_store$automatic_data_loaded 
   })
   outputOptions(output, "automatic_data_loaded", suspendWhenHidden = FALSE)
+  
+  # Automatic data loading status
+  output$automatic_data_loading_status <- renderText({
+    if(!is.null(data_store$error_message)) {
+      data_store$error_message
+    } else if(!is.null(data_store$success_message)) {
+      data_store$success_message
+    } else {
+      "No data loaded yet"
+    }
+  })
   
   # Control data status output 
   output$control_data_status <- renderText({
@@ -1770,7 +1865,7 @@ server <- function(input, output, session) {
       stringsAsFactors = FALSE
     )
     
-    # Generate run metadata 
+    # Generate run metadata WITH quality_flag for samples only
     run_metadata <- data.frame(
       RunID = paste0("RHM", sprintf("%02d", 1:30), "_01"),
       Run_accession = paste0("ERR", sample(1000000:9999999, 30)),
@@ -1787,6 +1882,7 @@ server <- function(input, output, session) {
       Notes_Runs = sample(c("Standard_run", "Good_quality_output", "Normal_processing", 
                             "Successful_sequencing", "No_issues_detected"), 30, replace = TRUE),
       Sample_ID = paste0("SHM", sprintf("%02d", sample(1:50, 30, replace = TRUE)), format(Sys.Date(), "%d%m%y")),
+      quality_flag = sample(c("PASS", "FAIL"), 30, replace = TRUE, prob = c(0.8, 0.2)), # 80% PASS, 20% FAIL
       stringsAsFactors = FALSE
     )
     
@@ -1832,7 +1928,7 @@ server <- function(input, output, session) {
       stringsAsFactors = FALSE
     )
     
-    # Generate CONTROL run metadata 
+    # Generate CONTROL run metadata WITHOUT quality_flag (controls don't have this column)
     control_run_metadata <- data.frame(
       RunID = paste0("CTRL_RHM", sprintf("%02d", 1:20), "_01"),
       Run_accession = paste0("ERR", sample(1000000:9999999, 20)),
@@ -1875,19 +1971,35 @@ server <- function(input, output, session) {
     # Ensure abundances don't exceed our max range
     control_taxonomy_data$Abundance <- pmin(control_taxonomy_data$Abundance, 10000)
     
-    # Store the data in reactive values 
-    data_store$sample_metadata <- sample_metadata
-    data_store$run_metadata <- run_metadata
-    data_store$taxonomy_data <- taxonomy_data 
+    # Store the UNFILTERED data first (will be filtered in reactive expressions based on checkbox)
+    data_store$sample_metadata_raw <- sample_metadata
+    data_store$run_metadata_raw <- run_metadata
+    data_store$taxonomy_data_raw <- taxonomy_data
     data_store$control_sample_metadata <- control_sample_metadata
     data_store$control_run_metadata <- control_run_metadata
     data_store$control_taxonomy_data <- control_taxonomy_data
-    data_store$success_message <- "Example data generated successfully! Ready for analysis."
+    
+    # Calculate statistics for display
+    total_samples <- nrow(run_metadata)
+    failed_samples <- sum(run_metadata$quality_flag == "FAIL")
+    passed_samples <- sum(run_metadata$quality_flag == "PASS")
+    
+    data_store$quality_stats <- list(
+      total = total_samples,
+      passed = passed_samples,
+      failed = failed_samples
+    )
+    
+    data_store$success_message <- paste0("Example data generated successfully! ",
+                                         "Total samples: ", total_samples, 
+                                         ", PASS: ", passed_samples, 
+                                         ", FAIL: ", failed_samples, 
+                                         ". Use quality filter to control visibility.")
     data_store$manual_data_loaded <- TRUE
     data_store$automatic_data_loaded <- FALSE
     
     # Show notification 
-    showNotification("Example data generated successfully!", type = "message")
+    showNotification("Example data generated successfully! Use quality filter to control data visibility.", type = "message")
   })
   
   # Load data when button is clicked 
@@ -1923,24 +2035,108 @@ server <- function(input, output, session) {
       # Read control taxonomy data 
       control_taxonomy_data <- read.delim(input$control_taxonomy$datapath, sep = "\t", header = TRUE)
       
-      # Store the data in reactive values 
-      data_store$sample_metadata <- sample_metadata
-      data_store$run_metadata <- run_metadata
-      data_store$taxonomy_data <- taxonomy_data
+      # Store the RAW data (will be filtered in reactive expressions based on checkbox)
+      data_store$sample_metadata_raw <- sample_metadata
+      data_store$run_metadata_raw <- run_metadata
+      data_store$taxonomy_data_raw <- taxonomy_data
       data_store$control_sample_metadata <- control_sample_metadata
       data_store$control_run_metadata <- control_run_metadata
       data_store$control_taxonomy_data <- control_taxonomy_data
+      
+      # Calculate quality statistics if quality_flag column exists
+      if ("quality_flag" %in% colnames(run_metadata)) {
+        total_samples <- nrow(run_metadata)
+        failed_samples <- sum(run_metadata$quality_flag == "FAIL", na.rm = TRUE)
+        passed_samples <- sum(run_metadata$quality_flag == "PASS", na.rm = TRUE)
+        
+        data_store$quality_stats <- list(
+          total = total_samples,
+          passed = passed_samples,
+          failed = failed_samples
+        )
+        
+        filter_message <- paste0(" Quality column detected: ", passed_samples, " PASS, ", failed_samples, " FAIL samples.")
+      } else {
+        data_store$quality_stats <- list(
+          total = nrow(run_metadata),
+          passed = nrow(run_metadata),
+          failed = 0
+        )
+        filter_message <- " No quality_flag column found."
+      }
+      
       data_store$manual_data_loaded <- TRUE
       data_store$automatic_data_loaded <- FALSE 
       
       # Show notification 
-      data_store$success_message <- "Data loaded successfully! Ready for analysis."
-      showNotification("Data loaded successfully!", type = "message")
+      data_store$success_message <- paste0("Data loaded successfully!", filter_message, " Use quality filter to control data visibility.")
+      showNotification(paste0("Data loaded successfully!", filter_message), type = "message")
+      
     }, error = function(e) {
       # Handle any error that occur during file reading
       data_store$error_message <- paste("Error loading data:", e$message)
       showNotification(paste("Error:", e$message), type = "error")
     })
+  })
+  
+  # Reactive expressions for filtered data based on quality checkbox
+  get_filtered_sample_data <- reactive({
+    req(data_store$sample_metadata_raw, data_store$run_metadata_raw)
+    
+    if (input$apply_quality_filter && "quality_flag" %in% colnames(data_store$run_metadata_raw)) {
+      # Apply quality filtering
+      passed_runs <- data_store$run_metadata_raw[data_store$run_metadata_raw$quality_flag == "PASS", ]
+      passed_sample_ids <- passed_runs$Sample_ID
+      filtered_sample_metadata <- data_store$sample_metadata_raw[data_store$sample_metadata_raw$Sample_ID %in% passed_sample_ids, ]
+      
+      return(list(
+        sample_metadata = filtered_sample_metadata,
+        run_metadata = passed_runs
+      ))
+    } else {
+      # Return all data without filtering
+      return(list(
+        sample_metadata = data_store$sample_metadata_raw,
+        run_metadata = data_store$run_metadata_raw
+      ))
+    }
+  })
+  
+  get_filtered_taxonomy_data <- reactive({
+    req(data_store$taxonomy_data_raw, data_store$run_metadata_raw)
+    
+    if (input$apply_quality_filter && "quality_flag" %in% colnames(data_store$run_metadata_raw)) {
+      # Apply quality filtering
+      passed_runs <- data_store$run_metadata_raw[data_store$run_metadata_raw$quality_flag == "PASS", ]
+      passed_sample_ids <- passed_runs$Sample_ID
+      filtered_taxonomy_data <- data_store$taxonomy_data_raw[data_store$taxonomy_data_raw$Sample_ID %in% passed_sample_ids, ]
+      
+      return(filtered_taxonomy_data)
+    } else {
+      # Return all data without filtering
+      return(data_store$taxonomy_data_raw)
+    }
+  })
+  
+  # Update reactive values when checkbox changes
+  observe({
+    req(data_store$manual_data_loaded)
+    
+    filtered_data <- get_filtered_sample_data()
+    data_store$sample_metadata <- filtered_data$sample_metadata
+    data_store$run_metadata <- filtered_data$run_metadata
+    data_store$taxonomy_data <- get_filtered_taxonomy_data()
+  })
+  
+  # Output for quality filter summary
+  output$quality_filter_summary <- renderText({
+    req(data_store$quality_stats)
+    
+    if (input$apply_quality_filter && data_store$quality_stats$failed > 0) {
+      paste0("Showing: ", data_store$quality_stats$passed, "/", data_store$quality_stats$total, " samples")
+    } else {
+      paste0("Showing: ", data_store$quality_stats$total, "/", data_store$quality_stats$total, " samples")
+    }
   })
   
   # Output for manual data loading status
@@ -2130,6 +2326,29 @@ server <- function(input, output, session) {
                                  overflow = 'hidden',
                                  textOverflow = 'ellipsis')
       }
+    }
+    
+    # Apply special styling for quality_flag column specifically
+    if("quality_flag" %in% colnames(data)) {
+      dt <- dt %>% formatStyle(
+        'quality_flag',
+        backgroundColor = styleEqual(
+          c('PASS', 'FAIL'), 
+          c('#d4edda', '#f8d7da')  
+        ),
+        color = styleEqual(
+          c('PASS', 'FAIL'), 
+          c('#155724', '#721c24') 
+        ),
+        fontWeight = styleEqual(
+          c('PASS', 'FAIL'), 
+          c('bold', 'bold')  
+        ),
+        border = styleEqual(
+          c('PASS', 'FAIL'), 
+          c('1px solid #c3e6cb', '1px solid #f5c6cb')  
+        )
+      )
     }
     
     return(dt)
@@ -4807,8 +5026,8 @@ server <- function(input, output, session) {
   }
   
   # Define the tree file path
-  PHYLO_TREE_PATH <- "group2_B/results/qiime_output/relevant_results/phylogenetic_tree.nwk"
-  TAXONOMY_PATH   <- "group2_B/results/qiime_output/relevant_results/taxonomy.tsv"
+  PHYLO_TREE_PATH <- "../group2_B/results/qiime_output/relevant_results/phylogenetic_tree.nwk"
+  TAXONOMY_PATH   <- "../group2_B/results/qiime_output/relevant_results/taxonomy.tsv"
   
   # Reactive value to store tree data
   phylo_tree_data <- reactiveValues(
@@ -7286,27 +7505,9 @@ server <- function(input, output, session) {
   
 
 # Run app
-#shinyApp(ui, server)
+shinyApp(ui, server)
 
 
-# Use a custom browser function that mimics RStudio viewer
-options(shiny.launch.browser = function(url) {
-  # Try different lightweight browsers in order of preference
-  browsers <- c(
-    "chromium-browser --app=%s --window-size=1200,800",
-    "google-chrome --app=%s --window-size=1200,800", 
-    "firefox --new-window %s"
-  )
-  
-  for (browser_cmd in browsers) {
-    browser <- strsplit(browser_cmd, " ")[[1]][1]
-    if (Sys.which(browser) != "") {
-      system(sprintf(browser_cmd, url), wait = FALSE)
-      break
-    }
-  }
-})
 
-runApp(shinyApp(ui, server))
 
 
