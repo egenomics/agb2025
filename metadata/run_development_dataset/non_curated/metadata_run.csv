@@ -1,4 +1,4 @@
-RunID,Sample_ID,Sequencing_Date,Sequencing_Platform,Sequencing_Type,Expected_read_length,Sequencing_depth_target,Library_preparation_kit,Technician_name,Notes_Runs,Sample_Accession
+RunID,Sample ID,Sequencing_Date,Sequencing_Platform,Sequencing_Type,Expected_read_length,Sequencing_depth_target,Library_preparation_kit,Technician_name,Notes_Runs,Sample_Accession
 run_1,ERR10674393,,MiSeq,16S rRNA,,,,,,SAMEA112188059
 run_1,ERR10674519,,MiSeq,16S rRNA,,,,,,SAMEA112188185
 run_1,ERR10674403,,MiSeq,16S rRNA,,,,,,SAMEA112188069

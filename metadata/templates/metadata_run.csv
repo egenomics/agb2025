@@ -1,1 +1,1 @@
-RunID,Sample_ID,Sequencing_Date,Sequencing_Platform,Sequencing_Type,Expected_read_length,Sequencing_depth_target,Library_preparation_kit,Technician_name,Notes_Runs
+RunID,Sample ID,Sequencing_Date,Sequencing_Platform,Sequencing_Type,Expected_read_length,Sequencing_depth_target,Library_preparation_kit,Technician_name,Notes_Runs
