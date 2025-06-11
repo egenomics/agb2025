@@ -1145,9 +1145,17 @@ ui <- dashboardPage(
                          solidHeader = TRUE,
                          width = 12,
                          
-                         # Button to reload tree if needed
-                         actionButton("reload_phylo", "Reload Tree", 
-                                      class = "btn-warning btn-sm"),
+                         fileInput("nwk_file", "Upload Newick Tree (.nwk)", 
+                                   accept = c(".nwk", ".tree"), 
+                                   buttonLabel = "Browse...", 
+                                   placeholder = "No file selected"),
+                         
+                         fileInput("taxonomy_file", "Upload taxonomy.tsv", 
+                                   accept = c(".tsv", ".txt"), 
+                                   buttonLabel = "Browse...", 
+                                   placeholder = "No file selected"),
+                         
+                         actionButton("load_tree_btn", "Load Tree"),
                          
                          hr(),
                          
@@ -1237,7 +1245,7 @@ ui <- dashboardPage(
                        )
                 )
               )
-      ),  
+      ), 
       
       # TAB 5: Lifestyle Tab 
       tabItem(tabName = "multifactor",
@@ -4935,8 +4943,6 @@ server <- function(input, output, session) {
   
   
   
-  
-  
   # ==============================================================================
   # SERVER - PHYLOGENETIC TREE TAB - FIXED VERSION WITH BOTTOM LEGEND
   # ==============================================================================
@@ -5025,9 +5031,78 @@ server <- function(input, output, session) {
     return(list(values = support_values, source = support_source))
   }
   
+  observeEvent(input$load_tree_btn, {
+    req(input$nwk_file)
+    
+    tryCatch({
+      if (!file.exists(input$nwk_file$datapath)) stop("Uploaded tree file not found")
+      
+      tree <- ape::read.tree(input$nwk_file$datapath)
+      tree <- clean_phylo_tree(tree)
+      
+      # Usar taxonomía cargada por el usuario
+      tax_tbl <- taxonomy_data()
+      if (!is.null(tax_tbl)) {
+        tax_vec <- setNames(tax_tbl$Taxon, tax_tbl$Feature.ID)
+        
+        # Diagnóstico
+        cat("Coincidencias tip.label / taxonomy:", sum(tree$tip.label %in% names(tax_vec)), "\n")
+        tree$tip.label <- ifelse(tree$tip.label %in% names(tax_vec),
+                                 tax_vec[tree$tip.label],
+                                 tree$tip.label)
+      } else {
+        cat("⚠ No taxonomy data loaded\n")
+      }
+      
+      phylo_tree_data$tree <- tree
+      phylo_tree_data$loaded <- TRUE
+      phylo_tree_data$file_exists <- TRUE
+      phylo_tree_data$error_msg <- NULL
+      phylo_tree_data$file_path <- input$nwk_file$datapath
+      
+      phylo_tree_data$debug_info <- paste("Tree loaded with", ape::Ntip(tree), "tips")
+      
+    }, error = function(e) {
+      phylo_tree_data$tree <- NULL
+      phylo_tree_data$loaded <- FALSE
+      phylo_tree_data$file_exists <- TRUE
+      phylo_tree_data$error_msg <- paste("Error loading tree:", e$message)
+    })
+  })
+  
+  observeEvent(input$taxonomy_file, {
+    req(input$taxonomy_file)
+    
+    tryCatch({
+      tax_tbl <- read.delim(
+        input$taxonomy_file$datapath,
+        header = TRUE,
+        sep = "\t",
+        quote = "",
+        comment.char = "",
+        stringsAsFactors = FALSE,
+        fileEncoding = "UTF-8"  # fuerza codificación compatible
+      )
+      
+      # Limpieza de nombres de columnas
+      colnames(tax_tbl) <- trimws(colnames(tax_tbl))
+      if (!all(c("Feature.ID", "Taxon") %in% colnames(tax_tbl))) {
+        cat("❌ Columnas esperadas no encontradas. Forzando nombres manualmente\n")
+        names(tax_tbl)[1:2] <- c("Feature.ID", "Taxon")  # solo si el orden es correcto
+      }
+      
+      taxonomy_data(tax_tbl)
+      cat("✔ Taxonomy file loaded:", nrow(tax_tbl), "rows\n")
+      
+    }, error = function(e) {
+      taxonomy_data(NULL)
+      cat("✗ Failed to load taxonomy file:", e$message, "\n")
+    })
+  })
+  
   # Define the tree file path
-  PHYLO_TREE_PATH <- "../group2_B/results/qiime_output/relevant_results/phylogenetic_tree.nwk"
-  TAXONOMY_PATH   <- "../group2_B/results/qiime_output/relevant_results/taxonomy.tsv"
+  #PHYLO_TREE_PATH <- "../group2_B/results/qiime_output/relevant_results/phylogenetic_tree.nwk"
+  #TAXONOMY_PATH   <- "../group2_B/results/qiime_output/relevant_results/taxonomy.tsv"
   
   # Reactive value to store tree data
   phylo_tree_data <- reactiveValues(
@@ -5037,6 +5112,8 @@ server <- function(input, output, session) {
     error_msg = NULL,
     debug_info = ""
   )
+  
+  taxonomy_data <- reactiveVal(NULL)
   
   # Enhanced tree cleaning function
   clean_phylo_tree <- function(tree) {
@@ -5086,8 +5163,8 @@ server <- function(input, output, session) {
   # Function to load tree automatically
   load_phylo_tree <- function() {
     tryCatch({
-      if (file.exists(PHYLO_TREE_PATH)) {
-        tree <- ape::read.tree(PHYLO_TREE_PATH)
+      if (file.exists(input$nwk_file$datapath)) {
+        tree <- ape::read.tree(input$nwk_file$datapath)
         
         # Clean the tree immediately after loading
         tree <- clean_phylo_tree(tree)
@@ -5124,12 +5201,12 @@ server <- function(input, output, session) {
         phylo_tree_data$tree <- NULL
         phylo_tree_data$loaded <- FALSE
         phylo_tree_data$file_exists <- FALSE
-        phylo_tree_data$error_msg <- paste("File not found:", PHYLO_TREE_PATH)
+        phylo_tree_data$error_msg <- paste("File not found:", input$nwk_file$datapath)
       }
     }, error = function(e) {
       phylo_tree_data$tree <- NULL
       phylo_tree_data$loaded <- FALSE
-      phylo_tree_data$file_exists <- file.exists(PHYLO_TREE_PATH)
+      phylo_tree_data$file_exists <- file.exists(input$nwk_file$datapath)
       phylo_tree_data$error_msg <- paste("Error loading tree:", e$message)
     })
   }
@@ -6107,7 +6184,7 @@ server <- function(input, output, session) {
     if(phylo_tree_data$loaded) {
       div(
         h4("✓ Tree loaded successfully", style = "color: #28a745;"),
-        p(paste("File:", basename(PHYLO_TREE_PATH)), style = "color: #666;")
+        p(paste("File:", basename(input$nwk_file$datapath)), style = "color: #666;")
       )
     } else if(phylo_tree_data$file_exists) {
       div(
@@ -6483,9 +6560,9 @@ server <- function(input, output, session) {
   outputOptions(output, "tree_loaded", suspendWhenHidden = FALSE)
   
   # Load tree at startup
-  observeEvent(TRUE, {
-    load_phylo_tree()
-  }, once = TRUE)
+  #observeEvent(TRUE, {
+  #  load_phylo_tree()
+  #}, once = TRUE)
   
   # Reload button with conflict resolution
   observeEvent(input$reload_phylo, {
