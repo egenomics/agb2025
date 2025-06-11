@@ -20,12 +20,12 @@ library(janitor)
 print("Reading metadata files...")
 
 # Read sample metadata
-metadata_sample_raw <- read_csv("metadata/run_development_dataset/non_curated/metadata_sample.csv", 
+metadata_sample_raw <- read_csv("metadata/healthy_controls/non_curated/metadata_sample.csv", 
                             locale = locale(encoding = "UTF-8"),
                             show_col_types = FALSE)
 
 # Read run metadata  
-metadata_run_raw <- read_csv("metadata/run_development_dataset/non_curated/metadata_run.csv",
+metadata_run_raw <- read_csv("metadata/healthy_controls/non_curated/metadata_run.csv",
                          locale = locale(encoding = "UTF-8"),
                          show_col_types = FALSE)
 
@@ -79,7 +79,7 @@ clean_names_safe <- function(names_vec) {
 
 colnames(metadata) <- clean_names_safe(colnames(metadata))
 names(metadata)[names(metadata) == "Ongoing_conditions_"] <- "Ongoing_conditions"
-
+names(metadata)[names(metadata) == "Sample_ID"] <- "Sample ID"
 # ─────────────────────────────────────────────────────────────────────────────
 # 4) Helper functions for consistent formatting -------------------------------
 # ─────────────────────────────────────────────────────────────────────────────
@@ -454,7 +454,7 @@ if ("Sequencing_Platform" %in% colnames(metadata)) {
 # 8) Write out the cleaned CSV ------------------------------------------------
 # ─────────────────────────────────────────────────────────────────────────────
 print("Writing cleaned metadata...")
-write_csv(metadata, "metadata_cleaned.csv", na = "")
+write_csv(metadata, "controls/metadata_controls.csv", na = "")
 
 print("✓ Successfully created metadata_cleaned.csv")
 print(paste("Final dataset contains", nrow(metadata), "rows and", ncol(metadata), "columns"))
