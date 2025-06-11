@@ -87,7 +87,47 @@ tail -n +2 "$CURATED_METADATA" \
 
 echo -e "\033[31mGenerated metadata file: $RUN_METADATA\033[0m"
 
-# Remove the temporary sample_ids file
+# Add the non_curated files and turning them into .tsv
+NON_CURATED_DIR="metadata/run_development_dataset/non_curated"
+SAMPLE_META_CSV="${NON_CURATED_DIR}/metadata_sample.csv"
+RUN_META_CSV="${NON_CURATED_DIR}/metadata_run.csv"
+SAMPLE_META_TSV="${METADATA_DIR}/metadata_sample.tsv"
+RUN_META_TSV="${METADATA_DIR}/metadata_run.tsv"
+
+if [[ -f "$RUN_META_CSV" ]]; then
+  echo "Filtering metadata_run.csv by sample ID..."
+  header=$(head -n 1 "$RUN_META_CSV" | tr ',' '\t')
+  echo -e "$header" > "$RUN_META_TSV"
+
+  # Filter lines where 2nd column (sample_id) is in SAMPLE_IDS_FILE
+  awk -F',' 'NR==FNR { ids[$1]; next } $2 in ids' "$SAMPLE_IDS_FILE" "$RUN_META_CSV" \
+    | tee /tmp/matched_metadata_run.csv \
+    | tr ',' '\t' >> "$RUN_META_TSV"
+
+  echo -e "\033[31mGenerated filtered: $RUN_META_TSV\033[0m"
+else
+  echo "File not found: $RUN_META_CSV"
+  exit 1
+fi
+
+awk -F',' '{ print $11 }' /tmp/matched_metadata_run.csv > /tmp/accession_ids.txt
+
+if [[ -f "$SAMPLE_META_CSV" ]]; then
+  echo "Filtering metadata_sample.csv by accession number (1st column)..."
+  header=$(head -n 1 "$SAMPLE_META_CSV" | tr ',' '\t')
+  echo -e "$header" > "$SAMPLE_META_TSV"
+
+  awk -F',' 'NR==FNR { ids[$1]; next } $1 in ids' /tmp/accession_ids.txt "$SAMPLE_META_CSV" \
+    | tr ',' '\t' >> "$SAMPLE_META_TSV"
+
+  echo -e "\033[31mGenerated filtered: $SAMPLE_META_TSV\033[0m"
+else
+  echo "File not found: $SAMPLE_META_CSV"
+  exit 1
+fi
+
+# Remove the temporary files
 rm -f "$SAMPLE_IDS_FILE"
+rm -f /tmp/matched_metadata_run.csv /tmp/accession_ids.txt
 
 echo -e "\033[31mRun ID for this run: R${NEXT_RUN}${DATE}\033[0m"
