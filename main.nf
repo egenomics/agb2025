@@ -105,7 +105,7 @@ workflow {
         .collect()
 
     // 1.5. Run MultiQC
-    MULTIQC(ch_multiqc_trigger.map { file("runs/${params.run_id}/") })
+    def (multiqc_output) = MULTIQC(ch_multiqc_trigger.map { file("runs/${params.run_id}/") })
 
     TRIMMOMATIC.out.trimmed_reads
     .map { it[1] }
@@ -123,13 +123,10 @@ workflow {
     metadata_sample_ch = Channel.fromPath(metadata_tsv_path, checkIfExists: true)
     kraken_reports_ch = KRAKEN.out.report.map { meta, report -> report }
 
-    // MultiQC Output as Optional Channel (Will be null if the file doesn't exist)
-    multiqc_fastqc_ch = Channel.fromPath(multiqc_path).ifEmpty { Channel.empty() }
-
     // Merge Metadata and MultiQC (if available)
     merged_csv_ch = MERGE_METADATA_MULTIQC(
         metadata_sample_ch,
-        multiqc_fastqc_ch
+        multiqc_output.map { file(multiqc_path) }
     )
 
     // Augment with Human Contamination Data
@@ -223,12 +220,4 @@ workflow {
         ch_rarefaction_summary.ifEmpty(file("NO_FILE"))
     )
 
-}
-
-def mergeChannels(List channels) {
-    def merged = channels[0]
-    for (int i=1; i<channels.size(); i++) {
-        merged = merged.merge(channels[i])
-    }
-    return merged
 }
