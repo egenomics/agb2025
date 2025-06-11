@@ -58,7 +58,9 @@ workflow {
 
     // 1. Pre-processing
     // 1.1. Run FastQC on raw reads
-    def (ch_fastqc_raw_reports, ch_fastqc_raw_versions) = FASTQC_RAW(raw_reads)
+    def fastqc_raw_outputs = FASTQC_RAW(raw_reads)
+    def ch_fastqc_raw_reports = fastqc_raw_outputs[0]
+    def ch_fastqc_raw_versions = fastqc_raw_outputs[1]
 
     // 1.2. Run Trimmomatic
     def (ch_trimmed_reads, ch_trimmomatic_logs, ch_trimmomatic_versions) = TRIMMOMATIC(raw_reads)
@@ -157,8 +159,8 @@ workflow {
     )
 
     if (params.auto_rarefaction) {
-        RAREFACTION_THRESHOLD.out.summary.view { 
-            "\n=== RAREFACTION THRESHOLD CALCULATED ===\n${it.text}\n========================================\n" 
+        RAREFACTION_THRESHOLD.out.summary.view {
+            "\n=== RAREFACTION THRESHOLD CALCULATED ===\n${it.text}\n========================================\n"
         }
         ch_rarefaction_summary = RAREFACTION_THRESHOLD.out.summary
     } else {
