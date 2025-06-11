@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 
 ###### AGB RESULTS DELIVERY #########
 
@@ -4806,8 +4807,8 @@ server <- function(input, output, session) {
   }
   
   # Define the tree file path
-  PHYLO_TREE_PATH <- "../group2_B/results/qiime_output/relevant_results/phylogenetic_tree.nwk"
-  TAXONOMY_PATH   <- "../group2_B/results/qiime_output/relevant_results/taxonomy.tsv"
+  PHYLO_TREE_PATH <- "group2_B/results/qiime_output/relevant_results/phylogenetic_tree.nwk"
+  TAXONOMY_PATH   <- "group2_B/results/qiime_output/relevant_results/taxonomy.tsv"
   
   # Reactive value to store tree data
   phylo_tree_data <- reactiveValues(
@@ -7285,9 +7286,27 @@ server <- function(input, output, session) {
   
 
 # Run app
-shinyApp(ui, server)
+#shinyApp(ui, server)
 
 
+# Use a custom browser function that mimics RStudio viewer
+options(shiny.launch.browser = function(url) {
+  # Try different lightweight browsers in order of preference
+  browsers <- c(
+    "chromium-browser --app=%s --window-size=1200,800",
+    "google-chrome --app=%s --window-size=1200,800", 
+    "firefox --new-window %s"
+  )
+  
+  for (browser_cmd in browsers) {
+    browser <- strsplit(browser_cmd, " ")[[1]][1]
+    if (Sys.which(browser) != "") {
+      system(sprintf(browser_cmd, url), wait = FALSE)
+      break
+    }
+  }
+})
 
+runApp(shinyApp(ui, server))
 
 
