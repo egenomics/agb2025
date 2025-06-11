@@ -114,37 +114,33 @@ workflow {
     .set { all_trimmed_files }
 
     // Metadata handling
-ch_metadata   = Channel.fromPath(params.metadata, checkIfExists: true)
-ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
+    ch_metadata   = Channel.fromPath(params.metadata, checkIfExists: true)
+    ch_classifier = Channel.fromPath(params.classifier_db, checkIfExists: true)
 
-def metadata_tsv_path      = "runs/${params.run_id}/metadata/metadata.tsv"
-def multiqc_path           = "runs/${params.run_id}/qc_reports/multiqc_data/multiqc_fastqc.txt"
+    def metadata_tsv_path      = "runs/${params.run_id}/metadata/metadata.tsv"
+    def multiqc_path           = "runs/${params.run_id}/multiqc/multiqc_data/multiqc_fastqc.txt"
 
-metadata_sample_ch = Channel.fromPath(metadata_tsv_path, checkIfExists: true)
-kraken_reports_ch = KRAKEN.out.report.map { meta, report -> report }
+    metadata_sample_ch = Channel.fromPath(metadata_tsv_path, checkIfExists: true)
+    kraken_reports_ch = KRAKEN.out.report.map { meta, report -> report }
 
-if (file(multiqc_path).exists()) {
-    log.info " Found multiqc_fastqc.txt, continuing with metadata merge"
+    // MultiQC Output as Optional Channel (Will be null if the file doesn't exist)
+    multiqc_fastqc_ch = Channel.fromPath(multiqc_path).ifEmpty { Channel.empty() }
 
-    multiqc_fastqc_ch  = Channel.fromPath(multiqc_path)
-
+    // Merge Metadata and MultiQC (if available)
     merged_csv_ch = MERGE_METADATA_MULTIQC(
         metadata_sample_ch,
         multiqc_fastqc_ch
     )
 
+    // Augment with Human Contamination Data
     human_augmented_ch = HOMOSAPINENS_CONTAMINATION(
         merged_csv_ch,
         kraken_reports_ch
     )
-
+    
+    // Perform Quality Classification on Augmented Data
     CLASSIFY_QUALITY_SAMPLES(human_augmented_ch)
-
-} else {
-    log.warn "Skipping metadata merge and sample flagging: multiqc_fastqc.txt not found at ${multiqc_path}"
-
-}
-
+    
     // 2. QIIME
     // 2.1. Import reads
     IMPORT_READS( all_trimmed_files )
