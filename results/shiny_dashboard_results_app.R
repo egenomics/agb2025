@@ -6430,15 +6430,12 @@ server <- function(input, output, session) {
     })
   })
   
-  # ENHANCED PLOT GENERATION FOR REPORTS
-  # Replace the plot generation section in your generate_report downloadHandler
-  
   # Enhanced report generation with proper plots
   output$generate_report <- downloadHandler(
     filename = function() {
       ext <- switch(input$report_format,
                     "html" = "html",
-                    "pdf" = "pdf", 
+                    
                     "docx" = "docx")
       paste0("Microbiome_Report_", Sys.Date(), ".", ext)
     },
@@ -7058,26 +7055,27 @@ server <- function(input, output, session) {
           cat("=== END TAXONOMY PLOTS DEBUG ===\n")
         }
         
-        # PARALLEL COORDINATES PLOT GENERATION FOR REPORT
-        # Add this to your metadata analysis section in the generate_report function:
         
-        # METADATA ANALYSIS PLOT (Enhanced with Parallel Coordinates)
+        # METADATA ANALYSIS PLOT
         if("metadata" %in% input$report_sections) {
           metadata_plot_path <- file.path(temp_dir, "metadata_analysis.png")
-          parallel_plot_path <- file.path(temp_dir, "parallel_coordinates.png")
           
-          cat("=== METADATA PLOTS DEBUG ===\n")
+          cat("=== METADATA PLOT DEBUG ===\n")
           
           tryCatch({
-            # 1. TRADITIONAL METADATA PLOT (Age/Gender analysis)
+            # Create metadata analysis plot
             if("Age" %in% colnames(data_store$sample_metadata) && 
                "Gender" %in% colnames(data_store$sample_metadata)) {
               
+              cat("Creating age/gender metadata plot...\n")
+              
+              # Prepare patient data
               meta_data <- data_store$sample_metadata %>%
                 select(Sample_ID, Age, Gender) %>%
                 mutate(Group = "Patient") %>%
                 filter(!is.na(Age), !is.na(Gender))
               
+              # Add control data if available
               if(!is.null(data_store$control_sample_metadata)) {
                 control_meta <- data_store$control_sample_metadata %>%
                   select(Sample_ID, Age, Gender) %>%
@@ -7086,212 +7084,142 @@ server <- function(input, output, session) {
                 meta_data <- bind_rows(meta_data, control_meta)
               }
               
-              p_meta <- ggplot(meta_data, aes(x = interaction(Gender, Group), y = Age, fill = Group)) +
-                geom_boxplot(alpha = 0.7) +
-                geom_jitter(width = 0.2, alpha = 0.6) +
+              cat("Metadata plot data:", nrow(meta_data), "samples\n")
+              
+              if(nrow(meta_data) > 0) {
+                p_meta <- ggplot(meta_data, aes(x = interaction(Gender, Group), y = Age, fill = Group)) +
+                  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+                  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +
+                  scale_fill_manual(values = c("Control" = "#27ae60", "Patient" = "#3498db")) +
+                  labs(
+                    title = "Age Distribution by Gender and Group",
+                    subtitle = paste("Analysis of", nrow(meta_data), "samples"),
+                    x = "Gender × Group",
+                    y = "Age (years)",
+                    fill = "Sample Group"
+                  ) +
+                  theme_minimal() +
+                  theme(
+                    plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+                    plot.subtitle = element_text(size = 12, hjust = 0.5),
+                    axis.title = element_text(size = 12),
+                    axis.text = element_text(size = 11),
+                    legend.position = "bottom",
+                    legend.title = element_text(size = 11),
+                    legend.text = element_text(size = 10)
+                  )
+                
+                ggsave(metadata_plot_path, p_meta, width = 10, height = 6, dpi = 300, bg = "white")
+                
+                if(file.exists(metadata_plot_path)) {
+                  plot_files$metadata_plot <- metadata_plot_path
+                  cat("✅ Age/Gender metadata plot created successfully\n")
+                }
+              }
+              
+            } else if("Age" %in% colnames(data_store$sample_metadata)) {
+              
+              cat("Creating age-only metadata plot...\n")
+              
+              # Age-only analysis
+              meta_data <- data_store$sample_metadata %>%
+                select(Sample_ID, Age) %>%
+                mutate(Group = "Patient") %>%
+                filter(!is.na(Age))
+              
+              # Add control data if available
+              if(!is.null(data_store$control_sample_metadata)) {
+                control_meta <- data_store$control_sample_metadata %>%
+                  select(Sample_ID, Age) %>%
+                  mutate(Group = "Control") %>%
+                  filter(!is.na(Age))
+                meta_data <- bind_rows(meta_data, control_meta)
+              }
+              
+              if(nrow(meta_data) > 0) {
+                p_meta <- ggplot(meta_data, aes(x = Group, y = Age, fill = Group)) +
+                  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+                  geom_jitter(width = 0.2, alpha = 0.6, size = 2) +
+                  scale_fill_manual(values = c("Control" = "#27ae60", "Patient" = "#3498db")) +
+                  labs(
+                    title = "Age Distribution by Sample Group",
+                    subtitle = paste("Analysis of", nrow(meta_data), "samples"),
+                    x = "Sample Group",
+                    y = "Age (years)"
+                  ) +
+                  theme_minimal() +
+                  theme(
+                    plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+                    plot.subtitle = element_text(size = 12, hjust = 0.5),
+                    axis.title = element_text(size = 12),
+                    axis.text = element_text(size = 11),
+                    legend.position = "none"
+                  ) +
+                  stat_summary(fun = mean, geom = "point", shape = 23, size = 3, fill = "red")
+                
+                ggsave(metadata_plot_path, p_meta, width = 8, height = 6, dpi = 300, bg = "white")
+                
+                if(file.exists(metadata_plot_path)) {
+                  plot_files$metadata_plot <- metadata_plot_path
+                  cat("✅ Age-only metadata plot created successfully\n")
+                }
+              }
+              
+            } else {
+              
+              cat("Creating basic sample count plot...\n")
+              
+              # Basic sample distribution plot
+              sample_counts <- data.frame(
+                Group = c("Patient", "Control"),
+                Count = c(
+                  nrow(data_store$sample_metadata),
+                  if(!is.null(data_store$control_sample_metadata)) nrow(data_store$control_sample_metadata) else 0
+                )
+              ) %>%
+                filter(Count > 0)
+              
+              p_meta <- ggplot(sample_counts, aes(x = Group, y = Count, fill = Group)) +
+                geom_col(alpha = 0.8, width = 0.6) +
+                geom_text(aes(label = Count), vjust = -0.5, size = 5, fontface = "bold") +
                 scale_fill_manual(values = c("Control" = "#27ae60", "Patient" = "#3498db")) +
                 labs(
-                  title = "Age Distribution by Gender and Group",
-                  x = "Gender × Group",
-                  y = "Age (years)"
+                  title = "Sample Distribution by Group",
+                  subtitle = paste("Total of", sum(sample_counts$Count), "samples"),
+                  x = "Sample Group",
+                  y = "Number of Samples"
                 ) +
                 theme_minimal() +
                 theme(
                   plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+                  plot.subtitle = element_text(size = 12, hjust = 0.5),
                   axis.title = element_text(size = 12),
                   axis.text = element_text(size = 11),
-                  legend.position = "bottom"
-                )
-              
-              ggsave(metadata_plot_path, p_meta, width = 10, height = 6, dpi = 300, bg = "white")
-              cat("Traditional metadata plot saved successfully\n")
-            }
-            
-            # 2. PARALLEL COORDINATES PLOT (adapted from your code)
-            cat("Creating parallel coordinates plot...\n")
-            
-            # Calculate Total Abundance per sample
-            taxa_data <- data_store$taxonomy_data %>%
-              group_by(Sample_ID) %>%
-              summarize(Total_Abundance = sum(Abundance), .groups = "drop")
-            
-            # Merge with metadata
-            combined <- merge(data_store$sample_metadata, taxa_data, by = "Sample_ID")
-            
-            # Add control data if available
-            if(!is.null(data_store$control_sample_metadata) && !is.null(data_store$control_taxonomy_data)) {
-              control_taxa_data <- data_store$control_taxonomy_data %>%
-                group_by(Sample_ID) %>%
-                summarize(Total_Abundance = sum(Abundance), .groups = "drop")
-              
-              control_combined <- merge(data_store$control_sample_metadata, control_taxa_data, by = "Sample_ID")
-              
-              # Add Group column to distinguish samples
-              combined$Group <- "Patient"
-              control_combined$Group <- "Control"
-              
-              # Combine all data
-              combined <- bind_rows(combined, control_combined)
-            } else {
-              combined$Group <- "Patient"
-            }
-            
-            # Select key variables for parallel plot (commonly available ones)
-            available_vars <- names(combined)
-            
-            # Define preferred variables in order of preference
-            preferred_vars <- c("Age", "Gender", "Body_Mass_Index", "Ongoing_conditions", 
-                                "Exercise_frequency", "Alcohol_consumption", "Smoking_status")
-            
-            # Select variables that exist in the data
-            selected_vars <- intersect(preferred_vars, available_vars)
-            
-            # If we don't have enough preferred vars, add other numeric/categorical ones
-            if(length(selected_vars) < 4) {
-              other_vars <- setdiff(available_vars, c(selected_vars, "Sample_ID", "Total_Abundance", "Group"))
-              # Filter to likely metadata columns (not technical ones)
-              other_vars <- other_vars[!grepl("ID|Date|Name|Notes", other_vars, ignore.case = TRUE)]
-              selected_vars <- c(selected_vars, head(other_vars, 4 - length(selected_vars)))
-            }
-            
-            # Add Total_Abundance at the end
-            all_vars <- c(selected_vars, "Total_Abundance", "Group")
-            
-            cat("Selected variables for parallel plot:", paste(selected_vars, collapse = ", "), "\n")
-            
-            # Prepare data for parallel plot
-            plot_data <- combined %>%
-              select(all_of(all_vars)) %>%
-              filter(!is.na(Group)) %>%  # Ensure we have group information
-              # Handle missing values by removing rows with any NA in selected columns
-              na.omit()
-            
-            cat("Parallel plot data: ", nrow(plot_data), "samples with", length(selected_vars), "variables\n")
-            
-            if(nrow(plot_data) < 5) {
-              cat("Not enough data for parallel plot\n")
-            } else {
-              
-              # Check if GGally is available for parallel coordinates
-              if(requireNamespace("GGally", quietly = TRUE)) {
-                
-                cat("Creating parallel plot with GGally\n")
-                
-                # Separate numeric and categorical variables
-                numeric_vars <- plot_data %>% 
-                  select(all_of(selected_vars), Total_Abundance) %>%
-                  select(where(is.numeric)) %>%
-                  names()
-                
-                categorical_vars <- plot_data %>% 
-                  select(all_of(selected_vars)) %>%
-                  select(where(~ is.character(.) || is.factor(.))) %>%
-                  names()
-                
-                cat("Numeric variables:", paste(numeric_vars, collapse = ", "), "\n")
-                cat("Categorical variables:", paste(categorical_vars, collapse = ", "), "\n")
-                
-                # Prepare data for parallel plot - handle each type appropriately
-                plot_data_processed <- plot_data %>%
-                  # Convert categorical to ordered factors first, then to numeric
-                  mutate(across(all_of(categorical_vars), ~ as.numeric(as.factor(.)))) %>%
-                  # Ensure all plotting columns are numeric
-                  select(all_of(c(numeric_vars, categorical_vars)), Group)
-                
-                # Only use numeric columns for the parallel plot
-                plot_columns <- c(numeric_vars, categorical_vars)
-                
-                # Create color mapping by group
-                group_colors <- c("Patient" = "#3498db", "Control" = "#27ae60")
-                plot_data_numeric$group_color <- group_colors[plot_data_numeric$Group]
-                
-                # User-friendly labels
-                friendly_labels <- gsub("_", " ", selected_vars)
-                friendly_labels <- c(friendly_labels, "Total Abundance")
-                
-                # Create parallel coordinates plot
-                p_parallel <- GGally::ggparcoord(
-                  data = plot_data_numeric,
-                  columns = 1:(length(selected_vars) + 1),  # Don't include Group column in plot
-                  groupColumn = "Group",
-                  scale = "uniminmax",
-                  showPoints = FALSE,
-                  alphaLines = 0.6
+                  legend.position = "none"
                 ) +
-                  scale_color_manual(values = group_colors) +
-                  theme_minimal(base_size = 12) +
-                  theme(
-                    plot.background = element_rect(fill = "white", color = NA),
-                    panel.background = element_rect(fill = "white", color = NA),
-                    panel.grid.major = element_line(color = "gray90", size = 0.3),
-                    panel.grid.minor = element_blank(),
-                    plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
-                    plot.subtitle = element_text(size = 12, hjust = 0.5),
-                    axis.title = element_text(size = 12),
-                    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-                    axis.text.y = element_text(size = 10),
-                    legend.position = "bottom",
-                    legend.title = element_text(size = 11),
-                    legend.text = element_text(size = 10)
-                  ) +
-                  labs(
-                    title = "Parallel Coordinates Plot",
-                    subtitle = paste("Multidimensional analysis of", nrow(plot_data), "samples across", length(selected_vars) + 1, "variables"),
-                    x = "Variables",
-                    y = "Scaled Values (0-1)",
-                    color = "Sample Group"
-                  ) +
-                  scale_x_discrete(labels = friendly_labels)
-                
-                ggsave(parallel_plot_path, p_parallel, width = 14, height = 8, dpi = 300, bg = "white")
-                cat("Parallel coordinates plot saved successfully\n")
-                
-              } else {
-                cat("GGally not available, creating simple correlation plot\n")
-                
-                # Fallback: Create a simple correlation/relationship plot
-                if(length(selected_vars) >= 2) {
-                  # Select first two numeric variables for a simple scatter plot
-                  numeric_vars <- plot_data %>% 
-                    select(where(is.numeric)) %>%
-                    select(-Total_Abundance) %>%
-                    names()
-                  
-                  if(length(numeric_vars) >= 2) {
-                    p_simple <- ggplot(plot_data, aes_string(x = numeric_vars[1], y = numeric_vars[2], color = "Group")) +
-                      geom_point(size = 3, alpha = 0.7) +
-                      scale_color_manual(values = group_colors) +
-                      labs(
-                        title = paste("Relationship between", gsub("_", " ", numeric_vars[1]), "and", gsub("_", " ", numeric_vars[2])),
-                        x = gsub("_", " ", numeric_vars[1]),
-                        y = gsub("_", " ", numeric_vars[2])
-                      ) +
-                      theme_minimal() +
-                      theme(legend.position = "bottom")
-                    
-                    ggsave(parallel_plot_path, p_simple, width = 10, height = 6, dpi = 300, bg = "white")
-                  }
-                }
+                ylim(0, max(sample_counts$Count) * 1.2)
+              
+              ggsave(metadata_plot_path, p_meta, width = 8, height = 6, dpi = 300, bg = "white")
+              
+              if(file.exists(metadata_plot_path)) {
+                plot_files$metadata_plot <- metadata_plot_path
+                cat("✅ Sample distribution plot created successfully\n")
               }
             }
             
-            # Store both plots
+            # Verify final status
             if(file.exists(metadata_plot_path)) {
-              plot_files$metadata_plot <- metadata_plot_path
-              cat("✅ Metadata analysis plot created\n")
-            }
-            
-            if(file.exists(parallel_plot_path)) {
-              plot_files$parallel_plot <- parallel_plot_path
-              cat("✅ Parallel coordinates plot created\n")
+              file_size <- file.info(metadata_plot_path)$size
+              cat("✅ Final metadata plot - Size:", file_size, "bytes\n")
+            } else {
+              cat("❌ Metadata plot was not created\n")
             }
             
           }, error = function(e) {
-            cat("❌ ERROR in metadata plots:", e$message, "\n")
-            cat("Traceback:", paste(as.character(sys.calls()), collapse = "\n"), "\n")
+            cat("❌ ERROR in metadata plot:", e$message, "\n")
           })
           
-          cat("=== END METADATA PLOTS DEBUG ===\n")
+          cat("=== END METADATA PLOT DEBUG ===\n")
         }
         
         # Calculate alpha diversity statistics
@@ -7316,7 +7244,6 @@ server <- function(input, output, session) {
         # Determine output format
         output_format <- switch(input$report_format,
                                 "html" = "html_document",
-                                "pdf" = "pdf_document", 
                                 "docx" = "word_document"
         )
         
@@ -7345,7 +7272,6 @@ server <- function(input, output, session) {
       })
     }
   )
-  
   
   
   
