@@ -1,0 +1,338 @@
+
+Attaching package: ‘shinydashboard’
+
+The following object is masked from ‘package:graphics’:
+
+    box
+
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ lubridate 1.9.4     ✔ tibble    3.2.1
+✔ purrr     1.0.2     ✔ tidyr     1.3.1
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Loading required package: permute
+Loading required package: lattice
+
+Attaching package: ‘DT’
+
+The following objects are masked from ‘package:shiny’:
+
+    dataTableOutput, renderDataTable
+
+
+Attaching package: ‘ape’
+
+The following object is masked from ‘package:dplyr’:
+
+    where
+
+
+Attaching package: ‘bslib’
+
+The following object is masked from ‘package:utils’:
+
+    page
+
+
+Attaching package: ‘plotly’
+
+The following object is masked from ‘package:ggplot2’:
+
+    last_plot
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+The following object is masked from ‘package:graphics’:
+
+    layout
+
+
+Attaching package: ‘reshape2’
+
+The following object is masked from ‘package:tidyr’:
+
+    smiths
+
+Loading required package: grid
+========================================
+ComplexHeatmap version 2.20.0
+Bioconductor page: http://bioconductor.org/packages/ComplexHeatmap/
+Github page: https://github.com/jokergoo/ComplexHeatmap
+Documentation: http://jokergoo.github.io/ComplexHeatmap-reference
+
+If you use it in published research, please cite either one:
+- Gu, Z. Complex Heatmap Visualization. iMeta 2022.
+- Gu, Z. Complex heatmaps reveal patterns and correlations in multidimensional 
+    genomic data. Bioinformatics 2016.
+
+
+The new InteractiveComplexHeatmap package can directly export static 
+complex heatmaps into an interactive Shiny app with zero effort. Have a try!
+
+This message can be suppressed by:
+  suppressPackageStartupMessages(library(ComplexHeatmap))
+========================================
+
+
+Attaching package: ‘ComplexHeatmap’
+
+The following object is masked from ‘package:plotly’:
+
+    add_heatmap
+
+========================================
+circlize version 0.4.16
+CRAN page: https://cran.r-project.org/package=circlize
+Github page: https://github.com/jokergoo/circlize
+Documentation: https://jokergoo.github.io/circlize_book/book/
+
+If you use it in published research, please cite:
+Gu, Z. circlize implements and enhances circular visualization
+  in R. Bioinformatics 2014.
+
+This message can be suppressed by:
+  suppressPackageStartupMessages(library(circlize))
+========================================
+
+
+Attaching package: ‘circlize’
+
+The following object is masked from ‘package:ape’:
+
+    degree
+
+Loading required package: viridisLite
+## FSA v0.10.0. See citation('FSA') if used in publication.
+## Run fishR() for related website and fishR('IFAR') for related book.
+ggtree v3.12.0 For help: https://yulab-smu.top/treedata-book/
+
+If you use the ggtree package suite in published research, please cite
+the appropriate paper(s):
+
+Guangchuang Yu, David Smith, Huachen Zhu, Yi Guan, Tommy Tsan-Yuk Lam.
+ggtree: an R package for visualization and annotation of phylogenetic
+trees with their covariates and other associated data. Methods in
+Ecology and Evolution. 2017, 8(1):28-36. doi:10.1111/2041-210X.12628
+
+Guangchuang Yu.  Data Integration, Manipulation and Visualization of
+Phylogenetic Trees (1st edition). Chapman and Hall/CRC. 2022,
+doi:10.1201/9781003279242
+
+LG Wang, TTY Lam, S Xu, Z Dai, L Zhou, T Feng, P Guo, CW Dunn, BR
+Jones, T Bradley, H Zhu, Y Guan, Y Jiang, G Yu. treeio: an R package
+for phylogenetic tree input and output with richly annotated and
+associated data. Molecular Biology and Evolution. 2020, 37(2):599-603.
+doi: 10.1093/molbev/msz240
+
+Attaching package: ‘ggtree’
+
+The following object is masked from ‘package:ape’:
+
+    rotate
+
+The following object is masked from ‘package:tidyr’:
+
+    expand
+
+treeio v1.28.0 For help: https://yulab-smu.top/treedata-book/
+
+If you use the ggtree package suite in published research, please cite
+the appropriate paper(s):
+
+LG Wang, TTY Lam, S Xu, Z Dai, L Zhou, T Feng, P Guo, CW Dunn, BR
+Jones, T Bradley, H Zhu, Y Guan, Y Jiang, G Yu. treeio: an R package
+for phylogenetic tree input and output with richly annotated and
+associated data. Molecular Biology and Evolution. 2020, 37(2):599-603.
+doi: 10.1093/molbev/msz240
+
+Guangchuang Yu, David Smith, Huachen Zhu, Yi Guan, Tommy Tsan-Yuk Lam.
+ggtree: an R package for visualization and annotation of phylogenetic
+trees with their covariates and other associated data. Methods in
+Ecology and Evolution. 2017, 8(1):28-36. doi:10.1111/2041-210X.12628
+
+Shuangbin Xu, Lin Li, Xiao Luo, Meijun Chen, Wenli Tang, Li Zhan, Zehan
+Dai, Tommy T. Lam, Yi Guan, Guangchuang Yu. Ggtree: A serialized data
+object for visualization of a phylogenetic tree and annotation data.
+iMeta 2022, 1(4):e56. doi:10.1002/imt2.56
+
+Attaching package: ‘broom’
+
+The following object is masked from ‘package:bslib’:
+
+    bootstrap
+
+Warning message:
+Navigation containers expect a collection of `bslib::nav_panel()`/`shiny::tabPanel()`s and/or `bslib::nav_menu()`/`shiny::navbarMenu()`s. Consider using `header` or `footer` if you wish to place content above (or below) every panel's contents. 
+
+Listening on http://127.0.0.1:5021
+Gtk-Message: 14:49:46.586: Not loading module "atk-bridge": The functionality is provided by GTK natively. Please try to not load it.
+[61729, Main Thread] WARNING: GTK+ module /snap/firefox/6198/gnome-platform/usr/lib/gtk-2.0/modules/libcanberra-gtk-module.so cannot be loaded.
+GTK+ 2.x symbols detected. Using GTK+ 2.x and GTK+ 3 in the same process is not supported.: 'glib warning', file /build/firefox/parts/firefox/build/toolkit/xre/nsSigHandlers.cpp:201
+
+(firefox_firefox:61729): Gtk-WARNING **: 14:49:46.711: GTK+ module /snap/firefox/6198/gnome-platform/usr/lib/gtk-2.0/modules/libcanberra-gtk-module.so cannot be loaded.
+GTK+ 2.x symbols detected. Using GTK+ 2.x and GTK+ 3 in the same process is not supported.
+Gtk-Message: 14:49:46.711: Failed to load module "canberra-gtk-module"
+[61729, Main Thread] WARNING: GTK+ module /snap/firefox/6198/gnome-platform/usr/lib/gtk-2.0/modules/libcanberra-gtk-module.so cannot be loaded.
+GTK+ 2.x symbols detected. Using GTK+ 2.x and GTK+ 3 in the same process is not supported.: 'glib warning', file /build/firefox/parts/firefox/build/toolkit/xre/nsSigHandlers.cpp:201
+
+(firefox_firefox:61729): Gtk-WARNING **: 14:49:46.714: GTK+ module /snap/firefox/6198/gnome-platform/usr/lib/gtk-2.0/modules/libcanberra-gtk-module.so cannot be loaded.
+GTK+ 2.x symbols detected. Using GTK+ 2.x and GTK+ 3 in the same process is not supported.
+Gtk-Message: 14:49:46.714: Failed to load module "canberra-gtk-module"
+Warning: ‘ape’ namespace cannot be unloaded:
+  namespace ‘ape’ is imported by ‘tidytree’, ‘phyloseq’, ‘treeio’, ‘ggtree’ so cannot be unloaded
+
+Attaching package: ‘ape’
+
+The following object is masked from ‘package:treeio’:
+
+    drop.tip
+
+The following object is masked from ‘package:ggtree’:
+
+    rotate
+
+The following object is masked from ‘package:circlize’:
+
+    degree
+
+The following object is masked from ‘package:dplyr’:
+
+    where
+
+Reloaded ape package to resolve phylo conflicts
+Phylo class conflicts resolved
+
+*** TAX LEVEL CHANGED TO: family ***
+
+*** MIN GROUP SIZE CHANGED TO: 2 ***
+
+=== PROCESSING TREE ===
+Tax level input: family 
+Midpoint root option: FALSE 
+Show group counts: FALSE 
+Applying collapse with min_size = 2 and show_counts = FALSE 
+=== COLLAPSE TREE DEBUG ===
+Original tree tips: 1365 
+Tax level: family 
+Min group size: 2 
+Show group counts: FALSE 
+=== EXTRACT TAXONOMY DEBUG ===
+Input level: family 
+Number of labels: 1365 
+Sample labels:
+1 : d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rickettsiales;f__Mitochondria;g__Mitochondria;s__ 
+2 : d__Bacteria;p__Firmicutes;c__Bacilli;o__RF39;f__RF39;g__RF39;s__ 
+3 : d__Bacteria;p__Firmicutes;c__Bacilli;o__RF39;f__RF39;g__RF39;s__ 
+Unique groups found: 75 
+Sample results:
+d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rickettsiales;f__Mitochondria;g__Mitochondria;s__  ->  Mitochondria 
+d__Bacteria;p__Firmicutes;c__Bacilli;o__RF39;f__RF39;g__RF39;s__  ->  RF39 
+d__Bacteria;p__Firmicutes;c__Bacilli;o__RF39;f__RF39;g__RF39;s__  ->  RF39 
+==============================
+Group distribution:
+tip_groups
+    Lachnospiraceae     Ruminococcaceae    Oscillospiraceae      Bacteroidaceae 
+                300                 151                 140                  77 
+ Clostridia_UCG-014 Christensenellaceae      Prevotellaceae     Eggerthellaceae 
+                 46                  42                  36                  35 
+   Anaerovoracaceae       Rikenellaceae 
+                 33                  30 
+Groups meeting criteria: 69 
+Group ' [Clostridium]_methylpentosum_group ' has 2 members
+Group ' [Eubacterium]_coprostanoligenes_group ' has 25 members
+Group ' Acidaminococcaceae ' has 13 members
+Group ' Actinomycetaceae ' has 2 members
+Group ' Akkermansiaceae ' has 8 members
+Group ' Anaerovoracaceae ' has 33 members
+Group ' Atopobiaceae ' has 7 members
+Group ' Bacteroidaceae ' has 77 members
+Group ' Barnesiellaceae ' has 21 members
+Group ' Bifidobacteriaceae ' has 13 members
+Group ' Butyricicoccaceae ' has 13 members
+Group ' Chloroplast ' has 8 members
+Group ' Christensenellaceae ' has 42 members
+Group ' Clostridia_UCG-014 ' has 46 members
+Group ' Clostridia_vadinBB60_group ' has 17 members
+Group ' Clostridiaceae ' has 9 members
+Group ' Coriobacteriaceae ' has 7 members
+Group ' Coriobacteriales_Incertae_Sedis ' has 8 members
+Group ' Defluviitaleaceae ' has 5 members
+Group ' Desulfovibrionaceae ' has 10 members
+Group ' DTU014 ' has 2 members
+Group ' Eggerthellaceae ' has 35 members
+Group ' Enterobacteriaceae ' has 4 members
+Group ' Erysipelatoclostridiaceae ' has 14 members
+Group ' Erysipelotrichaceae ' has 12 members
+Group ' Ethanoligenenaceae ' has 2 members
+Group ' Eubacteriaceae ' has 2 members
+Group ' Fusobacteriaceae ' has 2 members
+Group ' Gastranaerophilales ' has 10 members
+Group ' Hungateiclostridiaceae ' has 2 members
+Group ' Lachnospiraceae ' has 300 members
+Group ' Lactobacillaceae ' has 14 members
+Group ' Marinifilaceae ' has 15 members
+Group ' Methanobacteriaceae ' has 4 members
+Group ' Micrococcaceae ' has 2 members
+Group ' Mitochondria ' has 4 members
+Group ' Monoglobaceae ' has 8 members
+Group ' Muribaculaceae ' has 8 members
+Group ' Oscillospiraceae ' has 140 members
+Group ' Oscillospirales ' has 2 members
+Group ' Pasteurellaceae ' has 5 members
+Group ' Peptococcaceae ' has 4 members
+Group ' Peptostreptococcaceae ' has 8 members
+Group ' Prevotellaceae ' has 36 members
+Group ' Puniceicoccaceae ' has 6 members
+Group ' RF39 ' has 6 members
+Group ' Rikenellaceae ' has 30 members
+Group ' Ruminococcaceae ' has 151 members
+Group ' Saccharimonadaceae ' has 2 members
+Group ' Selenomonadaceae ' has 10 members
+Group ' Streptococcaceae ' has 12 members
+Group ' Sutterellaceae ' has 18 members
+Group ' Synergistaceae ' has 2 members
+Group ' Tannerellaceae ' has 21 members
+Group ' UCG-010 ' has 20 members
+Group ' uncultured ' has 13 members
+Group ' Unknown_Group_0 ' has 3 members
+Group ' Unknown_Group_1 ' has 4 members
+Group ' Unknown_Group_2 ' has 6 members
+Group ' Unknown_Group_3 ' has 8 members
+Group ' Unknown_Group_4 ' has 3 members
+Group ' Unknown_Group_5 ' has 3 members
+Group ' Unknown_Group_6 ' has 2 members
+Group ' Unknown_Group_7 ' has 5 members
+Group ' Unknown_Group_8 ' has 4 members
+Group ' Unknown_Group_9 ' has 3 members
+Group ' vadinBE97 ' has 2 members
+Group ' Veillonellaceae ' has 17 members
+Group ' Victivallaceae ' has 7 members
+Tips to remove: 1290 
+New tree has 75 tips
+==========================
+======================
+Plotting tree with 75 tips
+Display options - Tips: TRUE Nodes: FALSE Branches: FALSE 
+Using layout: rectangular with viridis palette
+=== EXTRACT TAXONOMY DEBUG ===
+Input level: family 
+Number of labels: 75 
+Sample labels:
+1 : Mitochondria 
+2 : RF39 
+3 : Erysipelotrichaceae 
+Unique groups found: 16 
+Sample results:
+Mitochondria  ->  Unknown_Group_1 
+RF39  ->  Unknown_Group_2 
+Erysipelotrichaceae  ->  Unknown_Group_3 
+==============================
+Found more than one class "phylo" in cache; using the first, from namespace 'phyloseq'
+Also defined by ‘tidytree’
+Input to asJSON(keep_vec_names=TRUE) is a named vector. In a future version of jsonlite, this option will not be supported, and named vectors will be translated into arrays instead of objects. If you want JSON object output, please use a named list instead. See ?toJSON.

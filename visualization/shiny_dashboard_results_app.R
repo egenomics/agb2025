@@ -1457,6 +1457,8 @@ server <- function(input, output, session) {
     manual_data_loaded = FALSE 
   )
   
+  
+  
   ########## AUTOMATIC DATA LOADING FROM HOSPITAL STRUCTURE #######
   # Helper function to extract date from run ID (R01030525 -> 030525)
   extract_date_from_run <- function(run_id) {
@@ -1626,9 +1628,24 @@ server <- function(input, output, session) {
       sample_meta_path <- file.path(run_path, "metadata", "metadata_sample.csv")
       sample_metadata <- read.csv(sample_meta_path, stringsAsFactors = FALSE)
       
+      if ("Sample_Accession" %in% colnames(sample_metadata)) {
+        colnames(sample_metadata)[colnames(sample_metadata) == "Sample_Accession"] <- "Sample_ID"
+      }
+      
+      
+      
       # Load run metadata 
       run_meta_path <- file.path(run_path, "metadata", "metadata_run.csv")
       run_metadata <- read.csv(run_meta_path, stringsAsFactors = FALSE)
+      
+      if ("Sample.ID" %in% colnames(run_metadata)) {
+        colnames(run_metadata)[colnames(run_metadata) == "Sample.ID"] <- "Sample_ID"
+      }
+      
+      # If you also need Run_accession column, handle it separately:
+      if ("Run.ID" %in% colnames(run_metadata)) {
+        colnames(run_metadata)[colnames(run_metadata) == "Run.ID"] <- "Run_accession"
+      }
       
       # Try to load taxonomy data from QIIME output 
       taxonomy_paths <- c(
@@ -2011,6 +2028,9 @@ server <- function(input, output, session) {
   })
   
   # Load data when button is clicked 
+  # DEBUGGING VERSION - Add this to your observeEvent(input$load_data, {})
+  # Replace your existing data loading section with this debug version
+  
   observeEvent(input$load_data, {
     # Clear previous messages 
     data_store$error_message = NULL
@@ -2027,21 +2047,96 @@ server <- function(input, output, session) {
       
       # Read sample metadata 
       sample_metadata <- read.csv(input$sample_metadata$datapath, header = TRUE)
+      cat("ORIGINAL Sample metadata columns:\n")
+      print(colnames(sample_metadata))
+      cat("Sample metadata first few rows:\n")
+      print(head(sample_metadata, 2))
+      
+      # Rename Sample_Accession to Sample_ID if it exists
+      if ("Sample_Accession" %in% colnames(sample_metadata)) {
+        cat("Renaming Sample_Accession to Sample_ID\n")
+        colnames(sample_metadata)[colnames(sample_metadata) == "Sample_Accession"] <- "Sample_ID"
+      }
+      
+      cat("AFTER RENAMING Sample metadata columns:\n")
+      print(colnames(sample_metadata))
       
       # Read run metadata 
       run_metadata <- read.csv(input$run_metadata$datapath, header = TRUE)
+      cat("ORIGINAL Run metadata columns:\n")
+      print(colnames(run_metadata))
+      
+      # Fix the renaming logic
+      if ("Sample.ID" %in% colnames(run_metadata)) {
+        cat("Renaming Sample.ID to Sample_ID in run metadata\n")
+        colnames(run_metadata)[colnames(run_metadata) == "Sample.ID"] <- "Run_accession"
+      }
+      
+      if ("Sample_Accession" %in% colnames(run_metadata)) {
+        cat("Renaming Sample.ID to Sample_ID in run metadata\n")
+        colnames(run_metadata)[colnames(run_metadata) == "Sample_Accession"] <- "Sample_ID"
+      }
+      
+      cat("AFTER RENAMING Run metadata columns:\n")
+      print(colnames(run_metadata))
       
       # Read taxonomy data 
       taxonomy_data <- read.delim(input$taxonomy_file$datapath, sep = "\t", header = TRUE)
+      cat("ORIGINAL Taxonomy data columns:\n")
+      print(colnames(taxonomy_data))
       
-      # Read control sample metadata 
+      taxonomy_data <- taxonomy_data %>%
+        rename(Run_accession = Sample_ID)
+      
+      taxonomy_data <- taxonomy_data %>%
+        left_join(run_metadata[, c("Run_accession", "Sample_ID")], by = "Run_accession")
+      
+      # Fix taxonomy column naming too
+      if ("Sample.ID" %in% colnames(taxonomy_data)) {
+        cat("Renaming Sample.ID to Sample_ID in taxonomy data\n")
+        colnames(taxonomy_data)[colnames(taxonomy_data) == "Sample.ID"] <- "Sample_ID"
+      }
+      if ("Sample_Accession" %in% colnames(taxonomy_data)) {
+        cat("Renaming Sample_Accession to Sample_ID in taxonomy data\n")
+        colnames(taxonomy_data)[colnames(taxonomy_data) == "Sample_Accession"] <- "Sample_ID"
+      }
+      
+      cat("AFTER RENAMING Taxonomy data columns:\n")
+      print(colnames(taxonomy_data))
+      
+      # Read control files
       control_sample_metadata <- read.csv(input$control_sample_metadata$datapath, header = TRUE)
-      
-      # Read control run metadata 
       control_run_metadata <- read.csv(input$control_run_metadata$datapath, header = TRUE)
-      
-      # Read control taxonomy data 
       control_taxonomy_data <- read.delim(input$control_taxonomy$datapath, sep = "\t", header = TRUE)
+      
+      
+      # Apply same renaming to control files
+      if ("Sample_Accession" %in% colnames(control_sample_metadata)) {
+        colnames(control_sample_metadata)[colnames(control_sample_metadata) == "Sample_Accession"] <- "Sample_ID"
+      }
+      if ("Sample.ID" %in% colnames(control_run_metadata)) {
+        colnames(control_run_metadata)[colnames(control_run_metadata) == "Sample.ID"] <- "Run_accession"
+      }
+      
+      if ("Sample_Accession" %in% colnames(control_run_metadata)) {
+        cat("Renaming Sample.ID to Sample_ID in run metadata\n")
+        colnames(control_run_metadata)[colnames(control_run_metadata) == "Sample_Accession"] <- "Sample_ID"
+      }
+      
+      if ("Sample.ID" %in% colnames(control_taxonomy_data)) {
+        colnames(control_taxonomy_data)[colnames(control_taxonomy_data) == "Sample.ID"] <- "Sample_ID"
+      }
+      
+      
+      if ("Sample_Accession" %in% colnames(control_taxonomy_data)) {
+        colnames(control_taxonomy_data)[colnames(control_taxonomy_data) == "Sample_Accession"] <- "Sample_ID"
+      }
+      
+      control_taxonomy_data <- control_taxonomy_data %>%
+        rename(Run_accession = Sample_ID)
+      
+      control_taxonomy_data <- control_taxonomy_data %>%
+        left_join(control_run_metadata[, c("Run_accession", "Sample_ID")], by = "Run_accession")
       
       # Store the RAW data (will be filtered in reactive expressions based on checkbox)
       data_store$sample_metadata_raw <- sample_metadata
@@ -2050,6 +2145,14 @@ server <- function(input, output, session) {
       data_store$control_sample_metadata <- control_sample_metadata
       data_store$control_run_metadata <- control_run_metadata
       data_store$control_taxonomy_data <- control_taxonomy_data
+      
+      # DEBUG: Check what's actually stored
+      cat("STORED sample_metadata_raw columns:\n")
+      print(colnames(data_store$sample_metadata_raw))
+      cat("STORED run_metadata_raw columns:\n")
+      print(colnames(data_store$run_metadata_raw))
+      cat("STORED taxonomy_data_raw columns:\n")
+      print(colnames(data_store$taxonomy_data_raw))
       
       # Calculate quality statistics if quality_flag column exists
       if ("quality_flag" %in% colnames(run_metadata)) {
@@ -2084,6 +2187,8 @@ server <- function(input, output, session) {
       # Handle any error that occur during file reading
       data_store$error_message <- paste("Error loading data:", e$message)
       showNotification(paste("Error:", e$message), type = "error")
+      cat("ERROR in data loading:\n")
+      print(e)
     })
   })
   
@@ -2211,16 +2316,37 @@ server <- function(input, output, session) {
   })
   
   # Update sample selection choices when data is loaded
+  # Update sample selection choices when data is loaded
   observe({
     if(data_store$manual_data_loaded && !is.null(data_store$sample_metadata)) {
-      sample_choices <- data_store$sample_metadata$Sample_ID
-      names(sample_choices) <- paste0(data_store$sample_metadata$Sample_ID, 
-                                      " (", data_store$sample_metadata$Collection_Date, ")")
       
-      updateSelectizeInput(session, "selected_sample_id", 
-                           choices = sample_choices,
-                           selected = character(0), 
-                           options = list(placeholder = "Choose a sample to analyze..."))
+      # Check if required columns exist and are not NULL
+      if("Sample_ID" %in% colnames(data_store$sample_metadata) && 
+         "Collection_Date" %in% colnames(data_store$sample_metadata) &&
+         !is.null(data_store$sample_metadata$Sample_ID)) {
+        
+        sample_choices <- data_store$sample_metadata$Sample_ID
+        
+        # Safely create names - handle cases where Collection_Date might be NULL/NA
+        collection_dates <- data_store$sample_metadata$Collection_Date
+        if(!is.null(collection_dates)) {
+          # Replace NA values with "Unknown Date"
+          collection_dates[is.na(collection_dates)] <- "Unknown Date"
+          names(sample_choices) <- paste0(data_store$sample_metadata$Sample_ID, " (", collection_dates, ")")
+        } else {
+          # If Collection_Date column is NULL, just use Sample_ID
+          names(sample_choices) <- data_store$sample_metadata$Sample_ID
+        }
+        
+        updateSelectizeInput(session, "selected_sample_id", 
+                             choices = sample_choices, 
+                             selected = character(0), 
+                             options = list(placeholder = "Choose a sample to analyze..."))
+      } else {
+        # Handle case where required columns are missing
+        showNotification("Required columns (Sample_ID, Collection_Date) not found in sample metadata", 
+                         type = "warning")
+      }
     }
   })
   
@@ -4195,6 +4321,7 @@ server <- function(input, output, session) {
   
   
   # Modified diversity_main_plot with ggplot storage
+  # Fix for the diversity plot generation
   output$diversity_main_plot <- renderPlotly({
     req(data_store$sample_metadata, data_store$taxonomy_data)
     req(data_store$control_sample_metadata, data_store$control_taxonomy_data)
@@ -4212,7 +4339,7 @@ server <- function(input, output, session) {
     sample_tax$Abundance <- as.integer(round(sample_tax$Abundance))
     control_tax$Abundance <- as.integer(round(control_tax$Abundance))
     
-    
+    # Sample diversity calculation
     sample_wide <- sample_tax %>%
       select(Sample_ID, Species, Abundance) %>%
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
@@ -4221,14 +4348,12 @@ server <- function(input, output, session) {
       column_to_rownames("Sample_ID") %>%
       as.matrix()
     
-    # Automatically choose the rarefaction depth
     min_depth <- min(rowSums(sample_matrix))
     if (min_depth < 1) {
       showNotification("Rarefaction failed: at least one sample has no reads.", type = "error")
       return(NULL)
     }
     
-    # Rarefy to the minimum depth
     rarefied_sample_matrix <- vegan::rrarefy(sample_matrix, sample = min_depth)
     
     sample_div <- tibble(
@@ -4238,18 +4363,24 @@ server <- function(input, output, session) {
       Simpson = vegan::diversity(rarefied_sample_matrix, index = "simpson")
     )
     
-    
-    if (input$subdivide_samples) {
-      req(input$condition_column)
+    # FIX 1: Ensure GroupLabel is always character and handle subdivisions properly
+    if (input$subdivide_samples && !is.null(input$condition_column)) {
       selected_col <- input$condition_column
-      sample_div <- left_join(sample_div,
-                              sample_meta %>% select(Sample_ID, !!sym(selected_col)),
-                              by = "Sample_ID")
-      sample_div$GroupLabel <- sample_div[[selected_col]]
+      if (selected_col %in% names(sample_meta)) {
+        sample_div <- left_join(sample_div,
+                                sample_meta %>% select(Sample_ID, !!sym(selected_col)),
+                                by = "Sample_ID")
+        # Convert to character and handle NAs
+        sample_div$GroupLabel <- as.character(sample_div[[selected_col]])
+        sample_div$GroupLabel[is.na(sample_div$GroupLabel)] <- "Unknown"
+      } else {
+        sample_div$GroupLabel <- "Sample"
+      }
     } else {
       sample_div$GroupLabel <- "Sample"
     }
     
+    # Control diversity calculation
     control_wide <- control_tax %>%
       select(Sample_ID, Species, Abundance) %>%
       pivot_wider(names_from = Species, values_from = Abundance, values_fill = 0)
@@ -4271,12 +4402,25 @@ server <- function(input, output, session) {
       Observed = rowSums(rarefied_control_matrix > 0),
       Shannon = vegan::diversity(rarefied_control_matrix, index = "shannon"),
       Simpson = vegan::diversity(rarefied_control_matrix, index = "simpson"),
-      GroupLabel = "Control"
+      GroupLabel = "Control"  # Always character
     )
     
+    # FIX 2: Ensure both dataframes have same column types before binding
+    sample_div$GroupLabel <- as.character(sample_div$GroupLabel)
+    control_div$GroupLabel <- as.character(control_div$GroupLabel)
     
     diversity_df <- bind_rows(sample_div, control_div)
     
+    # FIX 3: Clean and validate the data
+    diversity_df <- diversity_df %>%
+      filter(
+        !is.na(GroupLabel),
+        GroupLabel != "",
+        GroupLabel != "NA"
+      ) %>%
+      mutate(GroupLabel = as.character(GroupLabel))
+    
+    # FIX 4: Set factor levels explicitly
     group_levels <- c("Control", sort(unique(diversity_df$GroupLabel[diversity_df$GroupLabel != "Control"])))
     diversity_df$GroupLabel <- factor(diversity_df$GroupLabel, levels = group_levels)
     
@@ -4285,6 +4429,24 @@ server <- function(input, output, session) {
                          "Shannon" = "Shannon",
                          "Simpson" = "Simpson")
     
+    # FIX 5: Validate metric column exists and has valid values
+    if (!metric_col %in% names(diversity_df)) {
+      showNotification(paste("Metric column", metric_col, "not found"), type = "error")
+      return(NULL)
+    }
+    
+    diversity_df <- diversity_df %>%
+      filter(
+        !is.na(.data[[metric_col]]),
+        is.finite(.data[[metric_col]])
+      )
+    
+    if (nrow(diversity_df) == 0) {
+      showNotification("No valid data after filtering", type = "error")
+      return(NULL)
+    }
+    
+    # Create the plot
     p <- ggplot(diversity_df, aes(x = GroupLabel, y = .data[[metric_col]], fill = GroupLabel))
     
     if (input$alpha_plot_type == "Boxplot + Dots") {
@@ -4297,6 +4459,7 @@ server <- function(input, output, session) {
       p <- p + geom_jitter(aes(text = Sample_ID), shape = 21, alpha = 0.7, color = "black", position = jitter_pos)
     }
     
+    # Highlight selected sample
     if (!is.null(input$selected_sample_id) && input$selected_sample_id %in% diversity_df$Sample_ID) {
       highlighted <- diversity_df %>% filter(Sample_ID == input$selected_sample_id)
       p <- p + geom_point(data = highlighted,
@@ -4310,10 +4473,12 @@ server <- function(input, output, session) {
            x = "Group", y = paste(input$alpha_metric, "Index")) +
       theme_minimal() +
       theme(
-        axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate labels
+        axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = ifelse(input$show_diversity_legend, "right", "none")
-      )    
-    n_groups <- length(unique(diversity_df$GroupLabel))
+      )
+    
+    # Handle colors
+    n_groups <- length(levels(diversity_df$GroupLabel))
     
     if (!is.null(input$alpha_color_palette) && n_groups <= 9) {
       p <- p + scale_fill_brewer(palette = input$alpha_color_palette)
@@ -4321,8 +4486,7 @@ server <- function(input, output, session) {
       p <- p + scale_fill_manual(values = scales::hue_pal()(n_groups))
     }
     
-    
-    # STORE THE GGPLOT OBJECT FOR DOWNLOAD
+    # Store for download
     rv$latest_ggplot <- p
     rv$plot_type <- "alpha"
     
