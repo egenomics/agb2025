@@ -5,9 +5,7 @@ Repository for the AGB 2025 common class project
 [![Documentation  Wiki](https://img.shields.io/static/v1?label=Documentation&message=Wiki&labelColor=black&color=blue&logo=github&logoColor=white)](https://github.com/egenomics/agb2025/wiki)
 
 In this wiki page you will find the information about the pipeline context, the sample processing and the decisions made through each of the modules.
-
 ![IMG1.png](https://github.com/egenomics/agb2025/blob/main/img/IMG1.png)
-
 ## Quick start (Docker edition)
 
 ### 1 · Prerequisites
