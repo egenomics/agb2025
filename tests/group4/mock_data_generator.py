@@ -301,19 +301,21 @@ class MockDataGenerator:
                     f.write(f"@RNA_read{i}\n{seq}\n+\n{qual}\n")
     
     def create_format_validation_files(self, format_dir):
-        """Create files for format validation testing"""
-        # Uncompressed file (should be .fastq.gz but isn't compressed)
-        with open(format_dir / "not_compressed_1.fastq.gz", 'w') as f:
+    """Create files for format validation testing"""
+    # Uncompressed files (should be .fastq.gz but aren't compressed)
+    for suffix in ["1", "2"]:
+        with open(format_dir / f"not_compressed_{suffix}.fastq.gz", 'w') as f:
             for i in range(50):
-                f.write(f"@read{i}\n")
+                f.write(f"@read{i}/{suffix}\n")
                 f.write("ATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG\n")
                 f.write("+\n")
                 f.write("I" * 50 + "\n")
-        
-        # File with incorrect characters in sequence
-        with gzip.open(format_dir / "incorrect_char_1.fastq.gz", 'wt') as f:
+    
+    # Files with incorrect characters in sequence
+    for suffix in ["1", "2"]:
+        with gzip.open(format_dir / f"incorrect_char_{suffix}.fastq.gz", 'wt') as f:
             for i in range(50):
-                f.write(f"@read{i}\n")
+                f.write(f"@read{i}/{suffix}\n")
                 f.write("TVPLMTVPLMTVPLMTVPLMTVPLMTVPLMTVPLMTVPLMTVPLMTVPLM\n")  # Non-DNA chars
                 f.write("+\n")
                 f.write("I" * 50 + "\n")
