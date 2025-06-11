@@ -9,16 +9,20 @@ process CLASSIFY_QUALITY_PROCESS {
 
     script:
     """
-    export RUN_ID=${params.run_id}
-
     python3 << EOF
     import pandas as pd
-    df = pd.read_csv('${sample_metadata_csv}')
-    df['quality_flag'] = df['%GC'].apply(lambda x: 'FAIL' if x < 40 else 'PASS')
-    df.to_csv('metadata.tsv', index=False)
+    df = pd.read_csv('${sample_metadata_csv}', sep=',')
+    print(df.columns)
+
+    if '%GC' not in df.columns:
+        print("Column '%GC' not found")
+        df['quality_flag'] = 'UNKNOWN'
+    else:
+        df['quality_flag'] = df['%GC'].apply(lambda x: 'FAIL' if x < 40 else 'PASS')
+        df.to_csv('metadata.tsv', index=False)
     EOF
 
-    echo "Sample metadata classified and saved as metadata.tsv in runs/${RUN_ID}/metadata/"
+    echo "Sample metadata classified and saved as metadata.tsv in runs/${params.run_id}/metadata/"
     """
 
 }

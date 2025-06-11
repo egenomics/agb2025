@@ -2,3 +2,36 @@
 2025-06-11 09:05:45	9.5s	big_bell	ERR	0944c3e1814691a3b75ced6a177f9398	9c8c3159-0c3b-4d50-b8fd-1130df533d82	nextflow run main.nf -profile docker --run_id R01110625
 2025-06-11 09:07:56	22.4s	evil_leakey	ERR	0944c3e1814691a3b75ced6a177f9398	609a891b-1b09-4d1c-a1db-d197f2de4c94	nextflow run main.nf -profile docker --run_id R01110625
 2025-06-11 09:10:18	20.8s	astonishing_goldstine	ERR	0944c3e1814691a3b75ced6a177f9398	8cd84232-dc0a-4254-a839-1ec6412ef57d	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 11:13:16	22.5s	fabulous_thompson	ERR	c4c09a3f427d6c836b97be427405d071	607ef393-d4d3-434d-b4b9-428d719e81fe	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 11:45:18	21.5s	infallible_hypatia	ERR	c4c09a3f427d6c836b97be427405d071	157c3e37-aba9-458e-9bfb-aab685af5435	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:21:40	34.8s	drunk_laplace	ERR	c4c09a3f427d6c836b97be427405d071	886cdbf8-c32d-4b59-8d74-c85a66f466a3	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:25:38	33.6s	prickly_stallman	ERR	c4c09a3f427d6c836b97be427405d071	bf019eb6-273c-4e5c-8513-84104563d6eb	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:27:36	34s	happy_hugle	ERR	c4c09a3f427d6c836b97be427405d071	21d5f1f6-2b98-43a2-9b7f-6986dae7a90e	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:32:18	40.4s	sick_pesquet	ERR	c4c09a3f427d6c836b97be427405d071	b618ff9c-7c76-4cb6-9168-06662b350da2	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:40:58	33.3s	cheeky_ramanujan	ERR	c4c09a3f427d6c836b97be427405d071	ad08b2bd-55e3-41c3-bfc6-9db010cad18a	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:42:30	37.1s	nasty_nightingale	ERR	c4c09a3f427d6c836b97be427405d071	2157ce90-b25e-4bf9-8dc1-235b64e748d7	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:44:31	39.3s	furious_williams	ERR	c4c09a3f427d6c836b97be427405d071	fc5d4866-488d-4808-9625-441617491728	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:45:17	42.3s	special_plateau	ERR	c4c09a3f427d6c836b97be427405d071	1a0ee5ae-b318-42cd-86f1-c7ba6ccc661b	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:47:13	40.8s	condescending_curran	ERR	c4c09a3f427d6c836b97be427405d071	25ba6863-b952-4c42-ad3f-b39ae58a286a	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:48:23	39.7s	amazing_curry	ERR	c4c09a3f427d6c836b97be427405d071	aa005bdd-05f1-4993-8db3-acc7c257af65	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:51:20	8.4s	crazy_sammet	ERR	c4c09a3f427d6c836b97be427405d071	78bfff67-d7a9-4043-906a-793a5ff5bae4	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:53:00	38.4s	grave_golick	ERR	c4c09a3f427d6c836b97be427405d071	8aa4726b-dfa6-44b9-bddc-d9ffe903b0c3	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 12:55:14	-	goofy_rubens	-	77066e35ce0ffef53849948842f9c9b9	97e3250b-d112-471f-85d6-700c39933f45	nextflow run modules/local/merge_metadata.nf --run_id R01110625
+2025-06-11 12:57:42	-	modest_pesquet	-	77066e35ce0ffef53849948842f9c9b9	6466bb4f-faa3-4541-8e7e-3f45b831928e	nextflow run modules/local/merge_metadata.nf --run_id R01110625
+2025-06-11 12:58:04	-	awesome_einstein	-	967c4d106cd107b9cec174e86218c44c	cd2f6114-e1f8-46c6-b735-44a0629c5d24	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 12:58:19	-	berserk_bartik	-	1ad61030a0ac930a646097da6e2d6918	3ab897d1-7fd2-4e51-99c5-e1923f74892e	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 12:58:30	1.7s	stupefied_carson	ERR	a5551a275581d394e96d12297ecd1ec8	930d6b44-1a72-4b16-b98a-3edf910baf5f	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 12:58:52	1.1s	nostalgic_brenner	ERR	03dd7097078599a02059770e3a284387	ca4d49f8-b1a5-4e10-92c4-393b3b796e43	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 12:59:10	1.6s	disturbed_lalande	ERR	0b2541605c49d1a893a215e5539d0ac7	f2aeeb2e-10ba-4e05-9498-2fcd16129dff	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 13:03:45	38.3s	elated_brattain	ERR	c4c09a3f427d6c836b97be427405d071	5a0131d6-8700-46cd-ab31-652cf6b911b4	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 13:15:16	1.1s	mighty_caravaggio	ERR	28d64692bf5728737f5df9516bacf106	753d1bde-afa4-4d2e-a00d-fec2ca5c975b	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 13:16:26	1.8s	angry_morse	ERR	1700520172f23cdf79ca4a14ef85b561	c8067465-650e-411b-b81e-cdc8a249da77	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 13:16:52	1.5s	distraught_joliot	ERR	778deaa18f5ecb2f97fa43095b7da2fe	4073c873-0e78-4073-a65a-76a304deaf5a	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 13:17:52	1.7s	nasty_kowalevski	ERR	778deaa18f5ecb2f97fa43095b7da2fe	466ae1f5-1ba1-49f3-a211-348b80a2a2d0	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 13:18:46	1.6s	peaceful_gates	ERR	778deaa18f5ecb2f97fa43095b7da2fe	aeb18b89-3918-4636-a88f-3b77c81cea47	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 13:19:08	1.7s	sick_gates	OK	778deaa18f5ecb2f97fa43095b7da2fe	8173ba40-9562-4bdf-9d9f-646de864112e	nextflow run modules/local/test_merge_data.nf --run_id R01110625
+2025-06-11 13:19:33	33.4s	golden_liskov	ERR	c4c09a3f427d6c836b97be427405d071	023a31d0-9805-4c28-bf3d-269dc9785dca	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 13:22:24	39.3s	sharp_ptolemy	ERR	c4c09a3f427d6c836b97be427405d071	e3594f54-e558-4d6a-b1e2-899bf1060a88	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 13:24:05	40.9s	agitated_shirley	ERR	c4c09a3f427d6c836b97be427405d071	4961f4fe-851d-4ffa-b0ad-098e1368698e	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 13:27:17	37s	goofy_booth	ERR	c4c09a3f427d6c836b97be427405d071	26416904-c678-4475-83b8-3f27b268cd47	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 13:28:25	-	naughty_albattani	-	c4c09a3f427d6c836b97be427405d071	687a75ee-d236-4723-b3e5-af9a2f57b14b	nextflow run main.nf -profile docker --run_id R01110625

@@ -12,25 +12,24 @@ process HOMO_CONTAM_PROCESS {
 
     script:
     """
-    export RUN_ID=${params.run_id}
 
-    mkdir -p runs/\$RUN_ID/metadata/reports
-    cp ${kraken_reports} runs/\$RUN_ID/metadata/reports/
+    mkdir -p runs/${params.run_id}/metadata/reports
+    cp ${kraken_reports} runs/${params.run_id}/metadata/reports/
 
     python3 <<EOF
     import pandas as pd
     import os
 
-    df = pd.read_csv('${merged_metadata_csv}')
+    df = pd.read_csv('${merged_metadata_csv}', sep='\\t')
     df['Homo_Sapiens_%'] = 0.0
 
-    for fname in os.listdir('runs/\$RUN_ID/metadata/reports'):
+    for fname in os.listdir('runs/${params.run_id}/metadata/reports'):
         if not fname.endswith('.report.txt'):
             continue
         sample_id = fname.split('.kraken2.report.txt')[0]
         percent = 0.0
         found = False
-        with open(os.path.join('runs/\$RUN_ID/metadata/reports', fname)) as f:
+        with open(os.path.join('runs/${params.run_id}/metadata/reports', fname)) as f:
             for line in f:
                 if 'Homo sapiens' in line:
                     try:
@@ -39,8 +38,9 @@ process HOMO_CONTAM_PROCESS {
                         break
                     except:
                         pass
+        print(df.columns)
         df.loc[df['Sample_ID'] == sample_id, 'Homo_Sapiens_%'] = percent if found else 0.0
-
+    print(df.head())
     df.to_csv('metadata.tsv', index=False)
     EOF
     """
