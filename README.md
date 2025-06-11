@@ -1,7 +1,7 @@
 # Welcome to **AGB 2025 Microbiota Classification Pipeline**
 
 ### Repository for the AGB 2025 common class project.
-AGB 2025 is a **dockerised Nextflow workflow** that turns raw stool sequencing reads into clinically actionable labels (*healthy* vs *non-healthy*) and rich microbiome analytics. Built by the students of the subject AGB_2025. 
+AGB 2025 is a **dockerised Nextflow workflow** that turns raw stool sequencing reads into clinically actionable labels (*healthy* vs *non-healthy*) and rich microbiome analytics. Built by the students of the subject AGB_2025.
 
 ---
 
@@ -12,22 +12,22 @@ In this wiki page you will find the information about the pipeline context, the 
 ![IMG1.png](https://github.com/egenomics/agb2025/blob/main/img/IMG1.png)
 ## Quick start (Docker edition)
 
-### Prerequisites to install the pipeline
+### Prerequisites to start the pipeline
 
 | Tool                   | macOS (Homebrew)                                                            | Ubuntu / Debian                                                           | Notes                                                         |
 |------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------|
 | **Docker ≥ 24**        | `brew install --cask docker`<br/>Launch *Docker Desktop*                     | `sudo apt install docker.io`                                              | Ensure the Docker daemon is running and your user has access. |
 | **Nextflow ≥ 23.10**   | `brew install nextflow`                                                     | `curl -s https://get.nextflow.io \| bash && sudo mv nextflow /usr/local/bin/` | The pipeline pulls everything in containers.                |
-| **Memory Requirement** |                                                                             |                                                                           | At least 8 GB of available system memory is required for Kraken2. |
+| **Memory Requirement** |                                                                             |                                                                           | At least 4 GB of available system memory is required for Kraken2. |
 
 ## 1 · Setup Installing
 
-Before running the pipeline you must **(i)** clone the repository, **(ii)** make the custom Docker image available, and **(iii)** download the reference databases. 
+Before running the pipeline you must **(i)** clone the repository, **(ii)** make the custom Docker image available, **(iii)** download the reference databases and **(iv)** create the run.
 
 ### 1.1 Clone the repository
 ```bash
 git clone https://github.com/egenomics/agb2025.git
-cd agb2025 
+cd agb2025
 ```
 ### 1.2 Docker image
 This pipeline uses a **custom Docker image (agb2025-python)** to merge metadata with MultiQC output using pandas and csvkit. **To build the Docker Image, run this in the terminal**
@@ -48,9 +48,22 @@ chmod +x INSTALLME.sh
 
 The `INSTALLME.sh` script will save both databases in databases/.
 
-## 2 · Usage
+### 1.4 Create the run
 
-Use this command line:
+**To test the developing version of the pipeline (main.nf), a run needs to be created, sample raw data downloaded and the corresponding metadata created**. Executing the `create._run.sh` script will create a local folder called `runs/<run_id>/` following the run naming convention. This folder will contain 15 paired fastqs in raw_data/ and a metadata.tsv in metadata/. If you don't remove the folder and you reuse the same run_id, you will only need to do that once.
+
+```bash
+chmod +x create_run.sh
+./create_run.sh
+```
+
+*This script is only needed to simulate a real sequencing run during development.*
+
+After executing `./create_run.sh`, a `runs/<run_id>/` folder will be created. Copy the `run_id`. It will be used to **run the pipeline**. You can alternatively copy the run_id from the last line of the output of the `./create_run.sh` script.
+
+## 2 · Running the pipeline
+
+After copying the `run_id`, use this command line to **run the pipeline**:
 
 ```bash
 nextflow run main.nf --run_id <run_id> --sampling_depth <number> --auto_rarefaction TRUE -profile docker
@@ -62,31 +75,11 @@ nextflow run main.nf --run_id <run_id> --sampling_depth <number> --auto_rarefact
 ```bash
 nextflow run main.nf --run_id <run_id> --sampling_depth <number> --auto_rarefaction TRUE -profile docker -resume
 ```
-
-## 3 · Tutorial
-
-**To test the developing version of the pipeline (main.nf), you need to create the run and download sample data**. Executing the `create._run.sh` script will create a local folder called `runs/<run_id>/` following the run naming convention. This folder will contain 15 paired fastqs in raw_data/ and a metadata.tsv in metadata/. If you don't remove the folder and you reuse the same run_id, you will only need to do that once.
-
-```bash
-chmod +x create_run.sh
-./create_run.sh
-```
-
-*This script is only needed to simulate a real sequencing run during development.*
-
-After executing `./create_run.sh`, a `runs/<run_id>/` folder will be created. Copy the `run_id` and use it to **run the pipeline**.
-
-```bash
-nextflow run main.nf --run_id R01110625 --auto_rarefaction TRUE --sampling_depth 10000 -profile docker -resume
-```
-
-
 ---
 
 ### Scripts Overview
 - `create_run.sh` – prepares a run folder with raw fastq files and metadata.
 - `INSTALLME.sh` – automatically downloads and extracts kraken2 and qiime2 databases.
-
 
 ---
 
