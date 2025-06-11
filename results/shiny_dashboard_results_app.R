@@ -28,7 +28,6 @@ library(viridis)
 library(FSA)
 library(ggtree)
 library(treeio)
-library(DESeq2)
 library(broom)
 library(shinyBS)
 library(beyonce)
@@ -406,7 +405,6 @@ ui <- dashboardPage(
                            tags$ul(
                              style = "margin-top: 5px; margin-bottom: 10px;",
                              tags$li("PERMANOVA for community structure"),
-                             tags$li("DESeq2 for differential abundance"),
                              tags$li("Wilcoxon & t-tests for comparisons")
                            ),
                            tags$li("Customizable color schemes"),
@@ -737,7 +735,7 @@ ui <- dashboardPage(
                          # Taxonomic level selection
                          selectInput("tax_level", "Taxonomic Level:", 
                                      choices = c("Phylum", "Class", "Order", "Family", "Genus", "Species"), 
-                                     selected = "Genus"), 
+                                     selected = "Family"), 
                          
                          # Filtering options 
                          radioButtons("sample_group", "Sample Group:", 
@@ -757,7 +755,7 @@ ui <- dashboardPage(
                          
                          # Statistical testing options - SIMPLIFIED
                          selectInput("stat_test", "Statistical Test:", 
-                                     choices = c("None", "PERMANOVA", "DESeq2", "Wilcoxon", "t-test"), 
+                                     choices = c("None", "PERMANOVA", "Wilcoxon", "t-test"), 
                                      selected = "None")
                        ),
                        
@@ -779,16 +777,6 @@ ui <- dashboardPage(
                            </p>
                            <p style='margin-bottom: 0; font-size: 13px; color: #7f8c8d;'>
                              <strong>Best for:</strong> Comparing entire microbiome profiles, beta-diversity analysis.
-                           </p>
-                         </div>
-                         
-                         <div style='margin-bottom: 15px;'>
-                           <h5 style='color: #2c3e50; margin-bottom: 8px;'><strong>DESeq2</strong></h5>
-                           <p style='margin-bottom: 5px; font-size: 13px;'>
-                             <strong>Purpose:</strong> Identifies individual taxa that are significantly different between groups.
-                           </p>
-                           <p style='margin-bottom: 0; font-size: 13px; color: #7f8c8d;'>
-                             <strong>Best for:</strong> Finding specific bacteria/taxa that differ between conditions.
                            </p>
                          </div>
                          
@@ -924,7 +912,7 @@ ui <- dashboardPage(
                 )
               )
       ),
-                  
+      
       # TAB 3: Diversity Analysis Tab
       tabItem(tabName = "diversity",
               fluidRow(
@@ -2654,6 +2642,16 @@ server <- function(input, output, session) {
   
   
   
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   #### TAXONOMY TAB ######
   
   # Define colors 
@@ -2664,8 +2662,6 @@ server <- function(input, output, session) {
     "Rainbow" = scale_fill_manual(values = rainbow(25)), 
     "Set3" = scale_fill_brewer(palette = "Set3"), 
     "Spectral" = scale_fill_brewer(palette = "Spectral")
-    
-    
   )
   
   # Function to extract taxonomic levels from species names
@@ -2685,34 +2681,36 @@ server <- function(input, output, session) {
       # Create a dataframe to store taxonomic hierarchy 
       taxonomy_df <- data.frame(Taxon = taxa_list, stringsAsFactors = FALSE)
       
-      # Initialize taxonomic columns
-      taxonomy_df$Species <- NA
-      taxonomy_df$Genus <- NA
-      taxonomy_df$Family <- NA
-      taxonomy_df$Order <- NA
-      taxonomy_df$Class <- NA
-      taxonomy_df$Phylum <- NA
-      taxonomy_df$Kingdom <- NA
+      # Initialize taxonomic columns with consistent naming
+      taxonomy_df$Species <- NA_character_
+      taxonomy_df$Genus <- NA_character_
+      taxonomy_df$Family_Tax <- NA_character_  # Changed from Family to Family_Tax
+      taxonomy_df$Order_Tax <- NA_character_   # Changed from Order to Order_Tax
+      taxonomy_df$Class_Tax <- NA_character_   # Changed from Class to Class_Tax
+      taxonomy_df$Phylum <- NA_character_
+      taxonomy_df$Kingdom <- NA_character_
       
       # Parse taxonomic strings (format: k__Kingdom;p__Phylum;c__Class;o__Order;f__Family;g__Genus;s__Species)
-      for (i in 1:nrow(taxonomy_df)) {
+      for (i in seq_len(nrow(taxonomy_df))) {
         taxon_string <- taxonomy_df$Taxon[i]
         
-        if (!is.na(taxon_string) && taxon_string != "") {
+        if (!is.na(taxon_string) && nchar(taxon_string) > 0) {
           # Split by semicolon
-          tax_parts <- strsplit(taxon_string, ";")[[1]]
+          tax_parts <- strsplit(taxon_string, ";", fixed = TRUE)[[1]]
           
           for (part in tax_parts) {
+            part <- trimws(part)  # Remove whitespace
+            
             if (grepl("^k__", part)) {
               taxonomy_df$Kingdom[i] <- gsub("^k__", "", part)
             } else if (grepl("^p__", part)) {
               taxonomy_df$Phylum[i] <- gsub("^p__", "", part)
             } else if (grepl("^c__", part)) {
-              taxonomy_df$Class[i] <- gsub("^c__", "", part)
+              taxonomy_df$Class_Tax[i] <- gsub("^c__", "", part)
             } else if (grepl("^o__", part)) {
-              taxonomy_df$Order[i] <- gsub("^o__", "", part)
+              taxonomy_df$Order_Tax[i] <- gsub("^o__", "", part)
             } else if (grepl("^f__", part)) {
-              taxonomy_df$Family[i] <- gsub("^f__", "", part)
+              taxonomy_df$Family_Tax[i] <- gsub("^f__", "", part)
             } else if (grepl("^g__", part)) {
               taxonomy_df$Genus[i] <- gsub("^g__", "", part)
             } else if (grepl("^s__", part)) {
@@ -2732,43 +2730,50 @@ server <- function(input, output, session) {
         taxonomy_df$Species
       )
       
+      # Create mapping columns for backward compatibility
+      taxonomy_df$Family <- taxonomy_df$Family_Tax
+      taxonomy_df$Order <- taxonomy_df$Order_Tax
+      taxonomy_df$Class <- taxonomy_df$Class_Tax
+      
       return(taxonomy_df)
       
     } else {
-      # SIMPLIFIED APPROACH for generated data (existing code)
+      # SIMPLIFIED APPROACH for generated data
       
       # Get unique species 
-      species_list <- unique(all_taxonomy$Species)
+      species_list <- unique(all_taxonomy$Species[!is.na(all_taxonomy$Species)])
       
       # Create a dataframe to store taxonomic hierarchy 
-      taxonomy_df <- data.frame(Species = species_list)
+      taxonomy_df <- data.frame(Species = species_list, stringsAsFactors = FALSE)
       
       # Extract Genus 
-      taxonomy_df$Genus <- sapply(strsplit(species_list, " "), function(x) x[1])
+      taxonomy_df$Genus <- sapply(strsplit(as.character(species_list), " "), function(x) {
+        if (length(x) > 0) x[1] else "Unknown"
+      })
       
-      # Create Family 
+      # Create Family with safe naming
       genera <- unique(taxonomy_df$Genus)
-      families <- paste0("Family_", ceiling(seq_along(genera)/2))
-      family_map <- setNames(families[1:length(genera)], genera)
-      taxonomy_df$Family <- family_map[taxonomy_df$Genus]
+      family_names <- paste0("Family_", ceiling(seq_along(genera)/2))
+      family_mapping <- stats::setNames(family_names[seq_along(genera)], genera)
+      taxonomy_df$Family <- family_mapping[taxonomy_df$Genus]
       
       # Create Order 
       unique_families <- unique(taxonomy_df$Family)
-      orders <- paste0("Order_", ceiling(seq_along(unique_families)/3))
-      order_map <- setNames(orders[1:length(unique_families)], unique_families)
-      taxonomy_df$Order <- order_map[taxonomy_df$Family]
+      order_names <- paste0("Order_", ceiling(seq_along(unique_families)/3))
+      order_mapping <- stats::setNames(order_names[seq_along(unique_families)], unique_families)
+      taxonomy_df$Order <- order_mapping[taxonomy_df$Family]
       
       # Create Class 
       unique_orders <- unique(taxonomy_df$Order)
-      classes <- paste0("Class_", ceiling(seq_along(unique_orders)/2))
-      class_map <- setNames(classes[1:length(unique_orders)], unique_orders)
-      taxonomy_df$Class <- class_map[taxonomy_df$Order]
+      class_names <- paste0("Class_", ceiling(seq_along(unique_orders)/2))
+      class_mapping <- stats::setNames(class_names[seq_along(unique_orders)], unique_orders)
+      taxonomy_df$Class <- class_mapping[taxonomy_df$Order]
       
       # Create Phylum 
       unique_classes <- unique(taxonomy_df$Class)
-      phyla <- paste0("Phylum_", ceiling(seq_along(unique_classes)/2))
-      phylum_map <- setNames(phyla[1:length(unique_classes)], unique_classes)
-      taxonomy_df$Phylum <- phylum_map[taxonomy_df$Class]
+      phylum_names <- paste0("Phylum_", ceiling(seq_along(unique_classes)/2))
+      phylum_mapping <- stats::setNames(phylum_names[seq_along(unique_classes)], unique_classes)
+      taxonomy_df$Phylum <- phylum_mapping[taxonomy_df$Class]
       
       return(taxonomy_df)
     }
@@ -2841,13 +2846,22 @@ server <- function(input, output, session) {
     # Get filtered data
     tax_data <- filtered_taxonomy_data()
     
+    # Ensure we have the required columns
+    if (!"Sample_ID" %in% colnames(tax_data)) {
+      stop("Sample_ID column not found in data")
+    }
+    
     # Determine the abundance column name
     abundance_col <- if ("Abundance" %in% colnames(tax_data)) "Abundance" else "Count"
     
+    if (!abundance_col %in% colnames(tax_data)) {
+      stop("Neither Abundance nor Count column found in data")
+    }
+    
     # Group by Sample_ID to calculate total abundance per sample
-    sample_totals <- aggregate(tax_data[[abundance_col]], 
-                               by = list(Sample_ID = tax_data$Sample_ID), 
-                               FUN = sum)
+    sample_totals <- stats::aggregate(tax_data[[abundance_col]], 
+                                      by = list(Sample_ID = tax_data$Sample_ID), 
+                                      FUN = sum, na.rm = TRUE)
     colnames(sample_totals)[2] <- paste0(abundance_col, "_total")
     
     # Merge with original data to calculate relative abundance
@@ -2857,6 +2871,9 @@ server <- function(input, output, session) {
     tax_data_with_totals$RelativeAbundance <- (tax_data_with_totals[[abundance_col]] / 
                                                  tax_data_with_totals[[paste0(abundance_col, "_total")]]) * 100
     
+    # Handle NaN values
+    tax_data_with_totals$RelativeAbundance[is.nan(tax_data_with_totals$RelativeAbundance)] <- 0
+    
     # Update the Abundance column to use the correct column name for downstream processing
     if (abundance_col != "Abundance") {
       tax_data_with_totals$Abundance <- tax_data_with_totals[[abundance_col]]
@@ -2865,21 +2882,54 @@ server <- function(input, output, session) {
     # Filter by abundance threshold
     filtered_by_threshold <- tax_data_with_totals[tax_data_with_totals$RelativeAbundance >= input$abundance_threshold, ]
     
-    # Get selected taxonomic level
+    # Get selected taxonomic level and normalize case
     tax_level <- input$tax_level
+    
+    # Create a mapping for case-insensitive matching
+    available_cols <- colnames(filtered_by_threshold)
+    tax_level_mapping <- c(
+      "species" = "Species",
+      "genus" = "Genus", 
+      "family" = "Family",
+      "order" = "Order",
+      "class" = "Class",
+      "phylum" = "Phylum",
+      "kingdom" = "Kingdom"
+    )
+    
+    # Normalize the taxonomic level name
+    if (tolower(tax_level) %in% names(tax_level_mapping)) {
+      tax_level <- tax_level_mapping[tolower(tax_level)]
+    }
+    
+    # Validate taxonomic level exists in data
+    if (!tax_level %in% available_cols) {
+      # Try to find a close match
+      possible_matches <- available_cols[grepl(tax_level, available_cols, ignore.case = TRUE)]
+      if (length(possible_matches) > 0) {
+        tax_level <- possible_matches[1]
+      } else {
+        stop(paste("Taxonomic level", tax_level, "not found in data. Available levels:", 
+                   paste(available_cols, collapse = ", ")))
+      }
+    }
     
     # Group by taxonomic level and aggregate abundances
     if (tax_level != "Species") {
-      # Aggregate by the selected taxonomic level
-      agg_formula <- as.formula(paste("cbind(Abundance, RelativeAbundance) ~", 
-                                      "Sample_ID +", tax_level))
+      # Create aggregation formula safely
+      formula_str <- paste("cbind(Abundance, RelativeAbundance) ~ Sample_ID +", tax_level)
+      agg_formula <- stats::as.formula(formula_str)
       
-      aggregated_data <- aggregate(agg_formula, 
-                                   data = filtered_by_threshold, 
-                                   FUN = sum)
+      # Aggregate data
+      aggregated_data <- stats::aggregate(agg_formula, 
+                                          data = filtered_by_threshold, 
+                                          FUN = sum, na.rm = TRUE)
       
-      # Replace column names after aggregation
-      colnames(aggregated_data)[colnames(aggregated_data) == tax_level] <- "TaxonomicGroup"
+      # Rename the taxonomic level column
+      tax_col_index <- which(colnames(aggregated_data) == tax_level)
+      if (length(tax_col_index) > 0) {
+        colnames(aggregated_data)[tax_col_index] <- "TaxonomicGroup"
+      }
     } else {
       # For species level, just rename the column
       aggregated_data <- filtered_by_threshold
@@ -2887,11 +2937,16 @@ server <- function(input, output, session) {
       
       # Handle species with low abundance
       if (input$abundance_threshold > 0) {
-        sorted_species <- unique(aggregated_data[order(-aggregated_data$RelativeAbundance), "TaxonomicGroup"])
+        # Get unique species sorted by abundance
+        species_abundance <- stats::aggregate(RelativeAbundance ~ TaxonomicGroup, 
+                                              data = aggregated_data, 
+                                              FUN = mean, na.rm = TRUE)
+        sorted_species <- species_abundance$TaxonomicGroup[order(-species_abundance$RelativeAbundance)]
+        
         keep_top_n <- min(15, length(sorted_species))  # Limit to top 15 species
         
         if (length(sorted_species) > keep_top_n) {
-          top_species <- sorted_species[1:keep_top_n]
+          top_species <- sorted_species[seq_len(keep_top_n)]
           aggregated_data$TaxonomicGroup <- ifelse(aggregated_data$TaxonomicGroup %in% top_species, 
                                                    as.character(aggregated_data$TaxonomicGroup), 
                                                    "Other")
@@ -2902,7 +2957,9 @@ server <- function(input, output, session) {
     # Sort by abundance if requested
     if (input$sort_abundance) {
       # Aggregate by taxonomic group to get total abundance
-      group_totals <- aggregate(Abundance ~ TaxonomicGroup, data = aggregated_data, FUN = sum)
+      group_totals <- stats::aggregate(Abundance ~ TaxonomicGroup, 
+                                       data = aggregated_data, 
+                                       FUN = sum, na.rm = TRUE)
       group_totals <- group_totals[order(-group_totals$Abundance), ]
       
       # Create an ordered factor for taxonomic groups based on abundance
@@ -2939,20 +2996,23 @@ server <- function(input, output, session) {
     metadata <- categorize_metadata()
     
     # Merge taxonomy data with metadata to get group information
-    result <- merge(tax_data, metadata[, c("Sample_ID", "Group")], by = "Sample_ID", all.x = TRUE)
+    result <- merge(tax_data, metadata[, c("Sample_ID", "Group"), drop = FALSE], 
+                    by = "Sample_ID", all.x = TRUE)
     
     # If metadata_group is selected, add that grouping as well
     if (input$metadata_group != "None") {
       # Check if we should use the categorical version of Age
       if (input$metadata_group == "Age" && "Age_Category" %in% colnames(metadata)) {
         # Use Age_Category instead of Age
-        metadata_subset <- metadata[, c("Sample_ID", "Age_Category")]
+        metadata_subset <- metadata[, c("Sample_ID", "Age_Category"), drop = FALSE]
         colnames(metadata_subset)[2] <- "Age"  # Rename for consistency
         result <- merge(result, metadata_subset, by = "Sample_ID", all.x = TRUE)
       } else {
         # Use the original metadata column
-        metadata_subset <- metadata[, c("Sample_ID", input$metadata_group)]
-        result <- merge(result, metadata_subset, by = "Sample_ID", all.x = TRUE)
+        if (input$metadata_group %in% colnames(metadata)) {
+          metadata_subset <- metadata[, c("Sample_ID", input$metadata_group), drop = FALSE]
+          result <- merge(result, metadata_subset, by = "Sample_ID", all.x = TRUE)
+        }
       }
     }
     
@@ -2963,9 +3023,32 @@ server <- function(input, output, session) {
   output$total_taxa_box <- renderValueBox({
     req(filtered_taxonomy_data())
     
-    # Count unique taxa at the selected taxonomic level
+    # Get selected taxonomic level and normalize case
     tax_level <- input$tax_level
-    unique_taxa <- length(unique(filtered_taxonomy_data()[[tax_level]]))
+    
+    # Create a mapping for case-insensitive matching
+    available_cols <- colnames(filtered_taxonomy_data())
+    tax_level_mapping <- c(
+      "species" = "Species",
+      "genus" = "Genus", 
+      "family" = "Family",
+      "order" = "Order",
+      "class" = "Class",
+      "phylum" = "Phylum",
+      "kingdom" = "Kingdom"
+    )
+    
+    # Normalize the taxonomic level name
+    if (tolower(tax_level) %in% names(tax_level_mapping)) {
+      tax_level <- tax_level_mapping[tolower(tax_level)]
+    }
+    
+    # Count unique taxa at the selected taxonomic level
+    if (tax_level %in% available_cols) {
+      unique_taxa <- length(unique(filtered_taxonomy_data()[[tax_level]]))
+    } else {
+      unique_taxa <- 0
+    }
     
     valueBox(
       value = unique_taxa,
@@ -2979,11 +3062,15 @@ server <- function(input, output, session) {
     req(taxonomy_relative_abundance())
     
     # Find dominant taxa (with highest average relative abundance)
-    taxa_avg <- aggregate(RelativeAbundance ~ TaxonomicGroup, 
-                          data = taxonomy_relative_abundance(), 
-                          FUN = mean)
+    taxa_avg <- stats::aggregate(RelativeAbundance ~ TaxonomicGroup, 
+                                 data = taxonomy_relative_abundance(), 
+                                 FUN = mean, na.rm = TRUE)
     
-    dominant_taxa <- taxa_avg$TaxonomicGroup[which.max(taxa_avg$RelativeAbundance)]
+    if (nrow(taxa_avg) > 0) {
+      dominant_taxa <- taxa_avg$TaxonomicGroup[which.max(taxa_avg$RelativeAbundance)]
+    } else {
+      dominant_taxa <- "None"
+    }
     
     valueBox(
       value = as.character(dominant_taxa),
@@ -3012,10 +3099,12 @@ server <- function(input, output, session) {
     req(input$abundance_color_scheme)
     
     # Return the appropriate color scale based on selection
-    if (input$abundance_color_scheme %in% names(taxonomic_colors)) {
+    if (exists("taxonomic_colors") && input$abundance_color_scheme %in% names(taxonomic_colors)) {
       return(taxonomic_colors[[input$abundance_color_scheme]])
     } else {
-      return(taxonomic_colors[["Default"]])
+      # Default color scheme if taxonomic_colors is not defined
+      return(c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", 
+               "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"))
     }
   })
   
@@ -3398,56 +3487,6 @@ server <- function(input, output, session) {
                                  ifelse(permanova_result$`Pr(>F)`[1] < 0.05, 
                                         "(Significant)", "(Not significant)"))
                ))
-             },
-             
-             "DESeq2" = {
-               # DESeq2 analysis
-               if (!requireNamespace("DESeq2", quietly = TRUE)) {
-                 return(list(
-                   test_type = "DESeq2",
-                   error = "DESeq2 package not installed. Please install from Bioconductor."
-                 ))
-               }
-               
-               # Prepare count matrix (ensure integers)
-               count_matrix <- round(abundance_matrix)
-               count_matrix <- count_matrix[, colSums(count_matrix) > 0]  # Remove empty columns
-               
-               # Create DESeq2 dataset
-               sample_data <- data.frame(
-                 Group = factor(metadata$Group, levels = c("Control", "Patient"))
-               )
-               
-               dds <- DESeq2::DESeqDataSetFromMatrix(
-                 countData = t(count_matrix),  # DESeq2 expects genes as rows
-                 colData = sample_data,
-                 design = ~ Group
-               )
-               
-               # Filter low count features
-               keep <- rowSums(DESeq2::counts(dds)) >= 10
-               dds <- dds[keep,]
-               
-               # Run DESeq2 analysis
-               dds <- DESeq2::DESeq(dds, quiet = TRUE)
-               results_deseq <- DESeq2::results(dds, contrast = c("Group", "Patient", "Control"))
-               
-               # Convert to data frame and clean up
-               results_df <- as.data.frame(results_deseq)
-               results_df$Taxon <- rownames(results_df)
-               results_df$Significant <- !is.na(results_df$padj) & results_df$padj < 0.05
-               
-               # Remove rows with NA p-values
-               results_df <- results_df[!is.na(results_df$pvalue), ]
-               
-               return(list(
-                 test_type = "DESeq2",
-                 results = results_df,
-                 summary = paste("Tested", nrow(results_df), "taxa.",
-                                 "Significant differences found in", 
-                                 sum(results_df$Significant, na.rm = TRUE), 
-                                 "taxa (FDR < 0.05).")
-               ))
              }
       )
     }, error = function(e) {
@@ -3483,7 +3522,7 @@ server <- function(input, output, session) {
     }
     
     # Create results display based on test type
-    if (stat_results$test_type %in% c("Wilcoxon Rank-Sum Test", "T-test (log-transformed)", "DESeq2")) {
+    if (stat_results$test_type %in% c("Wilcoxon Rank-Sum Test", "T-test (log-transformed)")) {
       # For tests that produce per-taxon results
       results_df <- stat_results$results
       
@@ -3581,7 +3620,6 @@ server <- function(input, output, session) {
       }
     }
   )
-  
   
   ## HEATMAP 
   # Heatmap color schemes for ComplexHeatmap
