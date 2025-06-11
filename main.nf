@@ -70,7 +70,9 @@ workflow {
 
     // 1. Pre-processing
     // 1.1. Run FastQC on raw reads
-    def (ch_fastqc_raw_reports, ch_fastqc_raw_versions) = FASTQC_RAW(raw_reads)
+    def fastqc_raw_outputs = FASTQC_RAW(raw_reads)
+    def ch_fastqc_raw_reports = fastqc_raw_outputs[0]
+    def ch_fastqc_raw_versions = fastqc_raw_outputs[1]
 
     // 1.2. Run Trimmomatic
     def (ch_trimmed_reads, ch_trimmomatic_logs, ch_trimmomatic_versions) = TRIMMOMATIC(raw_reads)
@@ -86,7 +88,8 @@ workflow {
 
     // 1.4. Run Kraken2
     def kraken_input = ch_trimmed_reads.map { meta, reads ->
-        tuple(meta, reads)
+        def fixedReads = reads.collect { file ("runs/${params.run_id}/trimmed_reads/${it.getName()}") }
+        tuple(meta, fixedReads)
     }
 
     def (ch_kraken_reports, ch_kraken_versions) = KRAKEN(
@@ -96,25 +99,13 @@ workflow {
         true
     )
 
-    def channelsToMerge = [
-        ch_fastqc_raw_reports.map { meta, path -> path },
-        ch_fastqc_trim_reports.map { meta, path -> path },
-        ch_trimmomatic_logs.map { meta, path -> path },
-        ch_kraken_reports.map { meta, path -> path }
-    ]
+    ch_multiqc_trigger = Channel
+        .empty()
+        .mix(ch_fastqc_raw_reports, ch_fastqc_trim_reports, ch_trimmomatic_logs, ch_kraken_reports)
+        .collect()
 
-    mergeChannels(channelsToMerge).set { ch_multiqc_files }
-    mergeChannels(channelsToMerge).set { ch_software_versions }
-    
     // 1.5. Run MultiQC
-    MULTIQC(
-        ch_multiqc_files,
-        Channel.value(file("dummy_multiqc_config.yaml")),
-        Channel.value(file("dummy_extra_config.yaml")),
-        Channel.value(file("dummy_logo.png")),
-        ch_software_versions,
-        Channel.value( file("dummy_summary.txt") )
-    )
+    MULTIQC(ch_multiqc_trigger.map { file("runs/${params.run_id}/") })
 
     TRIMMOMATIC.out.trimmed_reads
     .map { it[1] }
@@ -236,10 +227,7 @@ if (file(multiqc_path).exists()) {
         ch_rarefaction_summary.ifEmpty(file("NO_FILE"))
     )
 
-    // println("Workflow completed at: ${new Date()}")
-    //println("Execution status: ${workflow.success ? 'SUCCESS' : 'FAILED'}")
 }
-
 
 def mergeChannels(List channels) {
     def merged = channels[0]
