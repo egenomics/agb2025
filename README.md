@@ -97,9 +97,11 @@ nextflow run main.nf --run_id R01110625 --auto_rarefaction TRUE --sampling_depth
 
 ## 4 · Validation
 
-- Benchmarking used 30 synthetic datasets with varying depths, error models, and GC correction, based on top gut ASVs from 10,000 fecal samples. Metrics were computed against known ground truth.
+- Benchmarking was conducted on 30 synthetic datasets with varying sequencing depths, error models, and GC correction settings. These were based on top gut ASVs from a cohort of 10,000 fecal samples, and performance metrics were calculated against known ground truth.
 
-- Stress Testing with mock communities assessed performance under edge-case conditions, leading to practical recommendations.
+- Stress Testing was carried out using mock communities to evaluate pipeline behavior under challenging conditions, resulting in practical recommendations.
 
-- Real Sample Application involved running the pipeline on datasets from different studies and sequencing depths. 
+- Real Sample Application was performed on datasets from different studies and sequencing depths to demonstrate the pipeline's applicability across diverse real-world scenarios.
+
+
 
