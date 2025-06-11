@@ -6,7 +6,7 @@ Repository for the AGB 2025 common class project
 
 In this wiki page you will find the information about the pipeline context, the sample processing and the decisions made through each of the modules.
 
-![IMG1.png]([https://github.com/egenomics/agb2025/img/IMG1.png])
+![IMG1.png](https://github.com/egenomics/agb2025/img/IMG1.png)
 
 ## Quick start (Docker edition)
 
