@@ -39,7 +39,7 @@ process HOMO_CONTAM_PROCESS {
                     except:
                         pass
         print(df.columns)
-        df.loc[df['Sample_ID'] == sample_id, 'Homo_Sapiens_%'] = percent if found else 0.0
+        df.loc[df["Sample ID"] == sample_id, 'Homo_Sapiens_%'] = percent if found else 0.0
     print(df.head())
     df.to_csv('metadata.tsv', index=False)
     EOF

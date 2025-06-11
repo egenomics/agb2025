@@ -25,7 +25,7 @@ process MERGE_METADATA_MULTIQC_PROCESS {
 
     sed 's/\\t/,/g' temp/multiqc_qc_clean.tsv > temp/multiqc_qc_clean.csv
 
-    csvjoin -c Sample_ID,Sample temp/metadata.csv temp/multiqc_qc_clean.csv > metadata.csv
+    csvjoin -c "Sample ID",Sample temp/metadata.csv temp/multiqc_qc_clean.csv > metadata.csv
 
     # Convert joined CSV to TSV
     tr ',' '\\t' < temp/metadata.csv > metadata.tsv
