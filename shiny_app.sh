@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 echo "Opening Shiny app... Please wait."
 
 # Run the Shiny app and log all output
-Rscript results/shiny_dashboard_results_app.R > results/shiny_log.txt 2>&1
+Rscript visualization/shiny_dashboard_results_app.R 
 
 # Check if Rscript was successful
 if [ $? -ne 0 ]; then
