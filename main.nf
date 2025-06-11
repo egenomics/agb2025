@@ -10,7 +10,7 @@ include { TRIMMOMATIC }             from './modules/nf-core/trimmomatic/main.nf'
 
 // Classification
 include { KRAKEN2_KRAKEN2 as KRAKEN } from './modules/nf-core/kraken2/kraken2/main.nf'
-include { MULTIQC               } from './modules/nf-core/multiqc/main.nf'
+include { MULTIQC               } from './modules/local/multiqc.nf'
 
 // Metadata operations
 include { MERGE_METADATA_MULTIQC }       from './modules/local/merge_metadata.nf'

@@ -4,6 +4,6 @@ FROM python:3.10-slim-buster
 RUN apt-get update && \
     apt-get install -y procps && \
     apt-get install -y --no-install-recommends gcc && \
-    pip install --no-cache-dir pandas csvkit && \
+    pip install --no-cache-dir pandas csvkit multiqc && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 

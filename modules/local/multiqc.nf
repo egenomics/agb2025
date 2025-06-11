@@ -1,10 +1,5 @@
 process MULTIQC {
-    label 'process_single'
-
-    conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/multiqc:1.29--pyhdfd78af_0' :
-        'biocontainers/multiqc:1.29--pyhdfd78af_0' }"
+    label 'MultiQC'
 
     input:
     path  multiqc_files, stageAs: "?/*"
@@ -19,8 +14,6 @@ process MULTIQC {
     task.ext.when == null || task.ext.when
 
     script:
-    def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ? "--filename ${task.ext.prefix}.html" : ''
 
     """
     multiqc $multiqc_files

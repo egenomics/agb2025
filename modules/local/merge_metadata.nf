@@ -9,7 +9,7 @@ process MERGE_METADATA_MULTIQC_PROCESS {
     path "metadata.tsv"
 
     script:
-       """
+    """
     mkdir -p temp
     ls -lh ${metadata_sample} ${multiqc_fastqc}
     head -n 3 ${metadata_sample}
