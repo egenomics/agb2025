@@ -19,9 +19,9 @@ process CLASSIFY_QUALITY_PROCESS {
         df['quality_flag'] = 'UNKNOWN'
     else:
         df['quality_flag'] = df['%GC'].apply(lambda x: 'FAIL' if x < 40 else 'PASS')
-    df.to_csv('metadata.tsv', index=False)
+    df.to_csv('metadata.csv', index=False)
     EOF
-
+    tr ',' '\\t' < metadata.csv > metadata.tsv
     echo "Sample metadata classified and saved as metadata.tsv in runs/${params.run_id}/metadata/"
     """
 
