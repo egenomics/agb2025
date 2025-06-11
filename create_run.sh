@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to the CSV file relative to where the script is run
-CSV_PATH="group4/datasets/dev.csv"
+CSV_PATH="data/dev.csv"
 
 # Create run_id to make new directory inside runs/
 DATE=$(date +%d%m%y)
