@@ -1,8 +1,0 @@
-Jun-05 13:12:20.851 [main] INFO  com.askimed.nf.test.App - nf-test 0.9.2
-Jun-05 13:12:20.882 [main] INFO  com.askimed.nf.test.App - Arguments: [test, tests]
-Jun-05 13:12:22.797 [main] INFO  com.askimed.nf.test.App - Nextflow Version: 25.04.2
-Jun-05 13:12:22.807 [main] WARN  com.askimed.nf.test.commands.RunTestsCommand - No nf-test config file found.
-Jun-05 13:12:23.103 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Loaded 28 files from directory /home/maider/Documents/AGB/agb2025 in 0.292 sec
-Jun-05 13:12:23.107 [main] INFO  com.askimed.nf.test.lang.dependencies.DependencyResolver - Found 0 files containing tests.
-Jun-05 13:12:23.108 [main] DEBUG com.askimed.nf.test.lang.dependencies.DependencyResolver - Found files: []
-Jun-05 13:12:23.113 [main] INFO  com.askimed.nf.test.commands.RunTestsCommand - Found 0 tests to execute.
