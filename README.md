@@ -36,7 +36,7 @@ chmod +x INSTALLME.sh
 The `INSTALLME.sh` script will save both databases in databases/.
 
 
-### 3 · Usage
+## 3 · Usage
 
 Use this command line:
 
@@ -51,7 +51,7 @@ To resume in case of an interrupted run, to skip completed tasks, we highly reco
 nextflow run main.nf --run_id <run_id> --sampling_depth <number> --auto_rarefaction TRUE -profile docker -resume
 ```
 
-### 4 ·  Tutorial
+## 4 ·  Tutorial
 
 To test the developing version of the pipeline (main.nf), you need to create the run and download sample data. Executing the `create._run.sh` script will create a local folder called `runs/<run_id>/` following the run naming convention. This folder will contain 15 paired fastqs in raw_data/ and a metadata.tsv in metadata/. If you don't remove the folder and you reuse the same run_id, you will only need to do that once.
 
@@ -69,7 +69,7 @@ nextflow run main.nf --run_id R01110625 --auto_rarefaction TRUE --sampling_depth
 ```
 
 
-## Scripts Overview
+### Scripts Overview
 - `create_run.sh` – prepares a run folder with raw fastq files and metadata.
 - `INSTALLME.sh` – automatically downloads and extracts kraken2 and qiime2 databases.
 
