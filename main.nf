@@ -127,14 +127,8 @@ if (file(multiqc_path).exists()) {
     CLASSIFY_QUALITY_SAMPLES(human_augmented_ch)
 
 } else {
-    log.warn "Skipping metadata merge: multiqc_fastqc.txt not found at ${multiqc_path}"
+    log.warn "Skipping metadata merge and sample flagging: multiqc_fastqc.txt not found at ${multiqc_path}"
 
-    human_augmented_ch = HOMOSAPINENS_CONTAMINATION(
-        metadata_sample_ch,
-        kraken_reports_ch
-    )
-
-    CLASSIFY_QUALITY_SAMPLES(human_augmented_ch)
 }
 
     // 2. QIIME

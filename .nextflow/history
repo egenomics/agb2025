@@ -1,0 +1,4 @@
+2025-06-11 09:04:14	-	condescending_perlman	-	0944c3e1814691a3b75ced6a177f9398	ff2baec4-f96c-4319-873d-8b3df1db9546	nextflow run main.nf -profile docker --run_id R02090625
+2025-06-11 09:05:45	9.5s	big_bell	ERR	0944c3e1814691a3b75ced6a177f9398	9c8c3159-0c3b-4d50-b8fd-1130df533d82	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 09:07:56	22.4s	evil_leakey	ERR	0944c3e1814691a3b75ced6a177f9398	609a891b-1b09-4d1c-a1db-d197f2de4c94	nextflow run main.nf -profile docker --run_id R01110625
+2025-06-11 09:10:18	20.8s	astonishing_goldstine	ERR	0944c3e1814691a3b75ced6a177f9398	8cd84232-dc0a-4254-a839-1ec6412ef57d	nextflow run main.nf -profile docker --run_id R01110625
