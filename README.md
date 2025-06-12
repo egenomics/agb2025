@@ -17,7 +17,7 @@ In this wiki page you will find the information about the pipeline context, the 
 | Tool                   | macOS (Homebrew)                                                            | Ubuntu / Debian                                                           | Notes                                                         |
 |------------------------|-----------------------------------------------------------------------------|---------------------------------------------------------------------------|---------------------------------------------------------------|
 | **Docker ≥ 24**        | `brew install --cask docker`<br/>Launch *Docker Desktop*                     | `sudo apt install docker.io`                                              | Ensure the Docker daemon is running and your user has access. |
-| **Nextflow ≥ 23.10**   | `brew install nextflow`                                                     | `curl -s https://get.nextflow.io \| bash && sudo mv nextflow /usr/local/bin/` | The pipeline pulls everything in containers.                |
+| **Nextflow ≥ 23.10**   | `brew install nextflow`                                                     | `curl -s https://get.nextflow.io \| bash && sudo chmod +x nextflow mv nextflow /usr/local/bin/` | The pipeline pulls everything in containers.                |
 | **Memory Requirement** |                                                                             |                                                                           | At least 4 GB of available system memory is required for Kraken2. |
 
 ## 1 · Setup Installing
