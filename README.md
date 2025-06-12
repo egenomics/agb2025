@@ -75,6 +75,10 @@ nextflow run main.nf --run_id <run_id> --sampling_depth <number> --auto_rarefact
 ```bash
 nextflow run main.nf --run_id <run_id> --sampling_depth <number> --auto_rarefaction TRUE -profile docker -resume
 ```
+
+### Scripts Overview
+- `create_run.sh` – prepares a run folder with raw fastq files and metadata.
+- `INSTALLME.sh` – automatically downloads and extracts kraken2 and qiime2 databases.
 ---
 
 ## 3 · Data Visualization
@@ -102,9 +106,7 @@ python visualization/convert_qiime_to_long.py [taxonomy.tsv path] [feature_table
 
 This will create a .tsv file suitable for upload into the Shiny app.
 
-### Scripts Overview
-- `create_run.sh` – prepares a run folder with raw fastq files and metadata.
-- `INSTALLME.sh` – automatically downloads and extracts kraken2 and qiime2 databases.
+
 
 ---
 
