@@ -10,27 +10,28 @@ process MERGE_METADATA_MULTIQC_PROCESS {
 
     script:
     """
-    mkdir -p temp
-    ls -lh ${metadata_sample} ${multiqc_fastqc}
-    head -n 3 ${metadata_sample}
+    python3 <<EOF
+    import pandas as pd
 
-    tr '\\t' ',' < ${metadata_sample} > temp/metadata.csv
+    metadata = pd.read_csv('${metadata_sample}', sep='\t')
+    qc_data = pd.read_csv('${multiqc_fastqc}', sep='\t')
 
-    awk -F'\\t' 'NR==1 {
-        for (i = 1; i <= 15; i++) printf "%s%s", \$i, (i==15?"\\n":"\\t")
-    }
-    NR > 1 {
-        for (i = 1; i <= 15; i++) printf "%s%s", \$i, (i==15?"\\n":"\\t")
-    }' ${multiqc_fastqc} > temp/multiqc_qc_clean.tsv
+    qc_data['Sample_base'] = qc_data['Sample'].str.extract(r'^(ERR\\d+)')
 
-    sed 's/\\t/,/g' temp/multiqc_qc_clean.tsv > temp/multiqc_qc_clean.csv
+    # Compute average %GC per sample (based on all 4 lines per sample)
+    gc_avg = qc_data.groupby('Sample_base')['%GC'].mean().reset_index()
 
-    csvjoin -c "Sample ID",Sample temp/metadata.csv temp/multiqc_qc_clean.csv > metadata.csv
+    # Perform merge on the "Sample ID" and "Sample" columns
+    metadata['Sample_base'] = metadata['Sample ID'].str.extract(r'^(ERR\\d+)')
 
-    # Convert joined CSV to TSV
-    tr ',' '\\t' < temp/metadata.csv > metadata.tsv
+    merged = metadata.merge(gc_avg, on='Sample_base', how='left')
 
-    echo "Merged metadata saved as metadata.tsv"
+    merged.drop(columns=['Sample_base'], inplace=True)
+
+    # Save the merged data to a new TSV file
+    merged.to_csv('metadata.tsv', sep='\t', index=False)
+
+    EOF
     """
 }
 
