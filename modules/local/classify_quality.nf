@@ -11,7 +11,7 @@ process CLASSIFY_QUALITY_PROCESS {
     """
     python3 << EOF
     import pandas as pd
-    df = pd.read_csv('${sample_metadata_csv}', sep=',')
+    df = pd.read_csv('${sample_metadata_csv}', sep='\t')
     print(df.columns)
 
     if '%GC' not in df.columns:
